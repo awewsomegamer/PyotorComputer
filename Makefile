@@ -5,7 +5,7 @@ asm:
 	make -C assembler
 
 emu:
-	#make -C emulator
+	make -C emulator
 
 clean:
 	rm -rf ./bin/*

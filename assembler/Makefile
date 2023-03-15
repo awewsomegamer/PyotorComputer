@@ -1,2 +1,2 @@
 all:
-	gcc main.c -o ../assembler.out -I./include/
+	gcc $(shell find . -type f -name '*.c') -o ../assembler.out -I./include/
