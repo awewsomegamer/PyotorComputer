@@ -31,17 +31,23 @@ void INST_LDA_IMM() { register_a = NEXT_BYTE; }
 void INST_LDX_IMM() { register_x = NEXT_BYTE; }
 void INST_LDY_IMM() { register_y = NEXT_BYTE; }
 
-void INST_LDA_ABS() { register_a = mem_byte_read(NEXT_BYTE | (NEXT_BYTE << 8)); }
-void INST_LDX_ABS() { register_x = mem_byte_read(NEXT_BYTE | (NEXT_BYTE << 8)); }
-void INST_LDY_ABS() { register_y = mem_byte_read(NEXT_BYTE | (NEXT_BYTE << 8)); }
+void INST_LDA_ABS() { register_a = PTR(NEXT_BYTE | (NEXT_BYTE << 8)); }
+void INST_LDX_ABS() { register_x = PTR(NEXT_BYTE | (NEXT_BYTE << 8)); }
+void INST_LDY_ABS() { register_y = PTR(NEXT_BYTE | (NEXT_BYTE << 8)); }
 
-void INST_LDA_ZPG() { register_a = mem_byte_read(NEXT_BYTE); }
-void INST_LDX_ZPG() { register_x = mem_byte_read(NEXT_BYTE); }
-void INST_LDY_ZPG() { register_y = mem_byte_read(NEXT_BYTE); }
+void INST_LDA_ZPG() { register_a = PTR(NEXT_BYTE); }
+void INST_LDX_ZPG() { register_x = PTR(NEXT_BYTE); }
+void INST_LDY_ZPG() { register_y = PTR(NEXT_BYTE); }
 
-void INST_LDA_ZPG_X() { register_a = mem_byte_read(OFF_X(NEXT_BYTE)); }
-void INST_LDX_ZPG_Y() { register_x = mem_byte_read(OFF_Y(CUR_BYTE | (NEXT_BYTE << 8))); }
-void INST_LDY_ZPG_X() { register_y = mem_byte_read(OFF_X(NEXT_BYTE)); }
+void INST_LDA_ZPG_X() { register_a = PTR(OFF_X(PTR(NEXT_BYTE))); }
+void INST_LDX_ZPG_Y() { register_x = PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE) << 8))); }
+void INST_LDY_ZPG_X() { register_y = PTR(OFF_X(PTR(NEXT_BYTE))); }
+
+void INST_LDA_IND_X() { register_a = PTR(OFF_X(PTR(NEXT_BYTE))); }
+void INST_LDA_IND_Y() { register_a = PTR(OFF_Y(PTR(NEXT_BYTE) | (PTR(NEXT_BYTE) << 8))); }
+
+void INST_LDA_ABS_X() { register_a = PTR(OFF_X(PTR(NEXT_BYTE))); }
+void INST_LDA_ABS_Y() { register_a = 0; }
 
 // ST instructions
 void INST_STA_ABS() { mem_byte_write(register_a, NEXT_BYTE | (NEXT_BYTE << 8)); }
@@ -52,9 +58,16 @@ void INST_STA_ZPG() { mem_byte_write(register_a, NEXT_BYTE); }
 void INST_STX_ZPG() { mem_byte_write(register_x, NEXT_BYTE); }
 void INST_STY_ZPG() { mem_byte_write(register_y, NEXT_BYTE); }
 
-void INST_STA_ZPG_X() { mem_byte_write(register_a, NEXT_BYTE + register_x); }
+void INST_STA_ZPG_X() { mem_byte_write(register_a, OFF_X(NEXT_BYTE)); }
 void INST_STX_ZPG_Y() { mem_byte_write(register_x, OFF_Y(CUR_BYTE | (NEXT_BYTE << 8))); }
-void INST_STY_ZPG_X() { mem_byte_write(register_y, NEXT_BYTE + register_x); }
+void INST_STY_ZPG_X() { mem_byte_write(register_y, OFF_X(NEXT_BYTE)); }
+
+void INST_STA_IND_X() { mem_byte_write(register_a, PTR(OFF_X(PTR(NEXT_BYTE)))); }
+void INST_STA_IND_Y() { mem_byte_write(register_a, PTR(OFF_Y(PTR(CUR_BYTE))) | (PTR(OFF_Y(PTR(NEXT_BYTE))) << 8)); }
+
+void INST_STA_ABS_X() { }
+void INST_STA_ABS_Y() { }
+
 
 void reg_dump_6502() {
         printf("-- 6502 REG DUMP --\n");
@@ -88,6 +101,9 @@ void init_6502() {
         instruction[0xB6] = INST_LDX_ZPG_Y;
         instruction[0xB4] = INST_LDY_ZPG_X;
 
+        instruction[0xA1] = INST_LDA_IND_X;
+        instruction[0xB1] = INST_LDA_IND_Y;
+
         // ST instructions
         instruction[0x8D] = INST_STA_ABS;
         instruction[0x8E] = INST_STX_ABS;
@@ -100,6 +116,9 @@ void init_6502() {
         instruction[0x95] = INST_STA_ZPG_X;
         instruction[0x96] = INST_STX_ZPG_Y;
         instruction[0x94] = INST_STY_ZPG_X;
+
+        instruction[0x81] = INST_STA_IND_X;
+        instruction[0x91] = INST_STA_IND_Y;
 
         DBG(1, "Initialized 6502 CPU")
 }
