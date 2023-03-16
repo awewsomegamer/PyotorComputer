@@ -7,6 +7,8 @@
 
 extern uint8_t io_port;
 
+void tick_6502();
+void reg_dump_6502();
 void init_6502();
 
 #endif

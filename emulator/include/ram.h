@@ -10,6 +10,8 @@
 uint8_t mem_byte_read(uint16_t);
 void mem_byte_write(uint8_t, uint16_t);
 
+void load_file(uint16_t, FILE *);
+
 void init_ram();
 
 #endif

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef DEBUG
         #define DBG(msg, what) \
