@@ -15,6 +15,7 @@ int main(int argc, char **argv) {
         for (;;) {
                 reg_dump_6502();
                 printf("MEMORY @ 0x200 %X\n", mem_byte_read(0x200));
+                printf("MEMORY @ 0x201 %X\n", mem_byte_read(0x201));
                 tick_6502();
         }
 
