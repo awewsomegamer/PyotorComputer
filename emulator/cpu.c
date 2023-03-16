@@ -31,8 +31,8 @@ void INST_LDX_IMM() { register_x = mem_byte_read(pc++); }
 void INST_LDY_IMM() { register_y = mem_byte_read(pc++); }
 
 void INST_STA_IMM() { mem_byte_write(register_a, mem_byte_read(pc++) | (mem_byte_read(pc++) << 8)); }
-void INST_STX_IMM() { mem_byte_write(register_a, mem_byte_read(pc++) | (mem_byte_read(pc++) << 8)); }
-void INST_STY_IMM() { mem_byte_write(register_a, mem_byte_read(pc++) | (mem_byte_read(pc++) << 8)); }
+void INST_STX_IMM() { mem_byte_write(register_x, mem_byte_read(pc++) | (mem_byte_read(pc++) << 8)); }
+void INST_STY_IMM() { mem_byte_write(register_y, mem_byte_read(pc++) | (mem_byte_read(pc++) << 8)); }
 
 void reg_dump_6502() {
         printf("-- 6502 REG DUMP --\n");
