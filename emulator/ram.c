@@ -29,11 +29,11 @@ void load_file(uint16_t address, FILE *file) {
 }
 
 void init_ram() {
-        DBG(1, "Initializing RAM")
+        DBG(1, printf("Initializing RAM");)
 
         memory = (uint8_t *)malloc(UINT16_MAX);
 
         ASSERT(memory != NULL)
 
-        DBG(1, "Initialized RAM")
+        DBG(1, printf("Initialized RAM");)
 }

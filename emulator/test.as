@@ -1,3 +1,2 @@
-        lda #$20
-        ldy #1
-        sta $200, y
+        lda #0
+        cmp #$7

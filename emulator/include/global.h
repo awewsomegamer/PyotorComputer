@@ -9,7 +9,9 @@
 #ifdef DEBUG
         #define DBG(msg, what) \
                 if (msg == 1) { \
-                        printf("[%s@%d] : "what"\n", __FILE__, __LINE__); \
+                        printf("[%s@%d] : ", __FILE__, __LINE__); \
+                        what \
+                        printf("\n"); \
                 } else { \
                         what; \
                 }
