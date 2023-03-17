@@ -247,6 +247,8 @@ void init_6502() {
         instruction[0xCA] = INST_DEX; DBG(0, installed++;)
         instruction[0xC8] = INST_INY; DBG(0, installed++;)
         instruction[0x88] = INST_DEY; DBG(0, installed++;)
+        instruction[0xEE] = INST_INC_ABS; DBG(0, installed++;)
+        instruction[0xCE] = INST_DEC_ABS; DBG(0, installed++;)
 
         // Transfer Instructions
         instruction[0x98] = INST_TYA; DBG(0, installed++;)
