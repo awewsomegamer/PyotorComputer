@@ -93,6 +93,12 @@ void INST_INY() { register_y++; }
 void INST_DEY() { register_y--; }
 void INST_INC_ABS() { uint16_t addr = NEXT_WORD; mem_byte_write(mem_byte_read(addr) + 1, addr); }
 void INST_DEC_ABS() { uint16_t addr = NEXT_WORD; mem_byte_write(mem_byte_read(addr) - 1, addr); }
+void INST_DEC_ZPG() { uint16_t addr = NEXT_BYTE; mem_byte_write(mem_byte_read(addr) - 1, addr); }
+void INST_DEC_ZPG_X() { uint16_t addr = OFF_X(NEXT_BYTE); mem_byte_write(mem_byte_read(addr) - 1, addr); }
+void INST_INC_ZPG() { uint16_t addr = NEXT_BYTE; mem_byte_write(mem_byte_read(addr) + 1, addr); }
+void INST_INC_ZPG_X() { uint16_t addr = OFF_X(NEXT_BYTE); mem_byte_write(mem_byte_read(addr) + 1, addr); }
+void INST_DEC_ABS_X() { uint16_t addr = OFF_X(NEXT_WORD); mem_byte_write(mem_byte_read(addr) - 1, addr); }
+void INST_INC_ABS_X() { uint16_t addr = OFF_X(NEXT_WORD); mem_byte_write(mem_byte_read(addr) + 1, addr); }
 
 // Transfer instructions
 void INST_TYA() { register_a = register_y; }
@@ -249,6 +255,12 @@ void init_6502() {
         instruction[0x88] = INST_DEY; DBG(0, installed++;)
         instruction[0xEE] = INST_INC_ABS; DBG(0, installed++;)
         instruction[0xCE] = INST_DEC_ABS; DBG(0, installed++;)
+        instruction[0xC6] = INST_DEC_ZPG; DBG(0, installed++;)
+        instruction[0xD6] = INST_DEC_ZPG_X; DBG(0, installed++;)
+        instruction[0xE6] = INST_INC_ZPG; DBG(0, installed++;)
+        instruction[0xF6] = INST_INC_ZPG_X; DBG(0, installed++;)
+        instruction[0xDE] = INST_DEC_ABS_X; DBG(0, installed++;)
+        instruction[0xFE] = INST_INC_ABS_X; DBG(0, installed++;)
 
         // Transfer Instructions
         instruction[0x98] = INST_TYA; DBG(0, installed++;)
