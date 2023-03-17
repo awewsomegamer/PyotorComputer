@@ -136,27 +136,94 @@ void INST_RTS() {
 
 void INST_JMP_ABS() { pc = NEXT_WORD; }
 void INST_JMP_IND() { pc = PTR(NEXT_WORD) | (PTR(NEXT_WORD) << 8); }
+void INST_BPL_REL() { if (!register_p.N) pc += (int8_t)NEXT_BYTE; else pc++; }
+void INST_BMI_REL() { if (register_p.N) pc += (int8_t)NEXT_BYTE; else pc++; }
+void INST_BVC_REL() { if (!register_p.V) pc += (int8_t)NEXT_BYTE; else pc++; }
+void INST_BVS_REL() { if (register_p.V) pc += (int8_t)NEXT_BYTE; else pc++; }
+void INST_BCC_REL() { if (!register_p.C) pc += (int8_t)NEXT_BYTE; else pc++; }
+void INST_BCS_REL() { if (register_p.C) pc += (int8_t)NEXT_BYTE; else pc++; }
+void INST_BNE_REL() { if (!register_p.Z) pc += (int8_t)NEXT_BYTE; else pc++; }
+void INST_BEQ_REL() { if (register_p.Z) pc += (int8_t)NEXT_BYTE; else pc++; }
 
-// Logical arithmetic instructions
+
+// Logical instructions
 void INST_ASL_A() { } // Shift the A register left (N: original bit in bit 6, Z: if the result is == 0, otherwise it is resets Z and stores the original bit 7 in the carry)
 void INST_ROL_A() { } // Rotate the A register left 1, old carry overflows to bit 0, old bit 7 overflows to carry
 void INST_LSR_A() { } // Logical Shift Right shift right by 1 bit 0 is shifted into bit 7 and original bit 0 overflows to carry
 void INST_ROR_A() { } // Rotate the A register right 1, old cary overflows to bit 7, old bit 0 overflows to carry
 
+void INST_ORA_IND_X() { }
+void INST_ORA_IND_Y() { }
+void INST_AND_IND_X() { }
+void INST_AND_IND_Y() { }
+void INST_EOR_IND_X() { }
+void INST_EOR_IND_Y() { }
+void INST_ADC_IND_X() { }
+void INST_ADC_IND_Y() { }
+void INST_SBC_IND_X() { }
+void INST_SBC_IND_Y() { }
+void INST_BIT_ZPG() { }
+void INST_ORA_ZPG() { }
+void INST_ORA_ZPG_X() { }
+void INST_AND_ZPG() { }
+void INST_AND_ZPG_X() { }
+void INST_EOR_ZPG() { }
+void INST_EOR_ZPG_X() { }
+void INST_ADC_ZPG() { }
+void INST_ADC_ZPG_X() { }
+void INST_SBC_ZPG_X() { }
+void INST_ASL_ZPG() { }
+void INST_ASL_ZPG_X() { }
+void INST_ROL_ZPG() { }
+void INST_ROL_ZPG_X() { }
+void INST_LSR_ZPG() { }
+void INST_LSR_ZPG_X() { }
+void INST_ROR_ZPG() { }
+void INST_ROR_ZPG_X() { }
+void INST_ORA_IMM() { }
+void INST_ORA_ABS_Y() { }
+void INST_AND_IMM() { }
+void INST_AND_IMM_Y() { }
+void INST_EOR_IMM() { }
+void INST_EOR_ABS_Y() { }
+void INST_ADC_IMM() { }
+void INST_ADC_ABS_Y() { }
+void INST_SBC_IMM() { }
+void INST_SBC_ABS_Y() { }
+void INST_ORA_ABS() { }
+void INST_ORA_ABS_X() { }
+void INST_AND_ABS() { }
+void INST_AND_ABS_X() { }
+void INST_EOR_ABS() { }
+void INST_EOR_ABS_X() { }
+void INST_ADC_ABS() { }
+void INST_ADC_ABS_X() { }
+void INST_SBC_ABS() { }
+void INST_SBC_ABS_X() { }
+void INST_ASL_ABS() { }
+void INST_ASL_ABS_X() { }
+void INST_ROL_ABS() { }
+void INST_ROL_ABS_X() { }
+void INST_LSR_ABS() { }
+void INST_LSR_ABS_X() { }
+void INST_ROR_ABS() { }
+void INST_ROR_ABS_X() { }
+
 // Comparison instructions
 void INST_CPX_IMM() { CMP_SET(register_x, NEXT_BYTE) }
 void INST_CPY_IMM() { CMP_SET(register_y, NEXT_BYTE) }
-void INST_CPX_ZPG() { uint16_t addr = NEXT_BYTE; CMP_SET(register_x, mem_byte_read(addr)) }
-void INST_CPY_ZPG() { uint16_t addr = NEXT_BYTE; CMP_SET(register_y, mem_byte_read(addr)) }
-void INST_CMP_ZPG() { uint16_t addr = NEXT_BYTE; CMP_SET(register_a, mem_byte_read(addr)) }
-void INST_CMP_ZPG_X() { uint16_t addr = OFF_X(NEXT_BYTE); CMP_SET(register_a, mem_byte_read(addr)) }
+void INST_CPX_ZPG() { CMP_SET(register_x, mem_byte_read(NEXT_BYTE)) }
+void INST_CPY_ZPG() { CMP_SET(register_y, mem_byte_read(NEXT_BYTE)) }
+void INST_CMP_ZPG() { CMP_SET(register_a, mem_byte_read(NEXT_BYTE)) }
+void INST_CMP_ZPG_X() { CMP_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
 void INST_CMP_IMM() { CMP_SET(register_a, NEXT_BYTE) }
-void INST_CMP_ABS_Y() { uint16_t addr = OFF_Y(NEXT_WORD); CMP_SET(register_a, mem_byte_read(addr)) }
-void INST_CPX_ABS() { uint16_t addr = NEXT_WORD; CMP_SET(register_x, mem_byte_read(addr)) }
-void INST_CPY_ABS() { uint16_t addr = NEXT_WORD; CMP_SET(register_y, mem_byte_read(addr)) }
-void INST_CMP_ABS() { uint16_t addr = NEXT_WORD; CMP_SET(register_a, mem_byte_read(addr)) }
-void INST_CMP_ABS_X() { uint16_t addr = OFF_X(NEXT_WORD); CMP_SET(register_a, mem_byte_read(addr)) }
+void INST_CMP_ABS_Y() {CMP_SET(register_a, mem_byte_read(OFF_Y(NEXT_WORD))) }
+void INST_CPX_ABS() { CMP_SET(register_x, mem_byte_read(NEXT_WORD)) }
+void INST_CPY_ABS() { CMP_SET(register_y, mem_byte_read(NEXT_WORD)) }
+void INST_CMP_ABS() { CMP_SET(register_a, mem_byte_read(NEXT_WORD)) }
+void INST_CMP_ABS_X() { CMP_SET(register_a, mem_byte_read(OFF_X(NEXT_WORD))) }
 
+// Just NOP
 void INST_NOP() { ; }
 
 void reg_dump_6502() {
@@ -176,7 +243,6 @@ void reg_dump_6502() {
         if (register_p.Z) printf(" | Z");
         if (register_p.C) printf(" | C");
         printf(")\n");
-
 
         printf("PC : %04X (%d)\n", pc, pc);
         printf("-- 6502 REG DUMP END --\n");
@@ -277,6 +343,14 @@ void init_6502() {
         instruction[0x60] = INST_RTS; DBG(0, installed++;)
         instruction[0x4C] = INST_JMP_ABS; DBG(0, installed++;)
         instruction[0x6C] = INST_JMP_IND; DBG(0, installed++;)
+        instruction[0x10] = INST_BPL_REL; DBG(0, installed++;)
+        instruction[0x30] = INST_BMI_REL; DBG(0, installed++;)
+        instruction[0x50] = INST_BVC_REL; DBG(0, installed++;)
+        instruction[0x70] = INST_BVS_REL; DBG(0, installed++;)
+        instruction[0x90] = INST_BCC_REL; DBG(0, installed++;)
+        instruction[0xB0] = INST_BCS_REL; DBG(0, installed++;)
+        instruction[0xD0] = INST_BNE_REL; DBG(0, installed++;)
+        instruction[0xF0] = INST_BEQ_REL; DBG(0, installed++;)
 
         // Compare instructions
         instruction[0xE0] = INST_CPX_IMM; DBG(0, installed++;)

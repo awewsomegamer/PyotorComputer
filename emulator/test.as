@@ -1,2 +1,5 @@
-        lda #0
-        cmp #$7
+        lda #$20
+        cmp #$19
+        bne NOTEQUAL
+        lda #$19
+NOTEQUAL:
