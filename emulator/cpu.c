@@ -1,6 +1,8 @@
 #include <cpu.h>
 #include <ram.h>
 
+// ** TODO: Implement BCD mode
+
 // Initial states of registers
 uint8_t io_port = 0;
 uint8_t register_a = 0;
@@ -158,10 +160,6 @@ void INST_AND_IND_X() { }
 void INST_AND_IND_Y() { }
 void INST_EOR_IND_X() { }
 void INST_EOR_IND_Y() { }
-void INST_ADC_IND_X() { }
-void INST_ADC_IND_Y() { }
-void INST_SBC_IND_X() { }
-void INST_SBC_IND_Y() { }
 void INST_BIT_ZPG() { }
 void INST_ORA_ZPG() { }
 void INST_ORA_ZPG_X() { }
@@ -169,9 +167,6 @@ void INST_AND_ZPG() { }
 void INST_AND_ZPG_X() { }
 void INST_EOR_ZPG() { }
 void INST_EOR_ZPG_X() { }
-void INST_ADC_ZPG() { }
-void INST_ADC_ZPG_X() { }
-void INST_SBC_ZPG_X() { }
 void INST_ASL_ZPG() { }
 void INST_ASL_ZPG_X() { }
 void INST_ROL_ZPG() { }
@@ -186,20 +181,12 @@ void INST_AND_IMM() { }
 void INST_AND_IMM_Y() { }
 void INST_EOR_IMM() { }
 void INST_EOR_ABS_Y() { }
-void INST_ADC_IMM() { }
-void INST_ADC_ABS_Y() { }
-void INST_SBC_IMM() { }
-void INST_SBC_ABS_Y() { }
 void INST_ORA_ABS() { }
 void INST_ORA_ABS_X() { }
 void INST_AND_ABS() { }
 void INST_AND_ABS_X() { }
 void INST_EOR_ABS() { }
 void INST_EOR_ABS_X() { }
-void INST_ADC_ABS() { }
-void INST_ADC_ABS_X() { }
-void INST_SBC_ABS() { }
-void INST_SBC_ABS_X() { }
 void INST_ASL_ABS() { }
 void INST_ASL_ABS_X() { }
 void INST_ROL_ABS() { }
@@ -208,6 +195,27 @@ void INST_LSR_ABS() { }
 void INST_LSR_ABS_X() { }
 void INST_ROR_ABS() { }
 void INST_ROR_ABS_X() { }
+
+// Arithmetic instructions
+void INST_ADC_IND_X() { ARIT_ADD_SET(OFF_X(NEXT_BYTE)) }
+void INST_ADC_IND_Y() { ARIT_ADD_SET(OFF_Y(mem_byte_read(CUR_BYTE) | (mem_byte_read(NEXT_BYTE + 1) << 8))) }
+void INST_SBC_IND_X() { ARIT_SUB_SET(OFF_X(NEXT_BYTE)) }
+void INST_SBC_IND_Y() { ARIT_SUB_SET(OFF_Y(mem_byte_read(CUR_BYTE) | (mem_byte_read(NEXT_BYTE + 1) << 8))) }
+
+void INST_ADC_ZPG() { ARIT_ADD_SET(NEXT_BYTE) }
+void INST_ADC_ZPG_X() { ARIT_ADD_SET(OFF_X(NEXT_BYTE)) }
+void INST_SBC_ZPG() { ARIT_SUB_SET(NEXT_BYTE) }
+void INST_SBC_ZPG_X() { ARIT_SUB_SET(OFF_X(NEXT_BYTE)) }
+
+void INST_ADC_IMM() { ARIT_ADD_SET(NEXT_BYTE) }
+void INST_ADC_ABS_Y() { ARIT_ADD_SET(OFF_Y(NEXT_WORD)) }
+void INST_SBC_IMM() { ARIT_SUB_SET(NEXT_BYTE) }
+void INST_SBC_ABS_Y() { ARIT_SUB_SET(OFF_Y(NEXT_WORD)) }
+
+void INST_ADC_ABS() { ARIT_ADD_SET(NEXT_WORD) }
+void INST_ADC_ABS_X() { ARIT_ADD_SET(OFF_X(NEXT_WORD)) }
+void INST_SBC_ABS() { ARIT_SUB_SET(NEXT_WORD) }
+void INST_SBC_ABS_X() { ARIT_SUB_SET(OFF_X(NEXT_WORD)) }
 
 // Comparison instructions
 void INST_CPX_IMM() { CMP_SET(register_x, NEXT_BYTE) }
@@ -365,6 +373,13 @@ void init_6502() {
         instruction[0xCC] = INST_CPY_ABS; DBG(0, installed++;)
         instruction[0xCD] = INST_CMP_ABS; DBG(0, installed++;)
         instruction[0xDD] = INST_CMP_ABS_X; DBG(0, installed++;)
+
+        // Arithmetic instructions
+        instruction[0x69] = INST_ADC_IMM; DBG(0, installed++;)
+        // instruction[0x00] = INST_ADC_ABS_Y; DBG(0, installed++;)
+        instruction[0xE9] = INST_SBC_IMM; DBG(0, installed++;)
+        // instruction[0x00] = INST_SBC_ABS_Y; DBG(0, installed++;)
+
 
         // NOP instruction
         instruction[0xEA] = INST_NOP;

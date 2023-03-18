@@ -1,5 +1,3 @@
-        lda #$20
-        cmp #$19
-        bne NOTEQUAL
-        lda #$19
-NOTEQUAL:
+LOOP:
+        sbc #$1
+        jmp LOOP
