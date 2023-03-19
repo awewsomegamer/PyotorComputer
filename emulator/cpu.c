@@ -5,6 +5,7 @@
 
 // Initial states of registers
 uint8_t io_port = 0;
+uint8_t io_port_direction = 0;
 uint8_t register_a = 0;
 uint8_t register_x = 0;
 uint8_t register_y = 0;
@@ -25,7 +26,11 @@ void (*instruction[0xFF])();
 
 // Preform one cycle on the 6502
 void tick_6502() {
-        (*instruction[NEXT_BYTE])();
+        uint8_t a = NEXT_BYTE;
+        printf("Doing instruction %X\n", a);
+        (*instruction[a])();
+        io_port = mem_byte_read(0x0001);
+        io_port_direction = mem_byte_read(0x0000);
 }
 
 // LD instructions
@@ -252,7 +257,11 @@ void reg_dump_6502() {
         if (register_p.C) printf(" | C");
         printf(")\n");
 
-        printf("PC : %04X (%d)\n", pc, pc);
+        printf("PC : %04X (%02X", pc, mem_byte_read(pc));
+        if (pc + 1 < UINT16_MAX) printf(" %02X", mem_byte_read(pc + 1));
+        if (pc + 2 < UINT16_MAX) printf(" %02X", mem_byte_read(pc + 2));
+        printf(")\n");
+
         printf("-- 6502 REG DUMP END --\n");
 }
 
@@ -383,7 +392,6 @@ void init_6502() {
         instruction[0x7D] = INST_ADC_ABS_X; DBG(0, installed++;)
         instruction[0xED] = INST_SBC_ABS; DBG(0, installed++;)
         instruction[0xFD] = INST_SBC_ABS_X; DBG(0, installed++;)
-
 
         // NOP instruction
         instruction[0xEA] = INST_NOP;

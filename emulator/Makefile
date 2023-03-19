@@ -2,8 +2,12 @@ CPPFLAGS =
 
 all:
 	gcc $(shell find . -type f -name '*.c') -o ../emulator.out -I./include/ $(CPPFLAGS)
-	ca65 test.as --verbose -mm near --cpu 6502 -o asm/test.o
-	ld65 -C asm/linker.ld65 -o test.bin asm/test.o
+
+	ca65 asm/kernel.as --verbose -mm near --cpu 6502 -o bin/kernel.o
+	ld65 -C asm/linker.ld65 -o bin/kernel.bin bin/kernel.o
+
+	ca65 asm/boot.as --verbose -mm near --cpu 6502 -o bin/boot.o
+	ld65 -C asm/linker.ld65 -o bin/boot.bin bin/boot.o
 
 
 debug: CPPFLAGS += -DDEBUG

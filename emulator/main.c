@@ -1,17 +1,22 @@
 #include <global.h>
 #include <cpu.h>
 #include <ram.h>
+#include <cga.h>
 #include <unistd.h>
 
 int main(int argc, char **argv) {
         init_6502();
         init_ram();
+        init_cga();
 
-        FILE *bin = fopen("test.bin", "r");
+        FILE *kern_bin = fopen("bin/kernel.bin", "r");
+        FILE *boot_bin = fopen("bin/boot.bin", "r");
         
-        ASSERT(bin != NULL);
+        ASSERT(kern_bin != NULL);
+        ASSERT(boot_bin != NULL);
 
-        load_file(0x0, bin);
+        load_file(KERNEL_MEM_BASE, kern_bin, "bin/kernel.bin");
+        load_file(ZERO_PAGE_BASE, boot_bin, "bin/boot.bin");
 
         for (;;) {
                 reg_dump_6502();
