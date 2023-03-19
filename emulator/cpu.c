@@ -260,31 +260,27 @@ void reg_dump_6502() {
 void init_6502() {
         DBG(1, printf("Initializing 6502 CPU");)
 
+        *(uint8_t *)&register_p = 0x00;
+
         int installed = 0;
 
         // LD instructions
         instruction[0xA9] = INST_LDA_IMM; DBG(0, installed++;)
         instruction[0xA2] = INST_LDX_IMM; DBG(0, installed++;)
         instruction[0xA0] = INST_LDY_IMM; DBG(0, installed++;)
-
         instruction[0xAD] = INST_LDA_ABS; DBG(0, installed++;)
         instruction[0xAE] = INST_LDX_ABS; DBG(0, installed++;)
         instruction[0xAC] = INST_LDY_ABS; DBG(0, installed++;)
-
         instruction[0xA5] = INST_LDA_ZPG; DBG(0, installed++;)
         instruction[0xA6] = INST_LDX_ZPG; DBG(0, installed++;)
         instruction[0xA4] = INST_LDY_ZPG; DBG(0, installed++;)
-
         instruction[0xB5] = INST_LDA_ZPG_X; DBG(0, installed++;)
         instruction[0xB6] = INST_LDX_ZPG_Y; DBG(0, installed++;)
         instruction[0xB4] = INST_LDY_ZPG_X; DBG(0, installed++;)
-
         instruction[0xA1] = INST_LDA_IND_X; DBG(0, installed++;)
         instruction[0xB1] = INST_LDA_IND_Y; DBG(0, installed++;)
-
         instruction[0xBD] = INST_LDA_ABS_X; DBG(0, installed++;)
         instruction[0xB9] = INST_LDA_ABS_Y; DBG(0, installed++;)
-
         instruction[0xBC] = INST_LDY_ABS_X; DBG(0, installed++;)
         instruction[0xBE] = INST_LDX_ABS_Y; DBG(0, installed++;)
 
@@ -292,18 +288,14 @@ void init_6502() {
         instruction[0x8D] = INST_STA_ABS; DBG(0, installed++;)
         instruction[0x8E] = INST_STX_ABS; DBG(0, installed++;)
         instruction[0x8C] = INST_STY_ABS; DBG(0, installed++;)
-
         instruction[0x85] = INST_STA_ZPG; DBG(0, installed++;)
         instruction[0x86] = INST_STX_ZPG; DBG(0, installed++;)
         instruction[0x84] = INST_STY_ZPG; DBG(0, installed++;)
-
         instruction[0x95] = INST_STA_ZPG_X; DBG(0, installed++;)
         instruction[0x96] = INST_STX_ZPG_Y; DBG(0, installed++;)
         instruction[0x94] = INST_STY_ZPG_X; DBG(0, installed++;)
-
         instruction[0x81] = INST_STA_IND_X; DBG(0, installed++;)
         instruction[0x91] = INST_STA_IND_Y; DBG(0, installed++;)
-
         instruction[0x9D] = INST_STA_ABS_X; DBG(0, installed++;)
         instruction[0x99] = INST_STA_ABS_Y; DBG(0, installed++;)
 
@@ -375,10 +367,22 @@ void init_6502() {
         instruction[0xDD] = INST_CMP_ABS_X; DBG(0, installed++;)
 
         // Arithmetic instructions
+        instruction[0x61] = INST_ADC_IND_X; DBG(0, installed++;)
+        instruction[0x71] = INST_ADC_IND_Y; DBG(0, installed++;)
+        instruction[0xE1] = INST_SBC_IND_X; DBG(0, installed++;)
+        instruction[0xF1] = INST_SBC_IND_Y; DBG(0, installed++;)
+        instruction[0x65] = INST_ADC_ZPG; DBG(0, installed++;)
+        instruction[0x75] = INST_ADC_ZPG_X; DBG(0, installed++;)
+        instruction[0xE5] = INST_SBC_ZPG; DBG(0, installed++;)
+        instruction[0xF5] = INST_SBC_ZPG_X; DBG(0, installed++;)
         instruction[0x69] = INST_ADC_IMM; DBG(0, installed++;)
-        // instruction[0x00] = INST_ADC_ABS_Y; DBG(0, installed++;)
+        instruction[0x79] = INST_ADC_ABS_Y; DBG(0, installed++;)
         instruction[0xE9] = INST_SBC_IMM; DBG(0, installed++;)
-        // instruction[0x00] = INST_SBC_ABS_Y; DBG(0, installed++;)
+        instruction[0xF9] = INST_SBC_ABS_Y; DBG(0, installed++;)
+        instruction[0x6D] = INST_ADC_ABS; DBG(0, installed++;)
+        instruction[0x7D] = INST_ADC_ABS_X; DBG(0, installed++;)
+        instruction[0xED] = INST_SBC_ABS; DBG(0, installed++;)
+        instruction[0xFD] = INST_SBC_ABS_X; DBG(0, installed++;)
 
 
         // NOP instruction

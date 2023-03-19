@@ -1,6 +1,7 @@
 #include <global.h>
 #include <cpu.h>
 #include <ram.h>
+#include <unistd.h>
 
 int main(int argc, char **argv) {
         init_6502();

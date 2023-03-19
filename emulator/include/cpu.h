@@ -33,8 +33,8 @@ extern uint8_t io_port;
 
 #define ARIT_SUB_SET(what) \
         {       \
-                uint16_t res = register_a - what - ~register_p.C; \
-                register_p.C = (int8_t)res >= 0; \
+                uint16_t res = register_a - what - !register_p.C; \
+                register_p.C = !((res >> 8) & 1); \
                 register_p.V = (int8_t)res > 127 || (int8_t)res < -127; \
                 register_p.N =  (res >> 7) & 1; \
                 register_p.Z = (int8_t)res == 0; \
