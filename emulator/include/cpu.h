@@ -41,6 +41,12 @@ extern uint8_t io_port;
                 register_a = (uint8_t)res; \
         }
 
+#define ARIT_AND_SET(what) ;
+#define ARIT_OR_SET(what) ;
+#define ARIT_EOR_SET(what) ;
+#define ARIT_LEFT_SHIFT(what, amount) ;
+#define ARIT_RIGHT_SHIFT(what, amount) ; 
+
 
 void tick_6502();
 void reg_dump_6502();

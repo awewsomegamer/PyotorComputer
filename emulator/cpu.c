@@ -159,19 +159,23 @@ void INST_ROL_A() { } // Rotate the A register left 1, old carry overflows to bi
 void INST_LSR_A() { } // Logical Shift Right shift right by 1 bit 0 is shifted into bit 7 and original bit 0 overflows to carry
 void INST_ROR_A() { } // Rotate the A register right 1, old cary overflows to bit 7, old bit 0 overflows to carry
 
-void INST_ORA_IND_X() { }
-void INST_ORA_IND_Y() { }
-void INST_AND_IND_X() { }
-void INST_AND_IND_Y() { }
-void INST_EOR_IND_X() { }
-void INST_EOR_IND_Y() { }
-void INST_BIT_ZPG() { }
-void INST_ORA_ZPG() { }
-void INST_ORA_ZPG_X() { }
-void INST_AND_ZPG() { }
-void INST_AND_ZPG_X() { }
-void INST_EOR_ZPG() { }
-void INST_EOR_ZPG_X() { }
+void INST_ORA_IND_X() { register_a |= mem_byte_read(OFF_X(NEXT_BYTE)); }
+void INST_ORA_IND_Y() { register_a |= mem_byte_read(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); }
+void INST_AND_IND_X() { register_a &= mem_byte_read(OFF_X(NEXT_BYTE)); }
+void INST_AND_IND_Y() { register_a &= mem_byte_read(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); }
+void INST_EOR_IND_X() { register_a ^= mem_byte_read(OFF_X(NEXT_BYTE)); }
+void INST_EOR_IND_Y() { register_a ^= mem_byte_read(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); }
+void INST_BIT_ZPG() { uint8_t result = mem_byte_read(NEXT_BYTE) & register_a; 
+                      
+                
+                
+                }
+void INST_ORA_ZPG() { register_a |= mem_byte_read(NEXT_BYTE); }
+void INST_ORA_ZPG_X() { register_a |= mem_byte_read(OFF_X(NEXT_BYTE)); }
+void INST_AND_ZPG() { register_a &= mem_byte_read(NEXT_BYTE); }
+void INST_AND_ZPG_X() { register_a &= mem_byte_read(OFF_X(NEXT_BYTE)); }
+void INST_EOR_ZPG() { register_a ^= mem_byte_read(NEXT_BYTE); }
+void INST_EOR_ZPG_X() { register_a ^= mem_byte_read(OFF_X(NEXT_BYTE)); }
 void INST_ASL_ZPG() { }
 void INST_ASL_ZPG_X() { }
 void INST_ROL_ZPG() { }
@@ -180,18 +184,18 @@ void INST_LSR_ZPG() { }
 void INST_LSR_ZPG_X() { }
 void INST_ROR_ZPG() { }
 void INST_ROR_ZPG_X() { }
-void INST_ORA_IMM() { }
-void INST_ORA_ABS_Y() { }
-void INST_AND_IMM() { }
-void INST_AND_IMM_Y() { }
-void INST_EOR_IMM() { }
-void INST_EOR_ABS_Y() { }
-void INST_ORA_ABS() { }
-void INST_ORA_ABS_X() { }
-void INST_AND_ABS() { }
-void INST_AND_ABS_X() { }
-void INST_EOR_ABS() { }
-void INST_EOR_ABS_X() { }
+void INST_ORA_IMM() { register_a |= NEXT_BYTE; }
+void INST_ORA_ABS_Y() { register_a |= mem_byte_read(OFF_Y(NEXT_WORD)); }
+void INST_AND_IMM() { register_a &= NEXT_BYTE; }
+void INST_AND_ABS_Y() { register_a &= mem_byte_read(OFF_Y(NEXT_WORD)); }
+void INST_EOR_IMM() { register_a ^= NEXT_BYTE; }
+void INST_EOR_ABS_Y() { register_a^= mem_byte_read(OFF_Y(NEXT_WORD)); }
+void INST_ORA_ABS() { register_a |= mem_byte_read(NEXT_WORD); }
+void INST_ORA_ABS_X() { register_a |= mem_byte_read(NEXT_WORD); }
+void INST_AND_ABS() { register_a &= mem_byte_read(NEXT_WORD); }
+void INST_AND_ABS_X() { register_a &= mem_byte_read(OFF_X(NEXT_WORD)); }
+void INST_EOR_ABS() { register_a ^= mem_byte_read(NEXT_WORD); }
+void INST_EOR_ABS_X() { register_a ^= mem_byte_read(OFF_X(NEXT_WORD)); }
 void INST_ASL_ABS() { }
 void INST_ASL_ABS_X() { }
 void INST_ROL_ABS() { }
