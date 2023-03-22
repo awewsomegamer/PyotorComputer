@@ -5,7 +5,7 @@
 uint8_t *memory = NULL;
 
 uint8_t mem_byte_read(uint16_t address) {
-        if ((io_port & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
+        if ((*(memory + 1) & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
                 return cga_mem_read(address);
         }
 
@@ -13,7 +13,7 @@ uint8_t mem_byte_read(uint16_t address) {
 }
 
 void mem_byte_write(uint8_t byte, uint16_t address) {
-        if ((io_port & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
+        if ((*(memory + 1) & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
                 cga_mem_write(address, byte);
                 return;
         }

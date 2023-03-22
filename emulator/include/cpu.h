@@ -3,9 +3,7 @@
 
 #include <global.h>
 
-#define IO_VIDEO_MASK 1
-
-extern uint8_t io_port;
+#define IO_VIDEO_MASK (1 << 0)
 
 #define OFF_X(value) (uint8_t)(value + register_x)
 #define OFF_Y(value) (value + register_y)
@@ -26,8 +24,7 @@ extern uint8_t io_port;
                 uint16_t res = register_a + what + register_p.C; \
                 register_p.C = res > 0xFF; \
                 register_p.V = (res >> 7) & 1 != (register_a >> 7) & 1; \
-                register_p.N =  (res >> 7) & 1; \
-                register_p.Z = res == 0; \
+                SET_NZ(what) \
                 register_a = (uint8_t)res; \
         }
 
@@ -36,20 +33,56 @@ extern uint8_t io_port;
                 uint16_t res = register_a - what - !register_p.C; \
                 register_p.C = !((res >> 8) & 1); \
                 register_p.V = (int8_t)res > 127 || (int8_t)res < -127; \
-                register_p.N =  (res >> 7) & 1; \
-                register_p.Z = (int8_t)res == 0; \
+                SET_NZ(what) \
                 register_a = (uint8_t)res; \
         }
 
-#define ARIT_AND_SET(what) ;
-#define ARIT_OR_SET(what) ;
-#define ARIT_EOR_SET(what) ;
-#define ARIT_LEFT_SHIFT(what, amount) ;
-#define ARIT_RIGHT_SHIFT(what, amount) ; 
+#define ARIT_AND_SET(what, value) \
+        { \
+                uint8_t result = what | value; \
+                SET_NZ(what) \
+                what = result; \
+        }
 
 
-void tick_6502();
-void reg_dump_6502();
-void init_6502();
+#define ARIT_OR_SET(what, value) \
+        { \
+                uint8_t result = what & value; \
+                register_p.Z = (result == 0); \
+                register_p.N = (result >> 7) & 1; \
+                what = result; \
+        }
+
+#define ARIT_EOR_SET(what, value) \
+        { \
+                uint8_t result = what ^ value; \
+                SET_NZ(result) \
+                what = result; \
+        }
+
+#define ARIT_LEFT_SHIFT(what, amount) \
+        { \
+                uint8_t result = (what << amount) | register_p.C; \
+                SET_NZ(result) \
+                register_p.C = (what >> 7) & 1; \
+                what = result; \
+        }
+
+#define ARIT_RIGHT_SHIFT(what, amount) \
+        { \
+                uint8_t result = (what >> amount) | (register_p.C << 7); \
+                SET_NZ(result) \
+                register_p.C = (what & 1); \
+                what = result; \
+        }
+
+#define SET_NZ(what) \
+        register_p.Z = (what == 0); \
+        register_p.N = (what >> 7) & 1;
+
+
+void tick_65C02();
+void reg_dump_65C02();
+void init_65C02();
 
 #endif
