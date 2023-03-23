@@ -11,6 +11,7 @@
 #define NEXT_BYTE mem_byte_read(pc++)
 #define CUR_BYTE mem_byte_read(pc)
 #define NEXT_WORD NEXT_BYTE | (NEXT_BYTE << 8)
+#define CUR_WORD CUR_BYTE | (mem_byte_read(pc + 1) << 8)
 #define CMP_SET(v1, v2) \
         { \
                 uint32_t iv1 = (uint32_t)v1; \
