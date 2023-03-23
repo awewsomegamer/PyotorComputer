@@ -27,29 +27,37 @@ void tick_65C02() {
         (*instruction[NEXT_BYTE])();
 }
 
+uint8_t ARIT_LEFT_SHIFT(uint8_t what) {
+        uint8_t result = (what << 1) | register_p.C;
+        SET_NZ(result)
+        register_p.C = (what >> 7) & 1;
+        return result;
+}
+
+uint8_t ARIT_RIGHT_SHIFT(uint8_t what) {
+        uint8_t result = (what >> 1) | (register_p.C << 7);
+        SET_NZ(result)
+        register_p.C = (what & 1);
+        return result;
+}
+
 // LD instructions
 void INST_LDA_IMM() { register_a = NEXT_BYTE; SET_NZ(register_a) }
 void INST_LDX_IMM() { register_x = NEXT_BYTE; SET_NZ(register_x) }
 void INST_LDY_IMM() { register_y = NEXT_BYTE; SET_NZ(register_y) }
-
 void INST_LDA_ABS() { register_a = PTR(NEXT_WORD); SET_NZ(register_a) }
 void INST_LDX_ABS() { register_x = PTR(NEXT_WORD); SET_NZ(register_x) }
 void INST_LDY_ABS() { register_y = PTR(NEXT_WORD); SET_NZ(register_y) }
-
 void INST_LDA_ZPG() { register_a = PTR(NEXT_BYTE); SET_NZ(register_a) }
 void INST_LDX_ZPG() { register_x = PTR(NEXT_BYTE); SET_NZ(register_x) }
 void INST_LDY_ZPG() { register_y = PTR(NEXT_BYTE); SET_NZ(register_y) }
-
 void INST_LDA_ZPG_X() { register_a = PTR(OFF_X(NEXT_BYTE)); SET_NZ(register_a) }
 void INST_LDX_ZPG_Y() { register_x = PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); SET_NZ(register_x) }
 void INST_LDY_ZPG_X() { register_y = PTR(OFF_X(NEXT_BYTE)); SET_NZ(register_y) }
-
 void INST_LDA_IND_X() { register_a = PTR(OFF_X(NEXT_BYTE)); SET_NZ(register_x)}
 void INST_LDA_IND_Y() { register_a = PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); SET_NZ(register_y) }
-
 void INST_LDA_ABS_X() { register_a = PTR(OFF_X(NEXT_WORD)); SET_NZ(register_x) }
 void INST_LDA_ABS_Y() { register_a = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
-
 void INST_LDY_ABS_X() { register_y = PTR(OFF_X(NEXT_WORD)); SET_NZ(register_x) }
 void INST_LDX_ABS_Y() { register_x = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
 
@@ -57,18 +65,14 @@ void INST_LDX_ABS_Y() { register_x = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
 void INST_STA_ABS() { mem_byte_write(register_a, NEXT_WORD); }
 void INST_STX_ABS() { mem_byte_write(register_x, NEXT_WORD); }
 void INST_STY_ABS() { mem_byte_write(register_y, NEXT_WORD); }
-
 void INST_STA_ZPG() { mem_byte_write(register_a, NEXT_BYTE); }
 void INST_STX_ZPG() { mem_byte_write(register_x, NEXT_BYTE); }
 void INST_STY_ZPG() { mem_byte_write(register_y, NEXT_BYTE); }
-
 void INST_STA_ZPG_X() { mem_byte_write(register_a, OFF_X(NEXT_BYTE)); }
 void INST_STX_ZPG_Y() { mem_byte_write(register_x, OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); }
 void INST_STY_ZPG_X() { mem_byte_write(register_y, OFF_X(NEXT_BYTE)); }
-
 void INST_STA_IND_X() { mem_byte_write(register_a, OFF_X(NEXT_BYTE)); }
 void INST_STA_IND_Y() { mem_byte_write(register_a, OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); }
-
 void INST_STA_ABS_X() { mem_byte_write(register_a, OFF_X(NEXT_WORD)); }
 void INST_STA_ABS_Y() { mem_byte_write(register_a, OFF_Y(NEXT_WORD)); }
 
@@ -154,10 +158,10 @@ void INST_BEQ_REL() { if (register_p.Z) pc += (int8_t)NEXT_BYTE; else pc++; }
 
 
 // Logical instructions
-void INST_ASL_A() { } // Shift the A register left (N: original bit in bit 6, Z: if the result is == 0, otherwise it is resets Z and stores the original bit 7 in the carry)
-void INST_ROL_A() { } // Rotate the A register left 1, old carry overflows to bit 0, old bit 7 overflows to carry
-void INST_LSR_A() { } // Logical Shift Right shift right by 1 bit 0 is shifted into bit 7 and original bit 0 overflows to carry
-void INST_ROR_A() { } // Rotate the A register right 1, old cary overflows to bit 7, old bit 0 overflows to carry
+void INST_ASL_A() { register_a = ARIT_LEFT_SHIFT(register_a); } // Shift the A register left (N: original bit in bit 6, Z: if the result is == 0, otherwise it is resets Z and stores the original bit 7 in the carry)
+void INST_ROL_A() { register_a = ARIT_LEFT_SHIFT(register_a); } // Rotate the A register left 1, old carry overflows to bit 0, old bit 7 overflows to carry
+void INST_LSR_A() { register_a = ARIT_RIGHT_SHIFT(register_a); register_p.N = 0;} // Logical Shift Right shift right by 1 bit 0 is shifted into bit 7 and original bit 0 overflows to carry
+void INST_ROR_A() { register_a = ARIT_RIGHT_SHIFT(register_a); } // Rotate the A register right 1, old cary overflows to bit 7, old bit 0 overflows to carry
 
 void INST_ORA_IND_X() { ARIT_OR_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
 void INST_ORA_IND_Y() { ARIT_OR_SET(register_a, mem_byte_read(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)))) }
@@ -183,14 +187,15 @@ void INST_AND_ZPG() { ARIT_AND_SET(register_a, mem_byte_read(NEXT_BYTE)) }
 void INST_AND_ZPG_X() { ARIT_AND_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
 void INST_EOR_ZPG() { ARIT_EOR_SET(register_a, mem_byte_read(NEXT_BYTE)) }
 void INST_EOR_ZPG_X() { ARIT_EOR_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
-void INST_ASL_ZPG() { }
-void INST_ASL_ZPG_X() { }
-void INST_ROL_ZPG() { }
-void INST_ROL_ZPG_X() { }
-void INST_LSR_ZPG() { }
-void INST_LSR_ZPG_X() { }
-void INST_ROR_ZPG() { }
-void INST_ROR_ZPG_X() { }
+
+void INST_ASL_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
+void INST_ASL_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
+void INST_ROL_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_RIGHT_SHIFT(mem_byte_read(address)), address); }
+void INST_ROL_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_RIGHT_SHIFT(mem_byte_read(address)), address); }
+void INST_LSR_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); register_p.N = 0; }
+void INST_LSR_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); register_p.N = 0; }
+void INST_ROR_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_RIGHT_SHIFT(mem_byte_read(address)), address); }
+void INST_ROR_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_RIGHT_SHIFT(mem_byte_read(address)), address); }
 void INST_ORA_IMM() { ARIT_OR_SET(register_a, NEXT_BYTE) }
 void INST_ORA_ABS_Y() { ARIT_OR_SET(register_a, mem_byte_read(OFF_Y(NEXT_WORD))) }
 void INST_AND_IMM() { ARIT_AND_SET(register_a, NEXT_BYTE) }
@@ -203,14 +208,14 @@ void INST_AND_ABS() { ARIT_AND_SET(register_a, mem_byte_read(NEXT_WORD)) }
 void INST_AND_ABS_X() { ARIT_AND_SET(register_a, mem_byte_read(OFF_X(NEXT_WORD))) }
 void INST_EOR_ABS() { ARIT_EOR_SET(register_a, mem_byte_read(NEXT_WORD)) }
 void INST_EOR_ABS_X() { ARIT_EOR_SET(register_a, mem_byte_read(OFF_X(NEXT_WORD))) }
-void INST_ASL_ABS() { }
-void INST_ASL_ABS_X() { }
-void INST_ROL_ABS() { }
-void INST_ROL_ABS_X() { }
-void INST_LSR_ABS() { }
-void INST_LSR_ABS_X() { }
-void INST_ROR_ABS() { }
-void INST_ROR_ABS_X() { }
+void INST_ASL_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
+void INST_ASL_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
+void INST_ROL_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
+void INST_ROL_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
+void INST_LSR_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); register_p.N = 0; }
+void INST_LSR_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); register_p.N = 0; }
+void INST_ROR_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
+void INST_ROR_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
 
 // Arithmetic instructions
 void INST_ADC_IND_X() { ARIT_ADD_SET(OFF_X(NEXT_BYTE)) }
@@ -251,7 +256,7 @@ void INST_CMP_ABS_X() { CMP_SET(register_a, mem_byte_read(OFF_X(NEXT_WORD))) }
 void INST_NOP() { ; }
 
 void reg_dump_65C02() {
-        printf("-- 6502 REG DUMP --\n");
+        printf("-- 65C02 REG DUMP --\n");
         printf("A  : %02X (%d)\n", register_a, register_a);
         printf("X  : %02X (%d)\n", register_x, register_x);
         printf("Y  : %02X (%d)\n", register_y, register_y);
@@ -273,7 +278,7 @@ void reg_dump_65C02() {
         if (pc + 2 < UINT16_MAX) printf(" %02X", mem_byte_read(pc + 2));
         printf(")\n");
 
-        printf("-- 6502 REG DUMP END --\n");
+        printf("-- 65C02 REG DUMP END --\n");
 }
 
 // Initialize the 6502
@@ -407,6 +412,54 @@ void init_65C02() {
         instruction[0x7D] = INST_ADC_ABS_X; DBG(0, installed++;)
         instruction[0xED] = INST_SBC_ABS; DBG(0, installed++;)
         instruction[0xFD] = INST_SBC_ABS_X; DBG(0, installed++;)
+
+        // Logical Instructions
+        instruction[0x01] = INST_ORA_IND_X; DBG(0, installed++;)
+        instruction[0x11] = INST_ORA_IND_Y; DBG(0, installed++;)
+        instruction[0x21] = INST_AND_IND_X; DBG(0, installed++;)
+        instruction[0x31] = INST_AND_IND_Y; DBG(0, installed++;)
+        instruction[0x41] = INST_EOR_IND_X; DBG(0, installed++;)
+        instruction[0x51] = INST_EOR_IND_Y; DBG(0, installed++;)
+        instruction[0x05] = INST_ORA_ZPG; DBG(0, installed++;)
+        instruction[0x15] = INST_ORA_ZPG_X; DBG(0, installed++;)
+        instruction[0x25] = INST_AND_ZPG; DBG(0, installed++;)
+        instruction[0x35] = INST_AND_ZPG_X; DBG(0, installed++;)
+        instruction[0x45] = INST_EOR_ZPG; DBG(0, installed++;)
+        instruction[0x55] = INST_EOR_ZPG_X; DBG(0, installed++;)
+        instruction[0x06] = INST_ASL_ZPG; DBG(0, installed++;)
+        instruction[0x16] = INST_ASL_ZPG_X; DBG(0, installed++;)
+        instruction[0x26] = INST_ROL_ZPG; DBG(0, installed++;)
+        instruction[0x36] = INST_ROL_ZPG_X; DBG(0, installed++;)
+        instruction[0x46] = INST_LSR_ZPG; DBG(0, installed++;)
+        instruction[0x56] = INST_LSR_ZPG_X; DBG(0, installed++;)
+        instruction[0x66] = INST_ROR_ZPG; DBG(0, installed++;)
+        instruction[0x76] = INST_ROR_ZPG_X; DBG(0, installed++;)
+        instruction[0x09] = INST_ORA_IMM; DBG(0, installed++;)
+        instruction[0x19] = INST_ORA_ABS_Y; DBG(0, installed++;)
+        instruction[0x29] = INST_AND_IMM; DBG(0, installed++;)
+        instruction[0x39] = INST_AND_ABS_Y; DBG(0, installed++;)
+        instruction[0x49] = INST_EOR_IMM; DBG(0, installed++;)
+        instruction[0x59] = INST_EOR_ABS_Y; DBG(0, installed++;)
+        instruction[0x0A] = INST_ASL_A; DBG(0, installed++;)
+        instruction[0x1A] = INST_ROL_A; DBG(0, installed++;)
+        instruction[0x2A] = INST_LSR_A; DBG(0, installed++;)
+        instruction[0x3A] = INST_ROR_A; DBG(0, installed++;)
+        instruction[0x0D] = INST_ORA_ABS; DBG(0, installed++;)
+        instruction[0x1D] = INST_ORA_ABS_X; DBG(0, installed++;)
+        instruction[0x2D] = INST_AND_ABS; DBG(0, installed++;)
+        instruction[0x3D] = INST_AND_ABS_X; DBG(0, installed++;)
+        instruction[0x4D] = INST_EOR_ABS; DBG(0, installed++;)
+        instruction[0x5D] = INST_EOR_ABS_X; DBG(0, installed++;)
+        instruction[0x0E] = INST_ASL_ABS; DBG(0, installed++;)
+        instruction[0x1E] = INST_ASL_ABS_X; DBG(0, installed++;)
+        instruction[0x2E] = INST_ROL_ABS; DBG(0, installed++;)
+        instruction[0x3E] = INST_ROL_ABS_X; DBG(0, installed++;)
+        instruction[0x4E] = INST_LSR_ABS; DBG(0, installed++;)
+        instruction[0x5E] = INST_LSR_ABS_X; DBG(0, installed++;)
+        instruction[0x6E] = INST_ROR_ABS; DBG(0, installed++;)
+        instruction[0x7E] = INST_ROR_ABS_X; DBG(0, installed++;)
+        instruction[0x24] = INST_BIT_ZPG; DBG(0, installed++;)
+        instruction[0x2C] = INST_BIT_ABS; DBG(0, installed++;)
 
         // NOP instruction
         instruction[0xEA] = INST_NOP;

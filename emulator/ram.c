@@ -22,14 +22,14 @@ void mem_byte_write(uint8_t byte, uint16_t address) {
 }
 
 void load_file(uint16_t address, FILE *file, char* name) {
-        DBG(1, printf("Loading file \"%s\" at 0x04X", name, address);)
+        DBG(1, printf("Loading file \"%s\" at 0x%04X", name, address);)
         fseek(file, 0, SEEK_END);
         size_t file_length = ftell(file);
         fseek(file, 0, SEEK_SET);
         ASSERT(file_length < UINT16_MAX);
         
         fread(memory + address, 1, file_length, file);
-        DBG(1, printf("Loaded file \"%s\" at 0x04X", name, address);)
+        DBG(1, printf("Loaded file \"%s\" at 0x%04X", name, address);)
 }
 
 void init_ram() {

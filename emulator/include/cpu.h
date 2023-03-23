@@ -60,22 +60,6 @@
                 what = result; \
         }
 
-#define ARIT_LEFT_SHIFT(what, amount) \
-        { \
-                uint8_t result = (what << amount) | register_p.C; \
-                SET_NZ(result) \
-                register_p.C = (what >> 7) & 1; \
-                what = result; \
-        }
-
-#define ARIT_RIGHT_SHIFT(what, amount) \
-        { \
-                uint8_t result = (what >> amount) | (register_p.C << 7); \
-                SET_NZ(result) \
-                register_p.C = (what & 1); \
-                what = result; \
-        }
-
 #define SET_NZ(what) \
         register_p.Z = (what == 0); \
         register_p.N = (what >> 7) & 1;
