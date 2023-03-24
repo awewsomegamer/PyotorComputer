@@ -2,7 +2,6 @@
 #include <ram.h>
 
 // ** TODO: Implement BCD mode
-
 // Initial states of registers
 uint8_t register_a = 0;
 uint8_t register_x = 0;
@@ -20,10 +19,18 @@ struct {
 } register_p;
 uint16_t pc = 0;
 
+// Pins
+uint8_t pin_IRQ = 1;
+uint8_t pin_NMI = 1;
+uint8_t pin_RES = 1;
+
+uint8_t waiting = 0;
+uint8_t stopped = 0;
+
 void (*instruction[0xFF])();
 
-// Preform one cycle on the 6502
-
+// Run-time instructions
+void INST_PHP();
 void INST_BBS(int index) {
         if ((PTR(NEXT_BYTE) >> index) & 1 == 1)
                 pc = NEXT_WORD;
@@ -66,7 +73,35 @@ void INST_BIT(uint8_t opcode) {
         }
 }
 
+void call_interrupt() {
+        mem_byte_write(((pc + 2) >> 8) & 0xFF, 0x100 + (register_s--));
+        mem_byte_write((pc + 2) & 0xFF, 0x100 + (register_s--));
+        INST_PHP();
+
+        if (!pin_NMI) {
+                // NMI
+                
+        } else if (!pin_IRQ) {
+                // IRQ
+        }
+}
+
+// Preform one cycle on the 6502
 void tick_65C02() {
+        if ((waiting && (pin_IRQ && pin_NMI && pin_RES)) || (stopped && pin_RES)) { // Is pin_IRQ here effected by register_p.I?
+                // We are waiting
+                return;
+        }
+
+        // printf("A\n");
+
+        if ((!pin_IRQ && register_p.I) || pin_NMI)
+                call_interrupt();
+
+        if (!pin_RES) {
+                // Hardware reset
+        }
+
         uint8_t opcode = NEXT_BYTE;
         uint8_t high_nibble = ((opcode >> 4) & 0xF);
         uint8_t low_nibble = (opcode & 0xF);
@@ -131,14 +166,14 @@ void INST_LDY_ZPG() { register_y = PTR(NEXT_BYTE); SET_NZ(register_y) }
 void INST_LDA_ZPG_X() { register_a = PTR(OFF_X(NEXT_BYTE)); SET_NZ(register_a) }
 void INST_LDX_ZPG_Y() { register_x = PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); SET_NZ(register_x) }
 void INST_LDY_ZPG_X() { register_y = PTR(OFF_X(NEXT_BYTE)); SET_NZ(register_y) }
-void INST_LDA_IND_X() { register_a = PTR(OFF_X(NEXT_BYTE)); SET_NZ(register_x)}
+void INST_LDA_IND_X() { register_a = PTR(PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8)); SET_NZ(register_x)}
 void INST_LDA_IND_Y() { register_a = PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); SET_NZ(register_y) }
 void INST_LDA_ABS_X() { register_a = PTR(OFF_X(NEXT_WORD)); SET_NZ(register_x) }
 void INST_LDA_ABS_Y() { register_a = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
 void INST_LDY_ABS_X() { register_y = PTR(OFF_X(NEXT_WORD)); SET_NZ(register_x) }
 void INST_LDX_ABS_Y() { register_x = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
 
-void INST_LDA_ZPG_IND() { register_a = mem_byte_read(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)); }
+void INST_LDA_ZPG_IND() { register_a = PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)); }
 
 // ST instructions
 void INST_STA_ABS() { mem_byte_write(register_a, NEXT_WORD); }
@@ -150,7 +185,7 @@ void INST_STY_ZPG() { mem_byte_write(register_y, NEXT_BYTE); }
 void INST_STA_ZPG_X() { mem_byte_write(register_a, OFF_X(NEXT_BYTE)); }
 void INST_STX_ZPG_Y() { mem_byte_write(register_x, OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); }
 void INST_STY_ZPG_X() { mem_byte_write(register_y, OFF_X(NEXT_BYTE)); }
-void INST_STA_IND_X() { mem_byte_write(register_a, OFF_X(NEXT_BYTE)); }
+void INST_STA_IND_X() { mem_byte_write(register_a, PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8)); }
 void INST_STA_IND_Y() { mem_byte_write(register_a, OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); }
 void INST_STA_ABS_X() { mem_byte_write(register_a, OFF_X(NEXT_WORD)); }
 void INST_STA_ABS_Y() { mem_byte_write(register_a, OFF_Y(NEXT_WORD)); }
@@ -163,13 +198,13 @@ void INST_STZ_ABS_X() { mem_byte_write(0x00, OFF_X(NEXT_WORD)); }
 
 // Stack instructions
 void INST_PHP() { mem_byte_write(*(uint8_t *)&register_p, 0x100 + (register_s--)); } // PUSH P
-void INST_PLP() { *(uint8_t *)&register_p = mem_byte_read(0x100 + (++register_s)); } // PULL P
+void INST_PLP() { *(uint8_t *)&register_p = PTR(0x100 + (++register_s)); } // PULL P
 void INST_PHA() { mem_byte_write(register_a, 0x100 + (register_s--)); } // PUSH A
-void INST_PLA() { register_a = mem_byte_read(0x100 + (++register_s)); SET_NZ(register_a)} // PULL A
+void INST_PLA() { register_a = PTR(0x100 + (++register_s)); SET_NZ(register_a)} // PULL A
 void INST_PHX() { mem_byte_write(register_x, 0x100 + (register_s--)); } // PUSH X
-void INST_PLX() { register_x = mem_byte_read(0x100 + (++register_s)); SET_NZ(register_x)} // PULL X
+void INST_PLX() { register_x = PTR(0x100 + (++register_s)); SET_NZ(register_x)} // PULL X
 void INST_PHY() { mem_byte_write(register_y, 0x100 + (register_s--)); } // PUSH Y
-void INST_PLY() { register_y = mem_byte_read(0x100 + (++register_s)); SET_NZ(register_y)} // PULL Y
+void INST_PLY() { register_y = PTR(0x100 + (++register_s)); SET_NZ(register_y)} // PULL Y
 
 // P register (Flag) instructions
 void INST_SED() { register_p.D = 1; }
@@ -187,14 +222,14 @@ void INST_INX() { register_x++; SET_NZ(register_x) }
 void INST_DEX() { register_x--; SET_NZ(register_x) }
 void INST_INY() { register_y++; SET_NZ(register_y) }
 void INST_DEY() { register_y--; SET_NZ(register_y) }
-void INST_INC_ABS() { uint16_t addr = NEXT_WORD; mem_byte_write(mem_byte_read(addr) + 1, addr); SET_NZ(mem_byte_read(addr)) }
-void INST_DEC_ABS() { uint16_t addr = NEXT_WORD; mem_byte_write(mem_byte_read(addr) - 1, addr); SET_NZ(mem_byte_read(addr)) }
-void INST_DEC_ZPG() { uint16_t addr = NEXT_BYTE; mem_byte_write(mem_byte_read(addr) - 1, addr); SET_NZ(mem_byte_read(addr)) }
-void INST_DEC_ZPG_X() { uint16_t addr = OFF_X(NEXT_BYTE); mem_byte_write(mem_byte_read(addr) - 1, addr); SET_NZ(mem_byte_read(addr)) }
-void INST_INC_ZPG() { uint16_t addr = NEXT_BYTE; mem_byte_write(mem_byte_read(addr) + 1, addr); SET_NZ(mem_byte_read(addr)) }
-void INST_INC_ZPG_X() { uint16_t addr = OFF_X(NEXT_BYTE); mem_byte_write(mem_byte_read(addr) + 1, addr); SET_NZ(mem_byte_read(addr)) }
-void INST_DEC_ABS_X() { uint16_t addr = OFF_X(NEXT_WORD); mem_byte_write(mem_byte_read(addr) - 1, addr); SET_NZ(mem_byte_read(addr)) }
-void INST_INC_ABS_X() { uint16_t addr = OFF_X(NEXT_WORD); mem_byte_write(mem_byte_read(addr) + 1, addr); SET_NZ(mem_byte_read(addr)) }
+void INST_INC_ABS() { uint16_t addr = NEXT_WORD; mem_byte_write(PTR(addr) + 1, addr); SET_NZ(PTR(addr)) }
+void INST_DEC_ABS() { uint16_t addr = NEXT_WORD; mem_byte_write(PTR(addr) - 1, addr); SET_NZ(PTR(addr)) }
+void INST_DEC_ZPG() { uint16_t addr = NEXT_BYTE; mem_byte_write(PTR(addr) - 1, addr); SET_NZ(PTR(addr)) }
+void INST_DEC_ZPG_X() { uint16_t addr = OFF_X(NEXT_BYTE); mem_byte_write(PTR(addr) - 1, addr); SET_NZ(PTR(addr)) }
+void INST_INC_ZPG() { uint16_t addr = NEXT_BYTE; mem_byte_write(PTR(addr) + 1, addr); SET_NZ(PTR(addr)) }
+void INST_INC_ZPG_X() { uint16_t addr = OFF_X(NEXT_BYTE); mem_byte_write(PTR(addr) + 1, addr); SET_NZ(PTR(addr)) }
+void INST_DEC_ABS_X() { uint16_t addr = OFF_X(NEXT_WORD); mem_byte_write(PTR(addr) - 1, addr); SET_NZ(PTR(addr)) }
+void INST_INC_ABS_X() { uint16_t addr = OFF_X(NEXT_WORD); mem_byte_write(PTR(addr) + 1, addr); SET_NZ(PTR(addr)) }
 
 // Transfer instructions
 void INST_TYA() { register_a = register_y; SET_NZ(register_a) }
@@ -205,18 +240,10 @@ void INST_TAX() { register_x = register_a; SET_NZ(register_x) }
 void INST_TSX() { register_x = register_s; SET_NZ(register_x) }
 
 // Control flow instructions
-void INST_BRK() {
-        mem_byte_write(((pc + 2) >> 8) & 0xFF, 0x100 + (register_s--));
-        mem_byte_write((pc + 2) & 0xFF, 0x100 + (register_s--));
-        INST_PHP();
-        register_p.B = 1;
-        register_p.I = 1;
-}
-
 void INST_RTI() {
         // Return from interrupt
         INST_PLP();
-        pc = mem_byte_read(0x100 + ++register_s) | (mem_byte_read(0x100 + ++register_s) << 8);
+        pc = PTR(0x100 + ++register_s) | (PTR(0x100 + ++register_s) << 8);
 } 
 
 void INST_JSR() {
@@ -227,7 +254,7 @@ void INST_JSR() {
 
 void INST_RTS() {
         // Return from sub-routine
-        pc = mem_byte_read(0x100 + ++register_s) | (mem_byte_read(0x100 + ++register_s) << 8);
+        pc = PTR(0x100 + ++register_s) | (PTR(0x100 + ++register_s) << 8);
 }
 
 void INST_JMP_ABS() { pc = NEXT_WORD; }
@@ -249,83 +276,83 @@ void INST_ROL_A() { register_a = ARIT_LEFT_SHIFT(register_a); } // Rotate the A 
 void INST_LSR_A() { register_a = ARIT_RIGHT_SHIFT(register_a); register_p.N = 0;} // Logical Shift Right shift right by 1 bit 0 is shifted into bit 7 and original bit 0 overflows to carry
 void INST_ROR_A() { register_a = ARIT_RIGHT_SHIFT(register_a); } // Rotate the A register right 1, old cary overflows to bit 7, old bit 0 overflows to carry
 
-void INST_ORA_IND_X() { ARIT_OR_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
-void INST_ORA_IND_Y() { ARIT_OR_SET(register_a, mem_byte_read(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)))) }
-void INST_ORA_ZPG_IND() { ARIT_OR_SET(register_a, mem_byte_read(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
-void INST_AND_IND_X() { ARIT_AND_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
-void INST_AND_IND_Y() { ARIT_AND_SET(register_a, mem_byte_read(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)))) }
-void INST_EOR_IND_X() { ARIT_EOR_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
-void INST_EOR_IND_Y() { ARIT_EOR_SET(register_a, mem_byte_read(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)))) }
-void INST_EOR_ZPG_IND() { ARIT_EOR_SET(register_a, mem_byte_read(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
+void INST_ORA_IND_X() { ARIT_OR_SET(register_a, PTR(PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8))) }
+void INST_ORA_IND_Y() { ARIT_OR_SET(register_a, PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)))) }
+void INST_ORA_ZPG_IND() { ARIT_OR_SET(register_a, PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
+void INST_AND_IND_X() { ARIT_AND_SET(register_a, PTR(PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8))) }
+void INST_AND_IND_Y() { ARIT_AND_SET(register_a, PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)))) }
+void INST_EOR_IND_X() { ARIT_EOR_SET(register_a, PTR(PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8))) }
+void INST_EOR_IND_Y() { ARIT_EOR_SET(register_a, PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)))) }
+void INST_EOR_ZPG_IND() { ARIT_EOR_SET(register_a, PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
 
 void INST_TRB_ZPG() {
-        uint8_t result = mem_byte_read(CUR_BYTE) & (register_a ^ 0xFF);
-        register_p.Z = (mem_byte_read(CUR_BYTE) == 0);
+        uint8_t result = PTR(CUR_BYTE) & (register_a ^ 0xFF);
+        register_p.Z = (PTR(CUR_BYTE) == 0);
         mem_byte_write(NEXT_BYTE, result);
 }
 
 void INST_TRB_ABS() {
-        uint8_t result = mem_byte_read(CUR_WORD) & (register_a ^ 0xFF);
-        register_p.Z = (mem_byte_read(CUR_WORD) == 0);
+        uint8_t result = PTR(CUR_WORD) & (register_a ^ 0xFF);
+        register_p.Z = (PTR(CUR_WORD) == 0);
         mem_byte_write(NEXT_WORD, result);
 }
 
 void INST_TSB_ZPG() {
-        uint8_t result = mem_byte_read(CUR_BYTE) | register_a;
-        register_p.Z = (mem_byte_read(CUR_BYTE) == 0);
+        uint8_t result = PTR(CUR_BYTE) | register_a;
+        register_p.Z = (PTR(CUR_BYTE) == 0);
         mem_byte_write(NEXT_BYTE, result);
 }
 
 void INST_TSB_ABS() {
-        uint8_t result = mem_byte_read(CUR_WORD) | register_a;
-        register_p.Z = (mem_byte_read(CUR_WORD) == 0);
+        uint8_t result = PTR(CUR_WORD) | register_a;
+        register_p.Z = (PTR(CUR_WORD) == 0);
         mem_byte_write(NEXT_WORD, result);
 }
 
-void INST_ORA_ZPG() { ARIT_OR_SET(register_a, mem_byte_read(NEXT_BYTE)) }
-void INST_ORA_ZPG_X() { ARIT_OR_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
-void INST_AND_ZPG() { ARIT_AND_SET(register_a, mem_byte_read(NEXT_BYTE)) }
-void INST_AND_ZPG_X() { ARIT_AND_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
-void INST_AND_ZPG_IND() { ARIT_AND_SET(register_a, mem_byte_read(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) } 
-void INST_EOR_ZPG() { ARIT_EOR_SET(register_a, mem_byte_read(NEXT_BYTE)) }
-void INST_EOR_ZPG_X() { ARIT_EOR_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
+void INST_ORA_ZPG() { ARIT_OR_SET(register_a, PTR(NEXT_BYTE)) }
+void INST_ORA_ZPG_X() { ARIT_OR_SET(register_a, PTR(OFF_X(NEXT_BYTE))) }
+void INST_AND_ZPG() { ARIT_AND_SET(register_a, PTR(NEXT_BYTE)) }
+void INST_AND_ZPG_X() { ARIT_AND_SET(register_a, PTR(OFF_X(NEXT_BYTE))) }
+void INST_AND_ZPG_IND() { ARIT_AND_SET(register_a, PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) } 
+void INST_EOR_ZPG() { ARIT_EOR_SET(register_a, PTR(NEXT_BYTE)) }
+void INST_EOR_ZPG_X() { ARIT_EOR_SET(register_a, PTR(OFF_X(NEXT_BYTE))) }
 
-void INST_ASL_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
-void INST_ASL_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
-void INST_ROL_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_RIGHT_SHIFT(mem_byte_read(address)), address); }
-void INST_ROL_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_RIGHT_SHIFT(mem_byte_read(address)), address); }
-void INST_LSR_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); register_p.N = 0; }
-void INST_LSR_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); register_p.N = 0; }
-void INST_ROR_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_RIGHT_SHIFT(mem_byte_read(address)), address); }
-void INST_ROR_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_RIGHT_SHIFT(mem_byte_read(address)), address); }
+void INST_ASL_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
+void INST_ASL_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
+void INST_ROL_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_RIGHT_SHIFT(PTR(address)), address); }
+void INST_ROL_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_RIGHT_SHIFT(PTR(address)), address); }
+void INST_LSR_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); register_p.N = 0; }
+void INST_LSR_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); register_p.N = 0; }
+void INST_ROR_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_RIGHT_SHIFT(PTR(address)), address); }
+void INST_ROR_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_RIGHT_SHIFT(PTR(address)), address); }
 void INST_ORA_IMM() { ARIT_OR_SET(register_a, NEXT_BYTE) }
-void INST_ORA_ABS_Y() { ARIT_OR_SET(register_a, mem_byte_read(OFF_Y(NEXT_WORD))) }
+void INST_ORA_ABS_Y() { ARIT_OR_SET(register_a, PTR(OFF_Y(NEXT_WORD))) }
 void INST_AND_IMM() { ARIT_AND_SET(register_a, NEXT_BYTE) }
-void INST_AND_ABS_Y() { ARIT_AND_SET(register_a, mem_byte_read(OFF_Y(NEXT_WORD))) }
+void INST_AND_ABS_Y() { ARIT_AND_SET(register_a, PTR(OFF_Y(NEXT_WORD))) }
 void INST_EOR_IMM() { ARIT_EOR_SET(register_a, NEXT_BYTE) }
-void INST_EOR_ABS_Y() { ARIT_EOR_SET(register_a, mem_byte_read(OFF_Y(NEXT_WORD))) }
-void INST_ORA_ABS() { ARIT_OR_SET(register_a, mem_byte_read(NEXT_WORD)) }
-void INST_ORA_ABS_X() { ARIT_OR_SET(register_a, mem_byte_read(NEXT_WORD)) }
-void INST_AND_ABS() { ARIT_AND_SET(register_a, mem_byte_read(NEXT_WORD)) }
-void INST_AND_ABS_X() { ARIT_AND_SET(register_a, mem_byte_read(OFF_X(NEXT_WORD))) }
-void INST_EOR_ABS() { ARIT_EOR_SET(register_a, mem_byte_read(NEXT_WORD)) }
-void INST_EOR_ABS_X() { ARIT_EOR_SET(register_a, mem_byte_read(OFF_X(NEXT_WORD))) }
-void INST_ASL_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
-void INST_ASL_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
-void INST_ROL_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
-void INST_ROL_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
-void INST_LSR_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); register_p.N = 0; }
-void INST_LSR_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); register_p.N = 0; }
-void INST_ROR_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
-void INST_ROR_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(mem_byte_read(address)), address); }
+void INST_EOR_ABS_Y() { ARIT_EOR_SET(register_a, PTR(OFF_Y(NEXT_WORD))) }
+void INST_ORA_ABS() { ARIT_OR_SET(register_a, PTR(NEXT_WORD)) }
+void INST_ORA_ABS_X() { ARIT_OR_SET(register_a, PTR(NEXT_WORD)) }
+void INST_AND_ABS() { ARIT_AND_SET(register_a, PTR(NEXT_WORD)) }
+void INST_AND_ABS_X() { ARIT_AND_SET(register_a, PTR(OFF_X(NEXT_WORD))) }
+void INST_EOR_ABS() { ARIT_EOR_SET(register_a, PTR(NEXT_WORD)) }
+void INST_EOR_ABS_X() { ARIT_EOR_SET(register_a, PTR(OFF_X(NEXT_WORD))) }
+void INST_ASL_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
+void INST_ASL_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
+void INST_ROL_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
+void INST_ROL_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
+void INST_LSR_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); register_p.N = 0; }
+void INST_LSR_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); register_p.N = 0; }
+void INST_ROR_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
+void INST_ROR_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
 
 // Arithmetic instructions
-void INST_ADC_IND_X() { ARIT_ADD_SET(OFF_X(NEXT_BYTE)) }
-void INST_ADC_IND_Y() { ARIT_ADD_SET(OFF_Y(mem_byte_read(CUR_BYTE) | (mem_byte_read(NEXT_BYTE + 1) << 8))) }
-void INST_ADC_ZPG_IND() { ARIT_ADD_SET(mem_byte_read(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
-void INST_SBC_IND_X() { ARIT_SUB_SET(OFF_X(NEXT_BYTE)) }
-void INST_SBC_IND_Y() { ARIT_SUB_SET(OFF_Y(mem_byte_read(CUR_BYTE) | (mem_byte_read(NEXT_BYTE + 1) << 8))) }
-void INST_SBC_ZPG_IND() { ARIT_SUB_SET(mem_byte_read(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
+void INST_ADC_IND_X() { ARIT_ADD_SET(PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8)) }
+void INST_ADC_IND_Y() { ARIT_ADD_SET(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
+void INST_ADC_ZPG_IND() { ARIT_ADD_SET(PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
+void INST_SBC_IND_X() { ARIT_SUB_SET(PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8)) }
+void INST_SBC_IND_Y() { ARIT_SUB_SET(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
+void INST_SBC_ZPG_IND() { ARIT_SUB_SET(PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
 void INST_ADC_ZPG() { ARIT_ADD_SET(NEXT_BYTE) }
 void INST_ADC_ZPG_X() { ARIT_ADD_SET(OFF_X(NEXT_BYTE)) }
 void INST_SBC_ZPG() { ARIT_SUB_SET(NEXT_BYTE) }
@@ -342,17 +369,32 @@ void INST_SBC_ABS_X() { ARIT_SUB_SET(OFF_X(NEXT_WORD)) }
 // Comparison instructions
 void INST_CPX_IMM() { CMP_SET(register_x, NEXT_BYTE) }
 void INST_CPY_IMM() { CMP_SET(register_y, NEXT_BYTE) }
-void INST_CPX_ZPG() { CMP_SET(register_x, mem_byte_read(NEXT_BYTE)) }
-void INST_CPY_ZPG() { CMP_SET(register_y, mem_byte_read(NEXT_BYTE)) }
-void INST_CMP_ZPG() { CMP_SET(register_a, mem_byte_read(NEXT_BYTE)) }
-void INST_CMP_ZPG_X() { CMP_SET(register_a, mem_byte_read(OFF_X(NEXT_BYTE))) }
+void INST_CMP_IND_X() { CMP_SET(register_a, PTR(PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(CUR_BYTE + 1)) << 8))) }
+void INST_CMP_IND_Y() { CMP_SET(register_a, PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE) << 8)))) }
+void INST_CPX_ZPG() { CMP_SET(register_x, PTR(NEXT_BYTE)) }
+void INST_CPY_ZPG() { CMP_SET(register_y, PTR(NEXT_BYTE)) }
+void INST_CMP_ZPG() { CMP_SET(register_a, PTR(NEXT_BYTE)) }
+void INST_CMP_ZPG_X() { CMP_SET(register_a, PTR(OFF_X(NEXT_BYTE))) }
 void INST_CMP_IMM() { CMP_SET(register_a, NEXT_BYTE) }
-void INST_CMP_ABS_Y() {CMP_SET(register_a, mem_byte_read(OFF_Y(NEXT_WORD))) }
-void INST_CPX_ABS() { CMP_SET(register_x, mem_byte_read(NEXT_WORD)) }
-void INST_CPY_ABS() { CMP_SET(register_y, mem_byte_read(NEXT_WORD)) }
-void INST_CMP_ABS() { CMP_SET(register_a, mem_byte_read(NEXT_WORD)) }
-void INST_CMP_ABS_X() { CMP_SET(register_a, mem_byte_read(OFF_X(NEXT_WORD))) }
-void INST_CMP_ZPG_IND() { CMP_SET(register_a, mem_byte_read(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
+void INST_CMP_ABS_Y() {CMP_SET(register_a, PTR(OFF_Y(NEXT_WORD))) }
+void INST_CPX_ABS() { CMP_SET(register_x, PTR(NEXT_WORD)) }
+void INST_CPY_ABS() { CMP_SET(register_y, PTR(NEXT_WORD)) }
+void INST_CMP_ABS() { CMP_SET(register_a, PTR(NEXT_WORD)) }
+void INST_CMP_ABS_X() { CMP_SET(register_a, PTR(OFF_X(NEXT_WORD))) }
+void INST_CMP_ZPG_IND() { CMP_SET(register_a, PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) }
+
+// Porcessor instructions
+void INST_BRK() {
+        mem_byte_write(((pc + 2) >> 8) & 0xFF, 0x100 + (register_s--));
+        mem_byte_write((pc + 2) & 0xFF, 0x100 + (register_s--));
+        INST_PHP();
+        // Does flag setting happen before or after push?
+        register_p.B = 1;
+        register_p.I = 1;
+        register_p.D = 0;
+}
+void INST_WAI() { waiting = 1; }
+void INST_STP() { stopped = 1; }
 
 // Just NOP
 void INST_NOP() { ; }
@@ -375,9 +417,9 @@ void reg_dump_65C02() {
         if (register_p.C) printf(" | C");
         printf(")\n");
 
-        printf("PC : %04X (%02X", pc, mem_byte_read(pc));
-        if (pc + 1 < UINT16_MAX) printf(" %02X", mem_byte_read(pc + 1));
-        if (pc + 2 < UINT16_MAX) printf(" %02X", mem_byte_read(pc + 2));
+        printf("PC : %04X (%02X", pc, PTR(pc));
+        if (pc + 1 < UINT16_MAX) printf(" %02X", PTR(pc + 1));
+        if (pc + 2 < UINT16_MAX) printf(" %02X", PTR(pc + 2));
         printf(")\n");
 
         printf("-- 65C02 REG DUMP END --\n");
@@ -426,7 +468,6 @@ void init_65C02() {
         instruction[0x91] = INST_STA_IND_Y; DBG(0, installed++;)
         instruction[0x9D] = INST_STA_ABS_X; DBG(0, installed++;)
         instruction[0x99] = INST_STA_ABS_Y; DBG(0, installed++;)
-
         instruction[0x92] = INST_STA_ZPG_IND; DBG(0, installed++;)
         instruction[0x64] = INST_STZ_ZPG; DBG(0, installed++;)
         instruction[0x74] = INST_STZ_ZPG_X; DBG(0, installed++;)
@@ -477,7 +518,6 @@ void init_65C02() {
         instruction[0xBA] = INST_TSX; DBG(0, installed++;)
 
         // Control flow instructions
-        // instruction[0x00] = INST_BRK;
         instruction[0x40] = INST_RTI; DBG(0, installed++;)
         instruction[0x20] = INST_JSR; DBG(0, installed++;)
         instruction[0x60] = INST_RTS; DBG(0, installed++;)
@@ -491,20 +531,21 @@ void init_65C02() {
         instruction[0xB0] = INST_BCS_REL; DBG(0, installed++;)
         instruction[0xD0] = INST_BNE_REL; DBG(0, installed++;)
         instruction[0xF0] = INST_BEQ_REL; DBG(0, installed++;)
-
         instruction[0x7C] = INST_JMP_ABS_X; DBG(0, installed++;)
         instruction[0x80] = INST_BRA_REL; DBG(0, installed++;)
 
         // Compare instructions
         instruction[0xE0] = INST_CPX_IMM; DBG(0, installed++;)
         instruction[0xC0] = INST_CPY_IMM; DBG(0, installed++;)
+        instruction[0xC1] = INST_CMP_IND_X; DBG(0, installed++;)
         instruction[0xE4] = INST_CPX_ZPG; DBG(0, installed++;)
         instruction[0xC4] = INST_CPY_ZPG; DBG(0, installed++;)
         instruction[0xC5] = INST_CMP_ZPG; DBG(0, installed++;)
+        instruction[0xD1] = INST_CMP_IND_Y; DBG(0, installed++;)
         instruction[0xD5] = INST_CMP_ZPG_X; DBG(0, installed++;)
         instruction[0xC9] = INST_CMP_IMM; DBG(0, installed++;)
         instruction[0xD9] = INST_CMP_ABS_Y; DBG(0, installed++;)
-        instruction[0xDC] = INST_CPX_ABS; DBG(0, installed++;)
+        instruction[0xEC] = INST_CPX_ABS; DBG(0, installed++;)
         instruction[0xCC] = INST_CPY_ABS; DBG(0, installed++;)
         instruction[0xCD] = INST_CMP_ABS; DBG(0, installed++;)
         instruction[0xDD] = INST_CMP_ABS_X; DBG(0, installed++;)
@@ -578,14 +619,18 @@ void init_65C02() {
         instruction[0x5E] = INST_LSR_ABS_X; DBG(0, installed++;)
         instruction[0x6E] = INST_ROR_ABS; DBG(0, installed++;)
         instruction[0x7E] = INST_ROR_ABS_X; DBG(0, installed++;)
-
         instruction[0x14] = INST_TRB_ZPG; DBG(0, installed++;)
         instruction[0x1C] = INST_TRB_ABS; DBG(0, installed++;)
         instruction[0x04] = INST_TSB_ZPG; DBG(0, installed++;)
         instruction[0x0C] = INST_TSB_ABS; DBG(0, installed++;)
 
-        // NOP instruction
-        instruction[0xEA] = INST_NOP;
+        // Processor instructions
+        instruction[0x00] = INST_BRK; DBG(0, installed++;)
+        instruction[0xDB] = INST_STP; DBG(0, installed++;)
+        instruction[0xCB] = INST_WAI; DBG(0, installed++;)
 
-        DBG(1, printf("Initialized 65C02 CPU, %d opcodes installed.", installed + 37);)
+        // NOP instruction
+        instruction[0xEA] = INST_NOP; DBG(0, installed++;)
+
+        DBG(1, printf("Initialized 65C02 CPU, %d opcodes installed", installed + 37);)
 }

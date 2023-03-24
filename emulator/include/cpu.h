@@ -65,6 +65,10 @@
         register_p.Z = (what == 0); \
         register_p.N = (what >> 7) & 1;
 
+extern uint8_t pin_IRQ;
+extern uint8_t pin_NMI;
+extern uint8_t pin_RES;
+
 
 void tick_65C02();
 void reg_dump_65C02();
