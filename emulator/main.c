@@ -18,9 +18,15 @@ int main(int argc, char **argv) {
         load_file(KERNEL_MEM_BASE, kern_bin, "bin/kernel.bin");
         load_file(ZERO_PAGE_BASE, boot_bin, "bin/boot.bin");
 
+        pin_RES = 0;
+
         for (;;) {
-            tick_65C02();
+                tick_65C02();
+                reg_dump_65C02();
+                sleep(1);
         }
+
+
 
         return 0;
 }

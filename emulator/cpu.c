@@ -74,15 +74,23 @@ void INST_BIT(uint8_t opcode) {
 }
 
 void call_interrupt() {
-        mem_byte_write(((pc + 2) >> 8) & 0xFF, 0x100 + (register_s--));
-        mem_byte_write((pc + 2) & 0xFF, 0x100 + (register_s--));
-        INST_PHP();
+        mem_byte_write(((pc + 2) >> 8) & 0xFF, 0x100 + (register_s--)); // High
+        mem_byte_write((pc + 2) & 0xFF, 0x100 + (register_s--)); // Low
+        INST_PHP(); // Push flags
+        register_p.I = 1; // Disable interrupts
 
         if (!pin_NMI) {
                 // NMI
-                
+                pc = PTR(0xFFFA) | (PTR(0xFFFB) << 8);
+                pin_NMI = 1;
         } else if (!pin_IRQ) {
                 // IRQ
+                pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
+                pin_IRQ = 1;
+        } else if (!pin_RES) {
+                // Reset
+                pc = PTR(0xFFFC) | (PTR(0xFFFD) << 8);
+                pin_RES = 1;
         }
 }
 
@@ -95,12 +103,8 @@ void tick_65C02() {
 
         // printf("A\n");
 
-        if ((!pin_IRQ && register_p.I) || pin_NMI)
+        if ((!pin_IRQ && !register_p.I) || !pin_NMI || !pin_RES) // NMI, RES, or IRQ pins went low, check if IRQs are unmasked
                 call_interrupt();
-
-        if (!pin_RES) {
-                // Hardware reset
-        }
 
         uint8_t opcode = NEXT_BYTE;
         uint8_t high_nibble = ((opcode >> 4) & 0xF);
@@ -244,7 +248,7 @@ void INST_RTI() {
         // Return from interrupt
         INST_PLP();
         pc = PTR(0x100 + ++register_s) | (PTR(0x100 + ++register_s) << 8);
-} 
+}
 
 void INST_JSR() {
         mem_byte_write(((pc + 2) >> 8) & 0xFF, 0x100 + (register_s--));
@@ -385,13 +389,16 @@ void INST_CMP_ZPG_IND() { CMP_SET(register_a, PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE
 
 // Porcessor instructions
 void INST_BRK() {
-        mem_byte_write(((pc + 2) >> 8) & 0xFF, 0x100 + (register_s--));
-        mem_byte_write((pc + 2) & 0xFF, 0x100 + (register_s--));
-        INST_PHP();
-        // Does flag setting happen before or after push?
-        register_p.B = 1;
+        mem_byte_write(((pc + 1) >> 8) & 0xFF, 0x100 + (register_s--)); // High
+        mem_byte_write((pc + 1) & 0xFF, 0x100 + (register_s--)); // Low
+        INST_PHP(); // Push flags
+
+        // Change flags
+        register_p.B = 1; 
         register_p.I = 1;
         register_p.D = 0;
+
+        pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
 }
 void INST_WAI() { waiting = 1; }
 void INST_STP() { stopped = 1; }
@@ -427,7 +434,7 @@ void reg_dump_65C02() {
 
 // Initialize the 6502
 void init_65C02() {
-        DBG(1, printf("Initializing 6502 CPU");)
+        DBG(1, printf("Initializing 65C02 CPU");)
 
         *(uint8_t *)&register_p = 0x00;
 
