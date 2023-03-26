@@ -25,8 +25,6 @@ int main(int argc, char **argv) {
                 reg_dump_65C02();
                 sleep(1);
         }
-
-
-
+        
         return 0;
 }

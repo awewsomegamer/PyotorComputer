@@ -69,6 +69,7 @@ extern uint8_t pin_IRQ;
 extern uint8_t pin_NMI;
 extern uint8_t pin_RES;
 
+extern uint64_t cycle_count;
 
 void tick_65C02();
 void reg_dump_65C02();

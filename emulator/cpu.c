@@ -27,16 +27,39 @@ uint8_t pin_RES = 1;
 uint8_t waiting = 0;
 uint8_t stopped = 0;
 
+// Clock
+uint64_t cycle_count = 0;
+
+// Tables
 void (*instruction[0xFF])();
+//                            0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+uint8_t cycles[0xFF] = { 7, 6, 0, 0, 5, 3, 5, 0, 0, 2, 2, 0, 6, 4, 6, 0,   // 0
+                              2, 5, 5, 0, 5, 4, 6, 0, 2, 4, 2, 0, 6, 4, 7, 0,   // 1
+                              6, 6, 0, 0, 3, 3, 5, 0, 0, 2, 2, 0, 4, 4, 6, 0,   // 2
+                              2, 5, 5, 0, 4, 4, 6, 0, 2, 4, 2, 0, 4, 4, 7, 0,   // 3
+                              6, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 3, 4, 6, 0,   // 4
+                              2, 5, 5, 0, 0, 4, 6, 0, 2, 4, 3, 0, 0, 4, 7, 0,   // 5
+                              6, 6, 0, 0, 3, 3, 5, 0, 4, 2, 2, 0, 5, 4, 6, 0,   // 6
+                              2, 5, 5, 0, 4, 4, 6, 0, 2, 4, 4, 0, 6, 4, 7, 0,   // 7
+                              3, 6, 0, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0,   // 8
+                              2, 6, 5, 0, 4, 4, 4, 0, 2, 5, 2, 0, 4, 4, 5, 0,   // 9
+                              2, 6, 2, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0,   // A
+                              2, 5, 5, 0, 4, 4, 4, 0, 2, 4, 2, 0, 4, 4, 4, 0,   // B
+                              2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,   // C
+                              2, 5, 5, 0, 0, 4, 6, 0, 2, 4, 3, 0, 0, 4, 7, 0,   // D
+                              2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,   // E
+                              2, 5, 5, 0, 0, 4, 6, 0, 2, 4, 4, 0, 0, 4, 7, 0 }; // F
 
 // Run-time instructions
 void INST_PHP();
 void INST_BBS(int index) {
+        cycle_count += 2;
         if ((PTR(NEXT_BYTE) >> index) & 1 == 1)
                 pc = NEXT_WORD;
 }
 
 void INST_BBR(int index) {
+        cycle_count += 2;
         if ((PTR(NEXT_BYTE) >> index) & 1 == 0)
                 pc = NEXT_WORD;
 }
@@ -96,8 +119,9 @@ void call_interrupt() {
 
 // Preform one cycle on the 6502
 void tick_65C02() {
-        if ((waiting && (pin_IRQ && pin_NMI && pin_RES)) || (stopped && pin_RES)) { // Is pin_IRQ here effected by register_p.I?
+        if ((waiting && (pin_IRQ && pin_NMI && pin_RES)) || (stopped && pin_RES)) {
                 // We are waiting
+                cycle_count++; // Should this be done this way?
                 return;
         }
 
@@ -113,34 +137,38 @@ void tick_65C02() {
         // BBSs
         if (high_nibble >= 0x8 &&  high_nibble <= 0xF && low_nibble == 0xF) {
                 INST_BBS((high_nibble) - 8); 
-                return;
+                goto TICK_RET;
         }
 
         // BBRs
         if (high_nibble >= 0x0 &&  high_nibble <= 7 && low_nibble == 0xF) {
                 INST_BBR(high_nibble); 
-                return;
+                goto TICK_RET;
         }
 
         // SMBs
         if (high_nibble >= 0x8 &&  high_nibble <= 0xF && low_nibble == 0x7) {
                 INST_SMB((high_nibble) - 8); 
-                return;
+                goto TICK_RET;
         }
 
         // RMBs
         if (high_nibble >= 0x0 &&  high_nibble <= 0x7 && low_nibble == 0x7) {
                 INST_RMB(high_nibble); 
-                return;
+                goto TICK_RET;
         }
 
         // BITs
         if (opcode == 0x24 || opcode == 0x2C || opcode == 0x89 || opcode == 0x34 || opcode == 0x3C) {
                 INST_BIT(opcode);
-                return;
+                goto TICK_RET;
         }
 
+        // Consult instruction table
         (*instruction[opcode])();
+
+        TICK_RET:
+        cycle_count += cycles[opcode];
 }
 
 uint8_t ARIT_LEFT_SHIFT(uint8_t what) {
@@ -176,7 +204,6 @@ void INST_LDA_ABS_X() { register_a = PTR(OFF_X(NEXT_WORD)); SET_NZ(register_x) }
 void INST_LDA_ABS_Y() { register_a = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
 void INST_LDY_ABS_X() { register_y = PTR(OFF_X(NEXT_WORD)); SET_NZ(register_x) }
 void INST_LDX_ABS_Y() { register_x = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
-
 void INST_LDA_ZPG_IND() { register_a = PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)); }
 
 // ST instructions
@@ -320,7 +347,6 @@ void INST_AND_ZPG_X() { ARIT_AND_SET(register_a, PTR(OFF_X(NEXT_BYTE))) }
 void INST_AND_ZPG_IND() { ARIT_AND_SET(register_a, PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))) } 
 void INST_EOR_ZPG() { ARIT_EOR_SET(register_a, PTR(NEXT_BYTE)) }
 void INST_EOR_ZPG_X() { ARIT_EOR_SET(register_a, PTR(OFF_X(NEXT_BYTE))) }
-
 void INST_ASL_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
 void INST_ASL_ZPG_X() { uint16_t address = OFF_X(NEXT_BYTE); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
 void INST_ROL_ZPG() { uint16_t address = NEXT_BYTE; mem_byte_write(ARIT_RIGHT_SHIFT(PTR(address)), address); }
@@ -408,12 +434,11 @@ void INST_NOP() { ; }
 
 void reg_dump_65C02() {
         printf("-- 65C02 REG DUMP --\n");
-        printf("A  : %02X (%d)\n", register_a, register_a);
-        printf("X  : %02X (%d)\n", register_x, register_x);
-        printf("Y  : %02X (%d)\n", register_y, register_y);
-        printf("S  : %02X (%d)\n", register_s, register_s);
-
-        printf("P  : %02X (", register_p, register_p);
+        printf("A     : %02X (%d)\n", register_a, register_a);
+        printf("X     : %02X (%d)\n", register_x, register_x);
+        printf("Y     : %02X (%d)\n", register_y, register_y);
+        printf("S     : %02X (%d)\n", register_s, register_s);
+        printf("P     : %02X (", register_p, register_p);
         if (register_p.N) printf("N");
         if (register_p.V) printf(" | V");
         if (register_p.unused) printf(" | Unused");
@@ -424,10 +449,12 @@ void reg_dump_65C02() {
         if (register_p.C) printf(" | C");
         printf(")\n");
 
-        printf("PC : %04X (%02X", pc, PTR(pc));
+        printf("PC    : %04X (%02X", pc, PTR(pc));
         if (pc + 1 < UINT16_MAX) printf(" %02X", PTR(pc + 1));
         if (pc + 2 < UINT16_MAX) printf(" %02X", PTR(pc + 2));
         printf(")\n");
+
+        printf("CYCLE : %X (%d)\n", cycle_count, cycle_count);
 
         printf("-- 65C02 REG DUMP END --\n");
 }
@@ -436,7 +463,7 @@ void reg_dump_65C02() {
 void init_65C02() {
         DBG(1, printf("Initializing 65C02 CPU");)
 
-        *(uint8_t *)&register_p = 0x00;
+        *(uint8_t *)&register_p = 0b00110100;
 
         int installed = 0;
 
