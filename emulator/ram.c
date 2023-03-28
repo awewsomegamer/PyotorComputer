@@ -18,6 +18,11 @@ void mem_byte_write(uint8_t byte, uint16_t address) {
                 return;
         }
 
+        if (KERNAL_MEM(address)) {
+                DBG(1, printf("Tried to write to KERNAL ROM address");)
+                return;
+        }
+
         *(memory + address) = byte;
 }
 

@@ -1,5 +1,5 @@
 MEMORY {
-            RAM1:  start = $0000, size = $FFFF;
+            RAM1:  start = $0000, size = $E380;
 }
 
 SEGMENTS {
