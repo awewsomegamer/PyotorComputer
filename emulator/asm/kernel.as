@@ -6,7 +6,7 @@
         brk
         nop
 
-        stp
+        jmp #$0000
 
 nop
 nop
