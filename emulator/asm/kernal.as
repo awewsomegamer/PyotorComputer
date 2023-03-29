@@ -1,7 +1,8 @@
-        .org 48512
+        .org 56512
 
 KERNAL_ENTRY:
         lda #$5
+        adc #$5
         jmp KERNAL_ENTRY
 
 IRQ_HANDLER:

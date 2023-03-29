@@ -22,19 +22,21 @@
         }
 #define ARIT_ADD_SET(what) \
         {       \
-                uint16_t res = register_a + what + register_p.C; \
+                uint8_t value = what; \
+                uint16_t res = register_a + value + register_p.C; \
                 register_p.C = res > 0xFF; \
                 register_p.V = (res >> 7) & 1 != (register_a >> 7) & 1; \
-                SET_NZ(what) \
+                SET_NZ(value) \
                 register_a = (uint8_t)res; \
         }
 
 #define ARIT_SUB_SET(what) \
         {       \
-                uint16_t res = register_a - what - !register_p.C; \
+                uint8_t value = what; \
+                uint16_t res = register_a - value - !register_p.C; \
                 register_p.C = !((res >> 8) & 1); \
                 register_p.V = (int8_t)res > 127 || (int8_t)res < -127; \
-                SET_NZ(what) \
+                SET_NZ(value) \
                 register_a = (uint8_t)res; \
         }
 

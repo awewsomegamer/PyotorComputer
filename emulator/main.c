@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
         init_ram();
         init_cga();
 
-        FILE *kern_bin = fopen("bin/kernel.bin", "r");
+        FILE *kern_bin = fopen("bin/kernal.bin", "r");
         
         ASSERT(kern_bin != NULL);
 
@@ -25,6 +25,8 @@ int main(int argc, char **argv) {
         uint64_t ticks = 0;
         uint64_t cycle_delta_sum = 0;
         for (;;) {
+                reg_dump_65C02();
+
                 uint64_t cycle_start = cycle_count;
                 tick_65C02();
                 ticks++;
@@ -42,7 +44,7 @@ int main(int argc, char **argv) {
                         last_second = time(NULL);
                 }
 
-                reg_dump_65C02();
+                // reg_dump_65C02();
 
                 sleep(1);
         }
