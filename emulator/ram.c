@@ -1,12 +1,12 @@
 #include <ram.h>
-#include <cga.h>
+#include <video.h>
 #include <cpu.h>
 
 uint8_t *memory = NULL;
 
 uint8_t mem_byte_read(uint16_t address) {
         if ((*(memory + 1) & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
-                return cga_mem_read(address);
+                return video_mem_read(address);
         }
 
         return *(memory + address);
@@ -14,7 +14,7 @@ uint8_t mem_byte_read(uint16_t address) {
 
 void mem_byte_write(uint8_t byte, uint16_t address) {
         if ((*(memory + 1) & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
-                cga_mem_write(address, byte);
+                video_mem_write(address, byte);
                 return;
         }
 
@@ -42,7 +42,7 @@ void init_ram() {
 
         memory = (uint8_t *)malloc(UINT16_MAX);
 
-        ASSERT(memory != NULL)
+        ASSERT(memory != NULL);
 
         DBG(1, printf("Initialized RAM");)
 }

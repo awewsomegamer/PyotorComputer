@@ -1,9 +1,13 @@
         .org 56512
 
 KERNAL_ENTRY:
-        lda #$5
-        adc #$5
-        jmp KERNAL_ENTRY
+        lda #$1
+        sta $0001
+LOOP:
+        lda #$1
+        sta $0200, y
+        iny
+        jmp LOOP
 
 IRQ_HANDLER:
         rti        

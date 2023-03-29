@@ -1,30 +1,21 @@
 #include <global.h>
 #include <cpu.h>
 #include <ram.h>
-#include <cga.h>
+#include <video.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
 
 #define SYSCLOCK_SPEED_MHZ 10
 #define SYS_MICRO_SPEED 1 / SYSCLOCK_SPEED_MHZ
 
-int main(int argc, char **argv) {
-        init_65C02();
-        init_ram();
-        init_cga();
+uint8_t running = 1;
 
-        FILE *kern_bin = fopen("bin/kernal.bin", "r");
-        
-        ASSERT(kern_bin != NULL);
-
-        load_file(KERNAL_MEM_BASE, kern_bin, "bin/kernel.bin");
-
-        pin_RES = 0;
-
+void *emulate(void *arg) {
         time_t last_second = time(NULL);
         uint64_t ticks = 0;
         uint64_t cycle_delta_sum = 0;
-        for (;;) {
+        while (running) {
                 reg_dump_65C02();
 
                 uint64_t cycle_start = cycle_count;
@@ -43,11 +34,30 @@ int main(int argc, char **argv) {
                         cycle_count = 0;
                         last_second = time(NULL);
                 }
-
-                // reg_dump_65C02();
-
-                sleep(1);
         }
+}
+
+int main(int argc, char **argv) {
+        init_65C02();
+        init_ram();
+        init_video();
+
+        FILE *kern_bin = fopen("bin/kernal.bin", "r");
         
+        ASSERT(kern_bin != NULL);
+
+        load_file(KERNAL_MEM_BASE, kern_bin, "bin/kernel.bin");
+
+        pin_RES = 0;
+
+        pthread_t emulation_thread;
+        pthread_create(&emulation_thread, NULL, emulate, NULL);
+
+        while (running)
+                update();
+        
+        pthread_join(emulation_thread, NULL);
+        destroy_video();
+
         return 0;
 }
