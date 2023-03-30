@@ -2,18 +2,18 @@
 #include <video.h>
 #include <cpu.h>
 
-uint8_t *memory = NULL;
+uint8_t *general_memory = NULL;
 
 uint8_t mem_byte_read(uint16_t address) {
-        if ((*(memory + 1) & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
+        if ((*(general_memory + 1) & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
                 return video_mem_read(address);
         }
 
-        return *(memory + address);
+        return *(general_memory + address);
 }
 
 void mem_byte_write(uint8_t byte, uint16_t address) {
-        if ((*(memory + 1) & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
+        if ((*(general_memory + 1) & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
                 video_mem_write(address, byte);
                 return;
         }
@@ -23,7 +23,7 @@ void mem_byte_write(uint8_t byte, uint16_t address) {
                 return;
         }
 
-        *(memory + address) = byte;
+        *(general_memory + address) = byte;
 }
 
 void load_file(uint16_t address, FILE *file, char* name) {
@@ -33,16 +33,16 @@ void load_file(uint16_t address, FILE *file, char* name) {
         fseek(file, 0, SEEK_SET);
         ASSERT(file_length < UINT16_MAX);
         
-        fread(memory + address, 1, file_length, file);
+        fread(general_memory + address, 1, file_length, file);
         DBG(1, printf("Loaded file \"%s\" at 0x%04X", name, address);)
 }
 
 void init_ram() {
         DBG(1, printf("Initializing RAM");)
 
-        memory = (uint8_t *)malloc(UINT16_MAX);
+        general_memory = (uint8_t *)malloc(UINT16_MAX);
 
-        ASSERT(memory != NULL);
+        ASSERT(general_memory != NULL);
 
         DBG(1, printf("Initialized RAM");)
 }

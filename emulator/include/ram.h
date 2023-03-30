@@ -23,6 +23,8 @@ enum memory_map {
 #define KERNAL_DAT_MEM(a)  (KERNAL_DAT_BASE  <= a && a <= KERNAL_MEM_BASE - 1)
 #define KERNAL_MEM(a)      (KERNAL_MEM_BASE  <= a && a <= MEM_TOP - 1)
 
+extern uint8_t *general_memory;
+
 uint8_t mem_byte_read(uint16_t);
 void mem_byte_write(uint8_t, uint16_t);
 

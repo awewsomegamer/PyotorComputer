@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <unistd.h>
+#include <time.h>
+#include <pthread.h>
+#include <string.h>
 
 #ifdef DEBUG
         #define DBG(msg, what) \
