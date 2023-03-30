@@ -14,7 +14,7 @@ LOOP:
         sta 48516
 
         tya
-        adc #$1
+        adc INCREMENTER
         tay
         
         bcc OVER
@@ -28,6 +28,10 @@ IRQ_HANDLER:
 
 NMI_HANDLER:
         rti
+
+INCREMENTER:
+        .byte $01
+
 
 ; Interrupt Vectors
         .res $FFFA-*
