@@ -14,7 +14,7 @@ LOOP:
         sta 48516
 
         tya
-        adc INCREMENTER
+        adc #$AD
         tay
         
         bcc OVER
