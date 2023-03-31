@@ -7,16 +7,7 @@ uint8_t register_a = 0;
 uint8_t register_x = 0;
 uint8_t register_y = 0;
 uint8_t register_s = 0xFF;
-struct {
-        uint8_t C : 1;
-        uint8_t Z : 1;
-        uint8_t I : 1;
-        uint8_t D : 1;
-        uint8_t B : 1;
-        uint8_t unused : 1;
-        uint8_t V : 1;
-        uint8_t N : 1;
-} register_p;
+struct reg_flags register_p;
 uint16_t pc = 0;
 
 // Pins
@@ -133,6 +124,7 @@ void tick_65C02() {
         uint8_t opcode = NEXT_BYTE;
         uint8_t high_nibble = ((opcode >> 4) & 0xF);
         uint8_t low_nibble = (opcode & 0xF);
+
 
         // BBSs
         if (high_nibble >= 0x8 &&  high_nibble <= 0xF && low_nibble == 0xF) {

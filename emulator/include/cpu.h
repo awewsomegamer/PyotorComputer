@@ -67,9 +67,22 @@
         register_p.Z = (what == 0); \
         register_p.N = (what >> 7) & 1;
 
+struct reg_flags {
+        uint8_t C : 1;
+        uint8_t Z : 1;
+        uint8_t I : 1;
+        uint8_t D : 1;
+        uint8_t B : 1;
+        uint8_t unused : 1;
+        uint8_t V : 1;
+        uint8_t N : 1;
+};
+
 extern uint8_t pin_IRQ;
 extern uint8_t pin_NMI;
 extern uint8_t pin_RES;
+
+extern struct reg_flags register_p;
 
 extern uint64_t cycle_count;
 

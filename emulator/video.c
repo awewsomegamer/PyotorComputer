@@ -1,5 +1,6 @@
 #include <video.h>
 #include <ram.h>
+#include <cpu.h>
 #include <SDL2/SDL.h>
 
 SDL_Window* window = NULL;
@@ -8,15 +9,21 @@ SDL_Texture* texture = NULL;
 SDL_Surface* surface = NULL;
 SDL_Event event;
 uint8_t *video_memory = NULL;
+uint8_t *font = NULL;
 
 pthread_t update_vram_thread;
+uint16_t sprite_table_address = 0;
 struct video_register {
-        uint32_t address : 24;
+        uint16_t address;
+        uint8_t mode;
         uint8_t data;
-        uint8_t status; // D(ata)1 R(ead)/W(rite) D(ata)2 0 0 0 0 0
+        uint8_t status; // D(ata)1 R(ead)/W(rite) D(ata)2 B 0 0 0 0
                         // D1: Indicates new data from CPU -> Video card
                         // R/W: 0: reading data, 1: writing data
                         // D2: Indicates new data from Video card -> CPU
+                        // B: 0: Draw background, 1: Don't draw background (text mode)
+        uint8_t foreground; // Foreground to use for text
+        uint8_t background; // Background to use for text (carry set means background is not drawn)
 
 }__attribute__((packed));
 
@@ -35,16 +42,49 @@ void *update_vram(void *arg) {
                         reg->status &= ~(1 << 7); // Clear D1
                         reg->status &= ~(1 << 5); // Clear D2
                         
-                        if (reg->address >= VRAM_SIZE)
-                                continue;
+                        switch (reg->mode) {
+                        case 0x00: // 320x200 8-bit Color
+                                if (reg->address >= VRAM_SIZE)
+                                        break;
 
-                        if ((reg->status >> 6) & 1 == 0) { 
-                                // Read
-                                reg->data = *(video_memory + reg->address);
-                                reg->status |= (1 << 5); // Set D2
-                        } else {
-                                // Write
-                                *(video_memory + reg->address) = reg->data;
+                                if ((reg->status >> 6) & 1 == 0) { 
+                                        // Read
+                                        reg->data = *(video_memory + reg->address);
+                                        reg->status |= (1 << 5); // Set D2
+                                } else {
+                                        // Write
+                                        *(video_memory + reg->address) = reg->data;
+                                }
+
+                                break;
+                        
+                        case 0x01: // Sprite Mode
+                                break;
+
+                        case 0x02: // Set Sprite Table Address
+                                break;
+                        
+                        case 0x03: // 80x25 Terminal Mode
+                                // Address behaves like index into screen: y * 80 + x
+                                uint8_t* data = font + reg->data * FONT_HEIGHT;
+
+                                int cx = (reg->address % 80) * FONT_WIDTH;
+                                int cy = (reg->address / 25) * FONT_HEIGHT;
+
+                                for (int i = 0; i < FONT_HEIGHT; i++) {
+                                        int rx = 0;
+                                        for (int j = FONT_WIDTH; j >= 0; j--) {
+                                                if ((data[i] >> j) & 1) {
+                                                        *(video_memory + (i + cy) * 320 + (rx + cx)) = reg->foreground;
+                                                } else if (!((reg->status >> 4) & 1)) {
+                                                        *(video_memory + (i + cy) * 320 + (rx + cx)) = reg->background;
+                                                }
+                                                
+                                                rx++;
+                                        }
+                                }
+
+                                break;
                         }
                 }
         }
@@ -71,6 +111,20 @@ void init_video() {
         DBG(1, printf("Initializing Video");)
 
         video_memory = (uint8_t *)malloc(VRAM_SIZE);
+
+        FILE *font_file = fopen("FONT.bin", "r");
+
+        fseek(font_file, 0, SEEK_END);
+        long font_size = ftell(font_file);
+        fseek(font_file, 0, SEEK_SET);
+
+        ASSERT(font_size != 0);
+
+        font = (uint8_t *)malloc(font_size);
+
+        ASSERT(font != NULL);
+
+        fread(font, 1, font_size, font_file);
 
         if (SDL_Init(SDL_INIT_VIDEO) != 0 ) {
                 printf("Failed to initialize Video\n");
@@ -101,5 +155,6 @@ void destroy_video() {
         SDL_DestroyWindow(window);
         SDL_DestroyTexture(texture);
         free(video_memory);
+        free(font);
         SDL_Quit();
 }
