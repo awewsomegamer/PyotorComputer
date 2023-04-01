@@ -44,6 +44,7 @@ void *update_vram(void *arg) {
                         
                         switch (reg->mode) {
                         case 0x00: // 320x200 8-bit Color
+                                // We are outside of the screen, do not write.
                                 if (reg->address >= VRAM_SIZE)
                                         break;
 
@@ -64,16 +65,20 @@ void *update_vram(void *arg) {
                         case 0x02: // Set Sprite Table Address
                                 break;
                         
-                        case 0x03: // 80x25 Terminal Mode
-                                // Address behaves like index into screen: y * 80 + x
+                        case 0x03: // 40x40 Terminal Mode
+                                // Address behaves like index into screen: y * 40 + x
                                 uint8_t* data = font + reg->data * FONT_HEIGHT;
 
-                                int cx = (reg->address % 80) * FONT_WIDTH;
-                                int cy = (reg->address / 25) * FONT_HEIGHT;
+                                int cx = (reg->address % 40) * FONT_WIDTH;
+                                int cy = (reg->address / 40) * FONT_HEIGHT;
 
                                 for (int i = 0; i < FONT_HEIGHT; i++) {
                                         int rx = 0;
                                         for (int j = FONT_WIDTH; j >= 0; j--) {
+                                                // We are outside of the screen, do not write.
+                                                if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
+                                                        break;
+
                                                 if ((data[i] >> j) & 1) {
                                                         *(video_memory + (i + cy) * 320 + (rx + cx)) = reg->foreground;
                                                 } else if (!((reg->status >> 4) & 1)) {
