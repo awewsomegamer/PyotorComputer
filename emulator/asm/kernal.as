@@ -95,17 +95,54 @@ LOOP_END:
         ply
         plx
 
+        lda #$EF
+
+        ; Set sprite table to be at kernel base
+        lda #.LOBYTE(KERNAL_ENTRY)
+        sta 48512
+        lda #.HIBYTE(KERNAL_ENTRY)
+        sta 48513
+        lda #$2 ; Sprite table address set mode
+        sta 48514
+        lda #%11000000 ; Write to video memory
+        sta 48516
+
+; Change color
+        lda #%00001011
+        sta 48517
+
+; Draw sprite loop
+        lda #$0
+SPRITE_LOOP:
+        pha
+        sta 48512
+        lda #$0 ; Address
+        sta 48513
+        lda #$1 ; Sprite mode
+        sta 48514
+        pla
+        sta 48515
+        pha
+        lda #%11000000 ; Write to video memory
+        sta 48516
+        pla
+
+        cmp #10
+        beq STOP
+        ina
+        jmp SPRITE_LOOP
+
+STOP:
         stp
 
-
-; $4815 - Char to draw
+; $48515 - Char to draw
 ; X - Char index low
 ; Y - Char index high
 DRAW_CHAR:
         pha
         stx 48512 ; Low byte of address
         sty 48513 ; High byte of address
-        lda #$3
+        lda #$3   ; Terminal mode
         sta 48514
         lda #%11010000 ; Write to video memory
         sta 48516

@@ -59,10 +59,33 @@ void *update_vram(void *arg) {
 
                                 break;
                         
-                        case 0x01: // Sprite Mode
+                        case 0x01: { // Sprite Mode (64x40)
+                                // 5 bytes wide, 5 bytes tall
+                                uint8_t *data = (uint8_t *)general_memory + (reg->data * SPRITE_WIDTH * SPRITE_HEIGHT + sprite_table_address);
+
+                                int cx = (reg->address % 64) * FONT_WIDTH;
+                                int cy = (reg->address / 40) * FONT_HEIGHT;
+                                for (int i = 0; i < 5; i++) {
+                                        int rx = 0;
+                                        for (int j = 0; j < 5; j++) {
+                                                if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
+                                                        break;
+
+                                                if ((data[i] >> j) & 1) {
+                                                        *(video_memory + (i + cy) * 320 + (rx + cx)) = reg->foreground;
+                                                } else if (!((reg->status >> 4) & 1)) {
+                                                        *(video_memory + (i + cy) * 320 + (rx + cx)) = reg->background;
+                                                }
+
+                                                rx++;
+                                        }
+                                }
+
                                 break;
+                        }
 
                         case 0x02: // Set Sprite Table Address
+                                sprite_table_address = reg->address;
                                 break;
                         
                         case 0x03: // 40x40 Terminal Mode

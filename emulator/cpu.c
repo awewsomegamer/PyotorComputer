@@ -196,7 +196,7 @@ void INST_LDA_ABS_X() { register_a = PTR(OFF_X(NEXT_WORD)); SET_NZ(register_x) }
 void INST_LDA_ABS_Y() { register_a = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
 void INST_LDY_ABS_X() { register_y = PTR(OFF_X(NEXT_WORD)); SET_NZ(register_x) }
 void INST_LDX_ABS_Y() { register_x = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
-void INST_LDA_ZPG_IND() { register_a = PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)); }
+void INST_LDA_ZPG_IND() { register_a = PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)); SET_NZ(register_a) }
 
 // ST instructions
 void INST_STA_ABS() { mem_byte_write(register_a, NEXT_WORD); }
