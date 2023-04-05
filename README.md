@@ -22,12 +22,14 @@ The processor used is the 65C02 microprocessor. This is because it fixes some bu
 ## Memory
 There is a total of 64 KiB of addressable memory. <br>
 
-`$0000` -> `$00FF` - 256 B Zero Page
-`$0100` -> `$01FF` - 256 B Stack
-`$0200` -> `$407F` - 16 KB video memory or general purpose RAM (1)
-`$4080` -> `$BD7F` - 32 KB general purpose RAM, intended for user programs
-`$BD80` -> `$DCBF` - 8 KB dedicated Kernal RAM
-`$DCC0` -> `$FFFF` - ~8 KB dedicated Kernal ROM (2)
+<ul>
+<li> `$0000` -> `$00FF` - 256 B Zero Page </li>
+<li> `$0100` -> `$01FF` - 256 B Stack </li>
+<li> `$0200` -> `$407F` - 16 KB video memory or general purpose RAM (1) </li>
+<li> `$4080` -> `$BD7F` - 32 KB general purpose RAM, intended for user programs </li>
+<li> `$BD80` -> `$DCBF` - 8 KB dedicated Kernal RAM </li>
+<li> `$DCC0` -> `$FFFF` - ~8 KB dedicated Kernal ROM (2) </li>
+</ul>
 
 (1): If **bit 0** at address **$0001 is set**, then the 16 KB of RAM is dedicated to **video memory**. If **bit 0** at address **$0001 is clear**, then the 16 KB of RAM is **dedicated to general purpose RAM**.
 
