@@ -59,15 +59,15 @@ void *update_vram(void *arg) {
 
                                 break;
                         
-                        case 0x01: { // Sprite Mode (64x40)
-                                // 5 bytes wide, 5 bytes tall
+                        case 0x01: { // Sprite Mode (40x40)
+                                // 8 bytes wide, 5 bytes tall
                                 uint8_t *data = (uint8_t *)general_memory + (reg->data * SPRITE_WIDTH * SPRITE_HEIGHT + sprite_table_address);
 
                                 int cx = (reg->address % 64) * FONT_WIDTH;
                                 int cy = (reg->address / 40) * FONT_HEIGHT;
-                                for (int i = 0; i < 5; i++) {
+                                for (int i = 0; i < SPRITE_HEIGHT; i++) {
                                         int rx = 0;
-                                        for (int j = 0; j < 5; j++) {
+                                        for (int j = 0; j < SPRITE_WIDTH; j++) {
                                                 if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
                                                         break;
 
@@ -88,12 +88,15 @@ void *update_vram(void *arg) {
                                 sprite_table_address = reg->address;
                                 break;
                         
-                        case 0x03: // 40x40 Terminal Mode
+                        case 0x03: // 40x12 Terminal Mode
                                 // Address behaves like index into screen: y * 40 + x
                                 uint8_t* data = font + reg->data * FONT_HEIGHT;
 
                                 int cx = (reg->address % 40) * FONT_WIDTH;
                                 int cy = (reg->address / 40) * FONT_HEIGHT;
+                                
+                                if ((reg->address / 40) > 11)
+                                        break;
 
                                 for (int i = 0; i < FONT_HEIGHT; i++) {
                                         int rx = 0;

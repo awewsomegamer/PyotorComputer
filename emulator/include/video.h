@@ -8,7 +8,7 @@
 #define VRAM_SIZE VRAM_WIDTH * VRAM_HEIGHT // Bytes
 #define FONT_WIDTH 8
 #define FONT_HEIGHT 16
-#define SPRITE_WIDTH 5
+#define SPRITE_WIDTH 8
 #define SPRITE_HEIGHT 5
 
 uint8_t video_mem_read(uint16_t address);

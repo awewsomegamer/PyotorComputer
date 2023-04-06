@@ -32,107 +32,50 @@ LOOP_END:
         ldx #$0
         ldy #$0
 
-        lda #'H'
-        sta 48515
-        lda #$0
-        jsr DRAW_CHAR
-        
-        lda #'e'
-        sta 48515
-        inx
-        jsr DRAW_CHAR
-
-        lda #'l'
-        sta 48515
-        inx
-        jsr DRAW_CHAR
-
-        lda #'l'
-        sta 48515
-        inx
-        jsr DRAW_CHAR
-
-        lda #'o'
-        sta 48515
-        inx
-        jsr DRAW_CHAR
-
-        inx
-
-        lda #'W'
-        sta 48515
-        inx
-        jsr DRAW_CHAR
-
-        lda #'o'
-        sta 48515
-        inx
-        jsr DRAW_CHAR
-
-        lda #'r'
-        sta 48515
-        inx
-        jsr DRAW_CHAR
-
-        lda #'l'
-        sta 48515
-        inx
-        jsr DRAW_CHAR
-
-        lda #'d'
-        sta 48515
-        inx
-        jsr DRAW_CHAR
-
-        inx
-
         lda #.LOBYTE(COOL_STRING)
         sta $4
         lda #.HIBYTE(COOL_STRING)
         sta $5
         jsr DRAW_STR
 
-        ply
-        plx
+; Load address of sprite table
+        lda #$00
+        sta 48512 ; Low byte
+        lda #$20
+        sta 48513 ; High byte
+        lda #$2
+        sta 48514 ; Mode: Set sprite table address
+        lda #%11000000
+        sta 48516 ; Write to video memory
 
-        lda #$EF
-
-        ; Set sprite table to be at kernel base
-        lda #.LOBYTE(KERNAL_ENTRY)
-        sta 48512
-        lda #.HIBYTE(KERNAL_ENTRY)
-        sta 48513
-        lda #$2 ; Sprite table address set mode
-        sta 48514
-        lda #%11000000 ; Write to video memory
-        sta 48516
+; Store smiley face at first sprite spot
+        lda #%01000010
+        sta $2000
+        lda #%01000010
+        sta $2001
+        lda #%00000000
+        sta $2002
+        lda #%10000001
+        sta $2003
+        lda #%01111110
+        sta $2004
 
 ; Change color
         lda #%00001011
         sta 48517
 
-; Draw sprite loop
+; Draw sprite
+        lda #$FF
+        sta 48512 ; Low byte
         lda #$0
-SPRITE_LOOP:
-        pha
-        sta 48512
-        lda #$0 ; Address
-        sta 48513
-        lda #$1 ; Sprite mode
-        sta 48514
-        pla
+        sta 48513 ; High byte
+        lda #$0
         sta 48515
-        pha
-        lda #%11000000 ; Write to video memory
-        sta 48516
-        pla
-
-        cmp #10
-        beq STOP
-        ina
-        jmp SPRITE_LOOP
-
-STOP:
+        lda #$1
+        sta 48514 ; Mode: Draw sprite
+        lda #%11010000
+        sta 48516 ; Write to video memory
+   
         stp
 
 ; $48515 - Char to draw
