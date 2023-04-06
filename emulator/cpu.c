@@ -2,6 +2,7 @@
 #include <ram.h>
 
 // ** TODO: Implement BCD mode
+
 // Initial states of registers
 uint8_t register_a = 0;
 uint8_t register_x = 0;
@@ -87,18 +88,21 @@ void INST_BIT(uint8_t opcode) {
         }
 }
 
+// ** TODO: The interrupt logic is not good, the pins are being set before
+//          the processor preforms or fufills the request. The pins should be
+//          set (I believe) on the RTI.
 void call_interrupt() {
         mem_byte_write(((pc + 2) >> 8) & 0xFF, 0x100 + (register_s--)); // High
         mem_byte_write((pc + 2) & 0xFF, 0x100 + (register_s--)); // Low
-        INST_PHP(); // Push flags
-        register_p.I = 1; // Disable interrupts
 
         if (!pin_NMI) {
                 // NMI
                 pc = PTR(0xFFFA) | (PTR(0xFFFB) << 8);
                 pin_NMI = 1;
-        } else if (!pin_IRQ) {
+        } else if (!pin_IRQ && !register_p.I) {
                 // IRQ
+// ** TODO: Sometimes it takes a while for this entire thing to actuate
+//          and register an IRQ.
                 pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
                 pin_IRQ = 1;
         } else if (!pin_RES) {
@@ -106,6 +110,9 @@ void call_interrupt() {
                 pc = PTR(0xFFFC) | (PTR(0xFFFD) << 8);
                 pin_RES = 1;
         }
+
+        INST_PHP(); // Push flags
+        register_p.I = 1; // Disable interrupts
 }
 
 // Preform one cycle on the 6502

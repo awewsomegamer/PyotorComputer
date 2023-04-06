@@ -1,6 +1,8 @@
         .org 56512
 
 KERNAL_ENTRY:
+        cli ; Allow for interrupts
+
         lda #$FF ; Set foreground to white, leave background blank
         sta 48517
         
@@ -76,7 +78,7 @@ LOOP_END:
         lda #%11010000
         sta 48516 ; Write to video memory
    
-        stp
+        wai
 
 ; $48515 - Char to draw
 ; X - Char index low
@@ -133,7 +135,26 @@ DRAW_STR_END:
         rts
 
 IRQ_HANDLER:
-        rti        
+        phy
+        ldy $3
+        lda ALPHABET, y
+        ply
+
+        sta 48515
+        jsr DRAW_CHAR
+
+; Increment to next char
+        txa
+        adc #1
+        tax
+        bcc IRQ_HANDLER_OVER
+        iny
+IRQ_HANDLER_OVER:
+
+        rti
+
+ALPHABET:
+	.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 NMI_HANDLER:
         rti

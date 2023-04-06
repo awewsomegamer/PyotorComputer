@@ -5,13 +5,13 @@
 
 #define IO_VIDEO_MASK (1 << 0)
 
-#define OFF_X(value) (uint8_t)(value + register_x)
+#define OFF_X(value) (uint8_t)(value + register_x) // This is not always true (sometimes ABS + X) (effects instructions which use _ABS_X addressing mode)
 #define OFF_Y(value) (value + register_y)
 #define PTR(value) (mem_byte_read(value))
 #define NEXT_BYTE mem_byte_read(pc++)
 #define CUR_BYTE mem_byte_read(pc)
-#define NEXT_WORD NEXT_BYTE | (NEXT_BYTE << 8)
-#define CUR_WORD CUR_BYTE | (mem_byte_read(pc + 1) << 8)
+#define NEXT_WORD (uint16_t)(NEXT_BYTE | (NEXT_BYTE << 8))
+#define CUR_WORD (uint16_t)(CUR_BYTE | (mem_byte_read(pc + 1) << 8))
 #define CMP_SET(v1, v2) \
         { \
                 uint32_t iv1 = (uint32_t)v1; \

@@ -3,6 +3,8 @@
 #include <cpu.h>
 #include <SDL2/SDL.h>
 
+#include <keyboard.h>
+
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 SDL_Texture* texture = NULL;
@@ -128,6 +130,9 @@ void update() {
         switch (event.type) {
         case SDL_QUIT:
                 running = 0;
+                break;
+        case SDL_KEYDOWN:
+                keyboard_request(event.key.keysym.scancode);
                 break;
         }
 

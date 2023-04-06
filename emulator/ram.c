@@ -5,19 +5,10 @@
 uint8_t *general_memory = NULL;
 
 uint8_t mem_byte_read(uint16_t address) {
-        if ((*(general_memory + 1) & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
-                return video_mem_read(address);
-        }
-
         return *(general_memory + address);
 }
 
 void mem_byte_write(uint8_t byte, uint16_t address) {
-        if ((*(general_memory + 1) & IO_VIDEO_MASK) && VIDEO_MEM(address)) {
-                video_mem_write(address, byte);
-                return;
-        }
-
         if (KERNAL_MEM(address)) {
                 DBG(1, printf("Tried to write to KERNAL ROM address");)
                 return;
