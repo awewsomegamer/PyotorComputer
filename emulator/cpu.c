@@ -92,8 +92,8 @@ void INST_BIT(uint8_t opcode) {
 //          the processor preforms or fufills the request. The pins should be
 //          set (I believe) on the RTI.
 void call_interrupt() {
-        mem_byte_write(((pc + 1) >> 8) & 0xFF, 0x100 + (register_s--)); // High
-        mem_byte_write((pc + 1) & 0xFF, 0x100 + (register_s--)); // Low
+        mem_byte_write(((pc) >> 8) & 0xFF, 0x100 + (register_s--)); // High
+        mem_byte_write((pc) & 0xFF, 0x100 + (register_s--)); // Low
 
         reg_dump_65C02();
 

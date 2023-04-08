@@ -77,11 +77,11 @@ LOOP_END:
         sta 48514 ; Mode: Draw sprite
         lda #%11010000
         sta 48516 ; Write to video memory
-
         wai
-        nop
 
-        stp
+TERMINATE:
+        nop
+        jmp TERMINATE
 
 
 ; $48515 - Char to draw
