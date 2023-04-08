@@ -77,8 +77,12 @@ LOOP_END:
         sta 48514 ; Mode: Draw sprite
         lda #%11010000
         sta 48516 ; Write to video memory
-   
+
         wai
+        nop
+
+        stp
+
 
 ; $48515 - Char to draw
 ; X - Char index low
@@ -144,12 +148,15 @@ IRQ_HANDLER:
         jsr DRAW_CHAR
 
 ; Increment to next char
+        php
+        clc
         txa
         adc #1
         tax
         bcc IRQ_HANDLER_OVER
         iny
 IRQ_HANDLER_OVER:
+        plp
 
         rti
 

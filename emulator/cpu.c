@@ -92,8 +92,10 @@ void INST_BIT(uint8_t opcode) {
 //          the processor preforms or fufills the request. The pins should be
 //          set (I believe) on the RTI.
 void call_interrupt() {
-        mem_byte_write(((pc + 2) >> 8) & 0xFF, 0x100 + (register_s--)); // High
-        mem_byte_write((pc + 2) & 0xFF, 0x100 + (register_s--)); // Low
+        mem_byte_write(((pc + 1) >> 8) & 0xFF, 0x100 + (register_s--)); // High
+        mem_byte_write((pc + 1) & 0xFF, 0x100 + (register_s--)); // Low
+
+        reg_dump_65C02();
 
         if (!pin_NMI) {
                 // NMI
@@ -117,16 +119,20 @@ void call_interrupt() {
 
 // Preform one cycle on the 6502
 void tick_65C02() {
-        if ((waiting && (pin_IRQ && pin_NMI && pin_RES)) || (stopped && pin_RES)) {
+        if ((waiting && ((pin_IRQ || register_p.I) && pin_NMI && pin_RES)) || (stopped && pin_RES)) {
                 // We are waiting
                 cycle_count++; // Should this be done this way?
                 return;
         }
 
-        // printf("A\n");
+        stopped = 0;
+        waiting = 0;
 
-        if ((!pin_IRQ && !register_p.I) || !pin_NMI || !pin_RES) // NMI, RES, or IRQ pins went low, check if IRQs are unmasked
+        if ((!pin_IRQ && !register_p.I) || !pin_NMI || !pin_RES) { // NMI, RES, or IRQ pins went low, check if IRQs are unmasked
+                printf("Calling Interrupt\n");
                 call_interrupt();
+        }
+
 
         uint8_t opcode = NEXT_BYTE;
         uint8_t high_nibble = ((opcode >> 4) & 0xF);
