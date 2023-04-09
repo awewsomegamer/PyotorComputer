@@ -35,6 +35,9 @@ void *emulate(void *arg) {
 }
 
 int main(int argc, char **argv) {
+        printf("Hello World this is a test of lazygit\n");
+
+
         init_65C02();
         init_ram();
         init_video();
