@@ -19,7 +19,7 @@ LOOP:
         sta 48516
 
         tya
-        adc #$AD
+        adc #$F
         tay
         
         bcc OVER
@@ -161,7 +161,7 @@ IRQ_HANDLER_OVER:
         rti
 
 ALPHABET:
-	.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ                    "
 
 NMI_HANDLER:
         rti
@@ -170,7 +170,8 @@ INCREMENTER:
         .byte $00
 
 COOL_STRING:
-        .asciiz "Hello World! I am writing this to you from a string and I am testing to see if screen wrapping works. Does it?"
+        ;.asciiz "Hello World! I am writing this to you from a string and I am testing to see if screen wrapping works. Does it?"
+        .asciiz "Hello Nagyi"
 
 ; Interrupt Vectors
         .res $FFFA-*

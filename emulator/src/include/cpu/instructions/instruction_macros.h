@@ -1,9 +1,7 @@
-#ifndef CPU_H
-#define CPU_H
+#ifndef INSTRUCTION_MACROS_H
+#define INSTRUCTION_MACROS_H
 
-#include <global.h>
-
-#define IO_VIDEO_MASK (1 << 0)
+#include <cpu/cpu.h>
 
 #define OFF_X(value) (uint8_t)(value + register_x) // This is not always true (sometimes ABS + X) (effects instructions which use _ABS_X addressing mode)
 #define OFF_Y(value) (value + register_y)
@@ -67,27 +65,25 @@
         register_p.Z = (what == 0); \
         register_p.N = (what >> 7) & 1;
 
-struct reg_flags {
-        uint8_t C : 1;
-        uint8_t Z : 1;
-        uint8_t I : 1;
-        uint8_t D : 1;
-        uint8_t B : 1;
-        uint8_t unused : 1;
-        uint8_t V : 1;
-        uint8_t N : 1;
-};
+// Stack Instructions
+void INST_PHP();
+void INST_PLP();
+void INST_PHA();
+void INST_PLA();
+void INST_PHX();
+void INST_PLX();
+void INST_PHY();
+void INST_PLY();
 
-extern uint8_t pin_IRQ;
-extern uint8_t pin_NMI;
-extern uint8_t pin_RES;
-
-extern struct reg_flags register_p;
-
-extern uint64_t cycle_count;
-
-void tick_65C02();
-void reg_dump_65C02();
-void init_65C02();
+void init_arithmetic_instructions();
+void init_comparison_instructions();
+void init_control_flow_instructions();
+void init_flag_instructions();
+void init_inc_dec_instructions();
+void init_load_instructions();
+void init_logical_instructions();
+void init_stack_instructions();
+void init_store_instructions();
+void init_transfer_instructions();
 
 #endif

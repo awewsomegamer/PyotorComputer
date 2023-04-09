@@ -1,6 +1,6 @@
 #include <video.h>
 #include <ram.h>
-#include <cpu.h>
+#include <cpu/cpu.h>
 #include <SDL2/SDL.h>
 
 #include <keyboard.h>

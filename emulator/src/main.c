@@ -1,5 +1,5 @@
 #include <global.h>
-#include <cpu.h>
+#include <cpu/cpu.h>
 #include <ram.h>
 #include <video.h>
 
@@ -14,7 +14,7 @@ void *emulate(void *arg) {
         uint64_t cycle_delta_sum = 0;
         while (running) {
                 // reg_dump_65C02();
-
+  
                 uint64_t cycle_start = cycle_count;
                 tick_65C02();
                 ticks++;

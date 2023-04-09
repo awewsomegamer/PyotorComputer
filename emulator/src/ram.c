@@ -1,6 +1,6 @@
 #include <ram.h>
 #include <video.h>
-#include <cpu.h>
+#include <cpu/cpu.h>
 
 uint8_t *general_memory = NULL;
 
