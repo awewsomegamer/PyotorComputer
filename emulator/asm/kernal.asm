@@ -170,7 +170,6 @@ INCREMENTER:
         .byte $00
 
 COOL_STRING:
-        ;.asciiz "Hello World! I am writing this to you from a string and I am testing to see if screen wrapping works. Does it?"
         .asciiz "Hello Nagyi"
 
 ; Interrupt Vectors

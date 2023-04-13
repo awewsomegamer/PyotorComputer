@@ -1,0 +1,193 @@
+Mnemonic	Addressing mode	Form	Opcode	Size	Timing
+ADC	Immediate	ADC #Oper	69	2	2
+ADC	Zero Page	ADC Zpg	65	2	3
+ADC	Zero Page,X	ADC Zpg,X	75	2	4
+ADC	Absolute	ADC Abs	6D	3	4
+ADC	Absolute,X	ADC Abs,X	7D	3	4
+ADC	Absolute,Y	ADC Abs,Y	79	3	4
+ADC	(Zero Page,X)	ADC (Zpg,X)	61	2	6
+ADC	(Zero Page),Y	ADC (Zpg),Y	71	2	5
+ADC	(Zero Page)	ADC (Zpg)	72	2	5
+AND	Immediate	AND #Oper	29	2	2
+AND	Zero Page	AND Zpg	25	2	3
+AND	Zero Page,X	AND Zpg,X	35	2	4
+AND	Absolute	AND Abs	2D	3	4
+AND	Absolute,X	AND Abs,X	3D	3	4
+AND	Absolute,Y	AND Abs,Y	39	3	4
+AND	(Zero Page,X)	AND (Zpg,X)	21	2	6
+AND	(Zero Page),Y	AND (Zpg),Y	31	2	5
+AND	(Zero Page)	AND (Zpg)	32	2	5
+ASL	Accumulator	ASL A	0A	1	2
+ASL	Zero Page	ASL Zpg	06	2	5
+ASL	Zero Page,X	ASL Zpg,X	16	2	6
+ASL	Absolute	ASL Abs	0E	3	6
+ASL	Absolute,X	ASL Abs,X	1E	3	7
+BBR0	Relative	BBR0 Oper	0F	2	2
+BBR1	Relative	BBR1 Oper	1F	2	2
+BBR2	Relative	BBR2 Oper	2F	2	2
+BBR3	Relative	BBR3 Oper	3F	2	2
+BBR4	Relative	BBR4 Oper	4F	2	2
+BBR5	Relative	BBR5 Oper	5F	2	2
+BBR6	Relative	BBR6 Oper	6F	2	2
+BBR7	Relative	BBR7 Oper	7F	2	2
+BBS0	Relative	BBS0 Oper	8F	2	2
+BBS1	Relative	BBS1 Oper	9F	2	2
+BBS2	Relative	BBS2 Oper	AF	2	2
+BBS3	Relative	BBS3 Oper	BF	2	2
+BBS4	Relative	BBS4 Oper	CF	2	2
+BBS5	Relative	BBS5 Oper	DF	2	2
+BBS6	Relative	BBS6 Oper	EF	2	2
+BBS7	Relative	BBS7 Oper	FF	2	2
+BCC	Relative	BCC Oper	90	2	2
+BCS	Relative	BCS Oper	B0	2	2
+BEQ	Relative	BEQ Oper	F0	2	2
+BIT	Immediate	BIT #Oper	89	2	2
+BIT	Zero Page	BIT Zpg	24	2	3
+BIT	Zero Page,X	BIT Zpg,X	34	2	4
+BIT	Absolute	BIT Abs	2C	3	4
+BIT	Absolute,X	BIT Abs,X	3C	3	4
+BMI	Relative	BMI Oper	30	2	2
+BNE	Relative	BNE Oper	D0	2	2
+BPL	Relative	BPL Oper	10	2	2
+BRA	Relative	BRA Oper	80	2	3
+BRK	Implied	BRK	00	1	7
+BVC	Relative	BVC Oper	50	2	2
+BVS	Relative	BVS Oper	70	2	2
+CLC	Implied	CLC	18	1	2
+CLD	Implied	CLD	D8	1	2
+CLI	Implied	CLI	58	1	2
+CLV	Implied	CLV	B8	1	2
+CMP	Immediate	CMP #Oper	C9	2	2
+CMP	Zero Page	CMP Zpg	C5	2	3
+CMP	Zero Page,X	CMP Zpg	D5	2	4
+CMP	Absolute	CMP Abs	CD	3	4
+CMP	Absolute,X	CMP Abs,X	DD	3	4
+CMP	Absolute,Y	CMP Abs,Y	D9	3	4
+CMP	(Zero Page,X)	CMP (Zpg,X)	C1	2	6
+CMP	(Zero Page),Y	CMP (Zpg),Y	D1	2	5
+CMP	(Zero Page)	CMP (Zpg)	D2	2	5
+CPX	Immediate	CPX #Oper	E0	2	2
+CPX	Zero Page	CPX Zpg	E4	2	3
+CPX	Absolute	CPX Abs	EC	3	4
+CPY	Immediate	CPY #Oper	C0	2	2
+CPY	Zero Page	CPY Zpg	C4	2	3
+CPY	Absolute	CPY Abs	CC	3	4
+DEA	Accumulator	DEA	3A	1	2
+DEC	Zero Page	DEC Zpg	C6	2	5
+DEC	Zero Page,X	DEC Zpg,X	D6	2	6
+DEC	Absolute	DEC Abs	CE	3	6
+DEC	Absolute,X	DEC Abs,X	DE	3	7
+DEX	Implied	DEX	CA	1	2
+DEY	Implied	DEY	88	1	2
+EOR	Immediate	EOR #Oper	49	2	2
+EOR	Zero Page	EOR Zpg	45	2	3
+EOR	Zero Page,X	EOR Zpg,X	55	2	4
+EOR	Absolute	EOR Abs	4D	3	4
+EOR	Absolute,X	EOR Abs,X	5D	3	4
+EOR	Absolute,Y	EOR Abs,Y	59	3	4
+EOR	(Zero Page,X)	EOR (Zpg,X)	41	2	6
+EOR	(Zero Page),Y	EOR (Zpg),Y	51	2	5
+EOR	(Zero Page)	EOR (Zpg)	52	2	5
+INA	Accumulator	INA	1A	1	2
+INC	Zero Page	INC Zpg	E6	2	5
+INC	Zero Page,X	INC Zpg,X	F6	2	6
+INC	Absolute	INC Abs	EE	3	6
+INC	Absolute,X	INC Abs,X	FE	3	7
+INX	Implied	INX	E8	1	2
+INY	Implied	INY	C8	1	2
+JMP	Absolute	JMP Abs	4C	3	3
+JMP	(Absolute)	JMP (Abs)	6C	3	5
+JMP	(Absolute,X)	JMP (Abs,X)	7C	3	6
+JSR	Absolute	JSR Abs	20	3	6
+LDA	Immediate	LDA #Oper	A9	2	2
+LDA	Zero Page	LDA Zpg	A5	2	3
+LDA	Zero Page,X	LDA Zpg,X	B5	2	4
+LDA	Absolute	LDA Abs	AD	3	4
+LDA	Absolute,X	LDA Abs,X	BD	3	4
+LDA	Absolute,Y	LDA Abs,Y	B9	3	4
+LDA	(Zero Page,X)	LDA (Zpg,X)	A1	2	6
+LDA	(Zero Page),Y	LDA (Zpg),Y	B1	2	5
+LDA	(Zero Page)	LDA (Zpg)	B2	2	5
+LDX	Immediate	LDX #Oper	A2	2	2
+LDX	Zero Page	LDX Zpg	A6	2	3
+LDX	Zero Page,Y	LDX Zpg,Y	B6	2	4
+LDX	Absolute	LDX Abs	AE	3	4
+LDX	Absolute,Y	LDX Abs,Y	BE	3	4
+LDY	Immediate	LDY #Oper	A0	2	2
+LDY	Zero Page	LDY Zpg	A4	2	3
+LDY	Zero Page,Y	LDY Zpg,X	B4	2	4
+LDY	Absolute	LDY Abs	AC	3	4
+LDY	Absolute,Y	LDY Abs,X	BC	3	4
+LSR	Accumulator	LSR A	4A	1	2
+LSR	Zero Page	LSR Zpg	46	2	5
+LSR	Zero Page,X	LSR Zpg,X	56	2	6
+LSR	Absolute	LSR Abs	4E	3	6
+LSR	Absolute,X	LSR Abs,X	5E	3	7
+NOP	Implied	NOP	EA	1	2
+ORA	Immediate	ORA #Oper	09	2	2
+ORA	Zero Page	ORA Zpg	05	2	3
+ORA	Zero Page,X	ORA Zpg,X	15	2	4
+ORA	Absolute	ORA Abs	0D	3	4
+ORA	Absolute,X	ORA Abs,X	1D	3	4
+ORA	Absolute,Y	ORA Abs,Y	19	3	4
+ORA	(Zero Page,X)	ORA (Zpg,X)	01	2	6
+ORA	(Zero Page),Y	ORA (Zpg),Y	11	2	5
+ORA	(Zero Page)	ORA (Zpg)	12	2	5
+PHA	Implied	PHA	48	1	3
+PHX	Implied	PHX	DA	1	3
+PHY	Implied	PHY	5A	1	3
+PLA	Implied	PLA	68	1	4
+PLX	Implied	PLX	FA	1	4
+PLY	Implied	PLY	7A	1	4
+ROL	Accumulator	ROL A	2A	1	2
+ROL	Zero Page	ROL Zpg	26	2	5
+ROL	Zero Page,X	ROL Zpg,X	36	2	6
+ROL	Absolute	ROL Abs	2E	3	6
+ROL	Absolute,X	ROL Abs,X	3E	3	7
+ROR	Accumulator	ROR A	6A	1	2
+ROR	Zero Page	ROR Zpg	66	2	5
+ROR	Zero Page,X	ROR Zpg,X	76	2	6
+ROR	Absolute	ROR Abs	6E	3	6
+ROR	Absolute,X	ROR Abs,X	7E	3	7
+RTI	Implied	RTI	40	1	6
+RTS	Implied	RTS	60	1	6
+SBC	Immediate	SBC #Oper	E9	2	2
+SBC	Zero Page	SBC Zpg	E5	2	3
+SBC	Zero Page,X	SBC Zpg,X	F5	2	4
+SBC	Absolute	SBC Abs	ED	3	4
+SBC	Absolute,X	SBC Abs,X	FD	3	4
+SBC	Absolute,Y	SBC Abs,Y	F9	3	4
+SBC	(Zero Page,X)	SBC (Zpg,X)	E1	2	6
+SBC	(Zero Page),Y	SBC (Zpg),Y	F1	2	5
+SBC	(Zero Page)	SBC (Zpg)	F2	2	5
+SEC	Implied	SEC	38	1	2
+SED	Implied	SED	F8	1	2
+SEI	Implied	SEI	78	1	2
+STA	Zero Page	STA Zpg	85	2	3
+STA	Zero Page,X	STA Zpg,X	95	2	4
+STA	Absolute	STA Abs	8D	3	4
+STA	Absolute,X	STA Abs,X	9D	3	5
+STA	Absolute,Y	STA Abs,Y	99	3	5
+STA	(Zero Page,X)	STA (Zpg,X)	81	2	6
+STA	(Zero Page),Y	STA (Zpg),Y	91	2	6
+STA	(Zero Page)	STA (Zpg)	92	2	5
+STX	Zero Page	STX Zpg	86	2	3
+STX	Zero Page,Y	STX Zpg,Y	96	2	4
+STX	Absolute	STX Abs	8E	3	4
+STY	Zero Page	STY Zpg	84	2	3
+STY	Zero Page,X	STY Zpg,X	94	2	4
+STY	Absolute	STY Abs	8C	3	4
+STZ	Zero Page	STZ Zpg	64	2	3
+STZ	Zero Page,X	STZ Zpg,X	74	2	4
+STZ	Absolute	STZ Abs	9C	3	4
+STZ	Absolute,X	STZ Abs,X	9E	3	5
+TAX	Implied	TAX	AA	1	2
+TAY	Implied	TAY	A8	1	2
+TRB	Zero Page	TRB Zpg	14	2	5
+TRB	Absolute	TRB Abs	1C	3	6
+TSB	Zero Page	TSB Zpg	04	2	5
+TSB	Absolute	TSB Abs	0C	3	6
+TSX	Implied	TSX	BA	1	2
+TXA	Implied	TXA	8A	1	2
+TXS	Implied	TXS	9A	1	2
+TYA	Implied	TYA	98	1	2

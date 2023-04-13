@@ -14,12 +14,11 @@ void INST_LDX_ZPG_Y() { register_x = PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 
 void INST_LDY_ZPG_X() { register_y = PTR(OFF_X(NEXT_BYTE)); SET_NZ(register_y) }
 void INST_LDA_IND_X() { register_a = PTR(PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8)); SET_NZ(register_x)}
 void INST_LDA_IND_Y() { register_a = PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); SET_NZ(register_y) }
-void INST_LDA_ABS_X() { register_a = PTR(OFF_X(NEXT_WORD)); SET_NZ(register_x) }
+void INST_LDA_ABS_X() { register_a = PTR(OFF_X_ABS(NEXT_WORD)); SET_NZ(register_x) }
 void INST_LDA_ABS_Y() { register_a = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
-void INST_LDY_ABS_X() { register_y = PTR(OFF_X(NEXT_WORD)); SET_NZ(register_x) }
+void INST_LDY_ABS_X() { register_y = PTR(OFF_X_ABS(NEXT_WORD)); SET_NZ(register_x) }
 void INST_LDX_ABS_Y() { register_x = PTR(OFF_Y(NEXT_WORD)); SET_NZ(register_y) }
 void INST_LDA_ZPG_IND() { register_a = PTR(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)); SET_NZ(register_a) }
-
 
 void init_load_instructions() {
         instruction[0xA9] = INST_LDA_IMM; DBG(0, installed_instructions++;)

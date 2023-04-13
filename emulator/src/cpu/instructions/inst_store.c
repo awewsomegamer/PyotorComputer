@@ -11,14 +11,13 @@ void INST_STX_ZPG_Y() { mem_byte_write(register_x, OFF_Y(PTR(CUR_BYTE) | (PTR(NE
 void INST_STY_ZPG_X() { mem_byte_write(register_y, OFF_X(NEXT_BYTE)); }
 void INST_STA_IND_X() { mem_byte_write(register_a, PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8)); }
 void INST_STA_IND_Y() { mem_byte_write(register_a, OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); }
-void INST_STA_ABS_X() { mem_byte_write(register_a, OFF_X(NEXT_WORD)); }
+void INST_STA_ABS_X() { mem_byte_write(register_a, OFF_X_ABS(NEXT_WORD)); }
 void INST_STA_ABS_Y() { mem_byte_write(register_a, OFF_Y(NEXT_WORD)); }
-
 void INST_STA_ZPG_IND() { mem_byte_write(register_a, (PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8))); }
 void INST_STZ_ZPG() { mem_byte_write(0x00, NEXT_BYTE); }
 void INST_STZ_ZPG_X() { mem_byte_write(0x00, OFF_X(NEXT_BYTE)); }
 void INST_STZ_ABS() { mem_byte_write(0x00, NEXT_WORD); }
-void INST_STZ_ABS_X() { mem_byte_write(0x00, OFF_X(NEXT_WORD)); }
+void INST_STZ_ABS_X() { mem_byte_write(0x00, OFF_X_ABS(NEXT_WORD)); }
 
 void init_store_instructions() {
         instruction[0x8D] = INST_STA_ABS; DBG(0, installed_instructions++;)

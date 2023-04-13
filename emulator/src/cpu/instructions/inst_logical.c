@@ -74,19 +74,19 @@ void INST_AND_ABS_Y() { ARIT_AND_SET(register_a, PTR(OFF_Y(NEXT_WORD))) }
 void INST_EOR_IMM() { ARIT_EOR_SET(register_a, NEXT_BYTE) }
 void INST_EOR_ABS_Y() { ARIT_EOR_SET(register_a, PTR(OFF_Y(NEXT_WORD))) }
 void INST_ORA_ABS() { ARIT_OR_SET(register_a, PTR(NEXT_WORD)) }
-void INST_ORA_ABS_X() { ARIT_OR_SET(register_a, PTR(NEXT_WORD)) }
+void INST_ORA_ABS_X() { ARIT_OR_SET(register_a, PTR(OFF_X_ABS(NEXT_WORD))) }
 void INST_AND_ABS() { ARIT_AND_SET(register_a, PTR(NEXT_WORD)) }
-void INST_AND_ABS_X() { ARIT_AND_SET(register_a, PTR(OFF_X(NEXT_WORD))) }
+void INST_AND_ABS_X() { ARIT_AND_SET(register_a, PTR(OFF_X_ABS(NEXT_WORD))) }
 void INST_EOR_ABS() { ARIT_EOR_SET(register_a, PTR(NEXT_WORD)) }
-void INST_EOR_ABS_X() { ARIT_EOR_SET(register_a, PTR(OFF_X(NEXT_WORD))) }
+void INST_EOR_ABS_X() { ARIT_EOR_SET(register_a, PTR(OFF_X_ABS(NEXT_WORD))) }
 void INST_ASL_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
-void INST_ASL_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
+void INST_ASL_ABS_X() { uint16_t address = OFF_X_ABS(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
 void INST_ROL_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
-void INST_ROL_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
+void INST_ROL_ABS_X() { uint16_t address = OFF_X_ABS(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
 void INST_LSR_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); register_p.N = 0; }
-void INST_LSR_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); register_p.N = 0; }
+void INST_LSR_ABS_X() { uint16_t address = OFF_X_ABS(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); register_p.N = 0; }
 void INST_ROR_ABS() { uint16_t address = NEXT_WORD; mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
-void INST_ROR_ABS_X() { uint16_t address = OFF_X(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
+void INST_ROR_ABS_X() { uint16_t address = OFF_X_ABS(NEXT_WORD); mem_byte_write(ARIT_LEFT_SHIFT(PTR(address)), address); }
 
 void init_logical_instructions() {
         instruction[0x01] = INST_ORA_IND_X; DBG(0, installed_instructions++;)

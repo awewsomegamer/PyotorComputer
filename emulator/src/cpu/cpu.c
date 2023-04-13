@@ -1,6 +1,8 @@
 #include <cpu/cpu.h>
 #include <cpu/instructions/instruction_macros.h>
 #include <ram.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 // ** TODO: Implement BCD mode
 
@@ -47,19 +49,25 @@ uint8_t cycles[256] = {  7, 6, 0, 0, 5, 3, 5, 0, 0, 2, 2, 0, 6, 4, 6, 0,   // 0
 
 // Run-time instructions
 void INST_BBS(int index) {
-        cycle_count += 2;
-        if ((PTR(NEXT_BYTE) >> index) & 1 == 1)
-                pc = NEXT_WORD;
+        uint16_t address = NEXT_WORD;
+
+        cycle_count += 5 + ((pc / PAGE_SIZE == address / PAGE_SIZE) ? 1 : 2);
+
+        if (((PTR(NEXT_BYTE) >> index) & 1) == 1)
+                pc = address;
 }
 
 void INST_BBR(int index) {
-        cycle_count += 2;
-        if ((PTR(NEXT_BYTE) >> index) & 1 == 0)
+        uint16_t address = NEXT_WORD;
+        
+        cycle_count += 5 + ((pc / PAGE_SIZE == address / PAGE_SIZE) ? 1 : 2);
+
+        if (((PTR(NEXT_BYTE) >> index) & 1) == 0)
                 pc = NEXT_WORD;
 }
 
-void INST_SMB(int index) { mem_byte_write(PTR(CUR_BYTE) | (1 << index), NEXT_BYTE); }
-void INST_RMB(int index) { mem_byte_write(PTR(CUR_BYTE) & ~(1 << index), NEXT_BYTE); }
+void INST_SMB(int index) { mem_byte_write(PTR(CUR_BYTE) | (1 << index), NEXT_BYTE); cycle_count += 5; }
+void INST_RMB(int index) { mem_byte_write(PTR(CUR_BYTE) & ~(1 << index), NEXT_BYTE); cycle_count += 5; }
 
 void INST_BIT(uint8_t opcode) { 
         uint8_t value = 0;
@@ -97,8 +105,6 @@ void call_interrupt() {
         mem_byte_write(((pc) >> 8) & 0xFF, 0x100 + (register_s--)); // High
         mem_byte_write((pc) & 0xFF, 0x100 + (register_s--)); // Low
 
-        reg_dump_65C02();
-
         if (!pin_NMI) {
                 // NMI
                 pc = PTR(0xFFFA) | (PTR(0xFFFB) << 8);
@@ -132,7 +138,6 @@ void tick_65C02() {
 
         if ((!pin_IRQ && !register_p.I) || !pin_NMI || !pin_RES) // NMI, RES, or IRQ pins went low, check if IRQs are unmasked
                 call_interrupt();
-
 
         uint8_t opcode = NEXT_BYTE;
         uint8_t high_nibble = ((opcode >> 4) & 0xF);
@@ -201,7 +206,7 @@ void reg_dump_65C02() {
         printf("X     : %02X (%d)\n", register_x, register_x);
         printf("Y     : %02X (%d)\n", register_y, register_y);
         printf("S     : %02X (%d)\n", register_s, register_s);
-        printf("P     : %02X (", register_p, register_p);
+        printf("P     : %02X (", *(uint8_t *)&register_p);
         if (register_p.N) printf("N");
         if (register_p.V) printf(" | V");
         if (register_p.unused) printf(" | Unused");
@@ -217,7 +222,7 @@ void reg_dump_65C02() {
         if (pc + 2 < UINT16_MAX) printf(" %02X", PTR(pc + 2));
         printf(")\n");
 
-        printf("CYCLE : %X (%d)\n", cycle_count, cycle_count);
+        printf("CYCLE : %X (%ul)\n", cycle_count, cycle_count);
 
         printf("-- 65C02 REG DUMP END --\n");
 }

@@ -14,7 +14,7 @@ void *emulate(void *arg) {
         uint64_t cycle_delta_sum = 0;
         while (running) {
                 // reg_dump_65C02();
-  
+
                 uint64_t cycle_start = cycle_count;
                 tick_65C02();
                 ticks++;
@@ -32,12 +32,11 @@ void *emulate(void *arg) {
                         last_second = time(NULL);
                 }
         }
+
+        return NULL;
 }
 
 int main(int argc, char **argv) {
-        printf("Hello World this is a test of lazygit\n");
-
-
         init_65C02();
         init_ram();
         init_video();

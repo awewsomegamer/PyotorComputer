@@ -19,7 +19,7 @@ void INST_RTS() {
 
 void INST_JMP_ABS() { pc = NEXT_WORD; }
 void INST_JMP_IND() { pc = PTR(NEXT_WORD) | (PTR(NEXT_WORD) << 8); }
-void INST_JMP_ABS_X() { pc = OFF_X(NEXT_WORD); }
+void INST_JMP_ABS_X() { pc = OFF_X_ABS(NEXT_WORD); }
 void INST_BPL_REL() { if (!register_p.N) pc += (int8_t)NEXT_BYTE; else pc++; }
 void INST_BMI_REL() { if (register_p.N) pc += (int8_t)NEXT_BYTE; else pc++; }
 void INST_BVC_REL() { if (!register_p.V) pc += (int8_t)NEXT_BYTE; else pc++; }

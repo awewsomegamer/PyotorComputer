@@ -15,9 +15,9 @@ void INST_ADC_ABS_Y() { ARIT_ADD_SET(OFF_Y(NEXT_WORD)) }
 void INST_SBC_IMM() { ARIT_SUB_SET(NEXT_BYTE) }
 void INST_SBC_ABS_Y() { ARIT_SUB_SET(OFF_Y(NEXT_WORD)) }
 void INST_ADC_ABS() { ARIT_ADD_SET(NEXT_WORD) }
-void INST_ADC_ABS_X() { ARIT_ADD_SET(OFF_X(NEXT_WORD)) }
+void INST_ADC_ABS_X() { ARIT_ADD_SET(OFF_X_ABS(NEXT_WORD)) }
 void INST_SBC_ABS() { ARIT_SUB_SET(NEXT_WORD) }
-void INST_SBC_ABS_X() { ARIT_SUB_SET(OFF_X(NEXT_WORD)) }
+void INST_SBC_ABS_X() { ARIT_SUB_SET(OFF_X_ABS(NEXT_WORD)) }
 
 void init_arithmetic_instructions() {
         instruction[0x61] = INST_ADC_IND_X; DBG(0, installed_instructions++;)

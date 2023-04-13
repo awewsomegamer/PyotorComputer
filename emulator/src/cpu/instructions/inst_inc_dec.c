@@ -12,8 +12,8 @@ void INST_DEC_ZPG() { uint16_t addr = NEXT_BYTE; mem_byte_write(PTR(addr) - 1, a
 void INST_DEC_ZPG_X() { uint16_t addr = OFF_X(NEXT_BYTE); mem_byte_write(PTR(addr) - 1, addr); SET_NZ(PTR(addr)) }
 void INST_INC_ZPG() { uint16_t addr = NEXT_BYTE; mem_byte_write(PTR(addr) + 1, addr); SET_NZ(PTR(addr)) }
 void INST_INC_ZPG_X() { uint16_t addr = OFF_X(NEXT_BYTE); mem_byte_write(PTR(addr) + 1, addr); SET_NZ(PTR(addr)) }
-void INST_DEC_ABS_X() { uint16_t addr = OFF_X(NEXT_WORD); mem_byte_write(PTR(addr) - 1, addr); SET_NZ(PTR(addr)) }
-void INST_INC_ABS_X() { uint16_t addr = OFF_X(NEXT_WORD); mem_byte_write(PTR(addr) + 1, addr); SET_NZ(PTR(addr)) }
+void INST_DEC_ABS_X() { uint16_t addr = OFF_X_ABS(NEXT_WORD); mem_byte_write(PTR(addr) - 1, addr); SET_NZ(PTR(addr)) }
+void INST_INC_ABS_X() { uint16_t addr = OFF_X_ABS(NEXT_WORD); mem_byte_write(PTR(addr) + 1, addr); SET_NZ(PTR(addr)) }
 
 void init_inc_dec_instructions() {
         instruction[0x1A] = INST_INA; DBG(0, installed_instructions++;)
