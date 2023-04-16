@@ -35,9 +35,9 @@ LOOP_END:
         ldy #$0
 
         lda #.LOBYTE(COOL_STRING)
-        sta $4
+        sta $6
         lda #.HIBYTE(COOL_STRING)
-        sta $5
+        sta $7
         jsr DRAW_STR
 
 ; Load address of sprite table
@@ -72,12 +72,28 @@ LOOP_END:
         lda #$0
         sta 48513 ; High byte
         lda #$0
-        sta 48515
+        sta 48515 ; Sprite index
         lda #$1
         sta 48514 ; Mode: Draw sprite
         lda #%11010000
         sta 48516 ; Write to video memory
         wai
+
+        lda #.LOBYTE(44100)
+        sta 48512 ; Low byte
+        lda #.HIBYTE(44100)
+        sta 48513 ; High byte
+
+        lda #$4
+        sta 48514 ; Audio mode
+
+        lda #128
+        sta 48515 ; Play for 1 second
+
+        lda #%11000000
+        sta 48516 ; Write to video memory
+
+
 
 TERMINATE:
         nop
@@ -99,7 +115,7 @@ DRAW_CHAR:
 
         rts
 
-; $4 - Absolute address of string
+; $6 - Absolute address of string
 ; X - Char start index low
 ; Y - Char start index high
 DRAW_STR:
@@ -108,7 +124,7 @@ DRAW_STR:
         clc
 
 DRAW_STR_LOOP:
-        lda ($4)
+        lda ($6)
         beq DRAW_STR_END
 
         sta 48515
@@ -122,13 +138,13 @@ DRAW_STR_LOOP:
         iny
 DRAW_STR_OVER1:
 ; Increment char pointer
-        lda $4
+        lda $6
         adc 1
-        sta $4
+        sta $6
         bcc DRAW_STR_OVER2
-        lda $5
+        lda $7
         ina
-        sta $5
+        sta $7
 DRAW_STR_OVER2:
         jmp DRAW_STR_LOOP
 

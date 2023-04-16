@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
         init_65C02();
         init_ram();
         init_video();
-
+        
         FILE *kern_bin = fopen("bin/kernal.bin", "r");
         
         ASSERT(kern_bin != NULL);

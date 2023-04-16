@@ -1,9 +1,11 @@
 #include <video.h>
 #include <ram.h>
 #include <cpu/cpu.h>
+#include <keyboard.h>
+#include <audio.h>
+
 #include <SDL2/SDL.h>
 
-#include <keyboard.h>
 
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
@@ -16,9 +18,9 @@ uint8_t *font = NULL;
 pthread_t update_vram_thread;
 uint16_t sprite_table_address = 0;
 struct video_register {
-        uint16_t address;
-        uint8_t mode;
-        uint8_t data;
+        uint16_t address; // Address 
+        uint8_t mode; // Mode
+        uint8_t data; // Data field
         uint8_t status; // D(ata)1 R(ead)/W(rite) D(ata)2 B 0 0 0 0
                         // D1: Indicates new data from CPU -> Video card
                         // R/W: 0: reading data, 1: writing data
@@ -26,7 +28,6 @@ struct video_register {
                         // B: 0: Draw background, 1: Don't draw background (text mode)
         uint8_t foreground; // Foreground to use for text
         uint8_t background; // Background to use for text (carry set means background is not drawn)
-
 }__attribute__((packed));
 
 uint8_t video_mem_read(uint16_t address) {
@@ -118,6 +119,11 @@ void *update_vram(void *arg) {
                                 }
 
                                 break;
+                        
+                        case 0x04: // Play 16-bit sound
+                                tick_speaker(reg->address, reg->data);
+
+                                break;
                         }
                 }
         }
@@ -162,8 +168,8 @@ void init_video() {
 
         fread(font, 1, font_size, font_file);
 
-        if (SDL_Init(SDL_INIT_VIDEO) != 0 ) {
-                printf("Failed to initialize Video\n");
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0 ) {
+                printf("SDL failed to initialize Video or Audio\n");
                 exit(1);
         }
 
@@ -182,6 +188,8 @@ void init_video() {
         SDL_ShowWindow(window);
 
         DBG(1, printf("Initialized Video");)
+
+        init_speaker();
 }
 
 void destroy_video() {
