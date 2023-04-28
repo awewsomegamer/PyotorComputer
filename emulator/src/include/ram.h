@@ -48,7 +48,7 @@ extern uint8_t *general_memory;
 uint8_t mem_byte_read(uint16_t);
 void mem_byte_write(uint8_t, uint16_t);
 
-void load_file(uint16_t, FILE *, char *);
+void load_file(uint16_t, char *);
 
 void init_ram();
 

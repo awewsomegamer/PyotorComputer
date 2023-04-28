@@ -39,3 +39,7 @@ void init_speaker() {
 
 	DBG(1, printf("Initialized Audio");)
 }
+
+void destroy_speaker() {
+	SDL_CloseAudioDevice(audio_device);
+}

@@ -2,6 +2,7 @@
 #include <cpu/cpu.h>
 #include <ram.h>
 #include <video.h>
+#include <control_reg.h>
 
 #define SYSCLOCK_SPEED_MHZ 10
 #define SYS_MICRO_SPEED 1 / SYSCLOCK_SPEED_MHZ
@@ -31,6 +32,8 @@ void *emulate(void *arg) {
                         cycle_count = 0;
                         last_second = time(NULL);
                 }
+
+                tick_control_register();
         }
 
         return NULL;
@@ -41,11 +44,7 @@ int main(int argc, char **argv) {
         init_ram();
         init_video();
         
-        FILE *kern_bin = fopen("bin/kernal.bin", "r");
-        
-        ASSERT(kern_bin != NULL);
-
-        load_file(KERNAL_MEM_BASE, kern_bin, "bin/kernel.bin");
+        load_file(KERNAL_MEM_BASE, "bin/kernel.bin");
 
         pin_RES = 0;
 

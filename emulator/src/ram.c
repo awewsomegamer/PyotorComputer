@@ -17,7 +17,11 @@ void mem_byte_write(uint8_t byte, uint16_t address) {
         *(general_memory + address) = byte;
 }
 
-void load_file(uint16_t address, FILE *file, char* name) {
+void load_file(uint16_t address, char *name) {
+        FILE *file = fopen(name, "r");
+
+        ASSERT(file != NULL)
+
         DBG(1, printf("Loading file \"%s\" at 0x%04X", name, address);)
         fseek(file, 0, SEEK_END);
         size_t file_length = ftell(file);
@@ -26,6 +30,8 @@ void load_file(uint16_t address, FILE *file, char* name) {
         
         fread(general_memory + address, 1, file_length, file);
         DBG(1, printf("Loaded file \"%s\" at 0x%04X", name, address);)
+
+        fclose(file);
 }
 
 void init_ram() {
