@@ -3,6 +3,7 @@
 #include <video.h>
 #include <audio.h>
 #include <disk.h>
+#include <cpu/cpu.h>
 
 struct control_register {
         uint16_t address;   // Address 
@@ -22,15 +23,16 @@ struct disk_register {
 				 // in general purpose RAM
 	uint16_t disk_address;   // Address on the disk from which to read from
 	uint16_t buffer_length;  // The length of the buffer
-	uint8_t status; // D1 R/W C1 C2 C3 B1 B2 B3
+	uint8_t status; // D1 R/W C3 C2 C1 B3 B2 B1
 			// D1: 1: New data from CPU to Disk
 			// R/W: 0: Read, 1: Write
-			// C1: 1: Disk 1 completed operation
-			// C2: 1: Disk 2 completed operation
 			// C3: 1: Disk 3 completed operation
-			// B1: 1: Operation bound for disk 1
-			// B2: 1: Operation bound for disk 2
+			// C2: 1: Disk 2 completed operation
+			// C1: 1: Disk 1 completed operation
 			// B3: 1: Operation bound for disk 3
+			// B2: 1: Operation bound for disk 2
+			// B1: 1: Operation bound for disk 1
+	uint8_t code;
 }__attribute__((packed));
 
 /*
@@ -95,17 +97,11 @@ struct disk_register {
 
 	This makes it possible for ONLY ONE disk to be
 	bound for operation. If more than one disk is
-	bound for operation, then the only the most
-	valuable bit's (furthest bit, that is set, to
-	the left) disk is bound for operation.
+	bound for operation, then an error will be thrown.
 
-	i.e. Disks 1 and 2 are bound for operation,
-	only disk 1 will complete operation as it 
-	is to the furthest to the left:
-	... *B1* B2 B3
-
-	
-	
+	The error is in the form of an IRQ with the code
+	field of the disk control register being a non-
+	zero value.
 */
 
 
@@ -159,16 +155,13 @@ void tick_control_register() {
 	struct disk_register *disk_reg = (struct disk_register*)(general_memory + KERNAL_DAT_BASE + sizeof(struct control_register));
 	if ((disk_reg->status >> 7) & 1) {
 		disk_reg->status &= 0b01000000; // Clear all bits except for R/W
+		
+		disk_reg->code = disk_operation_buffer(disk_reg->buffer_length, disk_reg->buffer_address,
+						       disk_reg->status & 0b111, disk_reg->disk_address, (disk_reg->status >> 6) & 1);
 
-		// Read back disk statuses and set proper
-		// C bits.
+		if (disk_reg->code >= 0 && disk_reg->code <= 2)
+			disk_reg->status |= disk_reg->code << 3;
 
-		if ((disk_reg->status >> 6) & 1 == 1) {
-			// Write
-			disk_write_buffer(disk_reg->buffer_length, disk_reg->buffer_address, disk_reg->status & 0b111, disk_reg->disk_address);			
-		} else {
-			// Read
-			disk_read_buffer(disk_reg->buffer_length, disk_reg->buffer_address, disk_reg->status & 0b111, disk_reg->disk_address);
-		}
+		pin_IRQ = 0; // Call interrupt to notify CPU disk operation is done (code and status fields are set)
 	}
 }

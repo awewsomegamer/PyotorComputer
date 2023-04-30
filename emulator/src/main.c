@@ -3,6 +3,7 @@
 #include <ram.h>
 #include <video.h>
 #include <control_reg.h>
+#include <disk.h>
 
 #define SYSCLOCK_SPEED_MHZ 10
 #define SYS_MICRO_SPEED 1 / SYSCLOCK_SPEED_MHZ
@@ -44,7 +45,10 @@ int main(int argc, char **argv) {
         init_ram();
         init_video();
         
-        load_file(KERNAL_MEM_BASE, "bin/kernel.bin");
+        load_file(KERNAL_MEM_BASE, "bin/kernal.bin");
+        
+        connect_disk("bin/kernal.bin", 0);
+        disk_operation_buffer(100, 0x200, 0, 0x0, 0);
 
         pin_RES = 0;
 
