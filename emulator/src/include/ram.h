@@ -45,10 +45,10 @@ enum memory_map {
 
 extern uint8_t *general_memory;
 
-uint8_t mem_byte_read(uint16_t);
-void mem_byte_write(uint8_t, uint16_t);
+uint8_t mem_byte_read(uint16_t address);
+void mem_byte_write(uint8_t byte, uint16_t address);
 
-void load_file(uint16_t, char *);
+void load_file(uint16_t address, char *name);
 
 void init_ram();
 
