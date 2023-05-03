@@ -31,8 +31,8 @@
 enum memory_map {
         ZERO_PAGE_BASE = 0x0000,
         STACK_BASE = 0x0100,
-        PROGRAM_MEM_BASE = 0x200 + KB_16,
-        KERNAL_DAT_BASE = PROGRAM_MEM_BASE + (KB_16 * 2),
+        PROGRAM_MEM_BASE = 0x0200,
+        KERNAL_DAT_BASE = PROGRAM_MEM_BASE + (KB_16 * 3),
         KERNAL_MEM_BASE = KERNAL_DAT_BASE + (KB_16 / 2),
         MEM_TOP = UINT16_MAX
 };
