@@ -22,9 +22,9 @@ struct control_register {
 struct disk_register {
 	uint16_t buffer_address; // Address of the buffer to read to, or to write from			 @ 48519 -> 48520					
 				 // in general purpose RAM						 		
-	uint16_t disk_address;   // Address on the disk from which to read from				 @ 48521 -> 48522				
-	uint16_t buffer_length;  // The length of the buffer						 @ 48523 -> 48524		
-	uint8_t status; 	 // D1 R/W C3 C2 C1 B3 B2 B1						 @ 48525		
+	uint16_t sector;   	 // Sector on the disk							 @ 48521 -> 48522				
+	uint16_t buffer_length;  // The length of the buffer (in 512 byte sectors)			 @ 48523 -> 48524
+	uint8_t status; 	 // D1 R/W C3 C2 C1 B3 B2 B1						 @ 48525	
 			 	 // D1: 1: New data from CPU to Disk					 			
 			 	 // R/W: 0: Read, 1: Write						 		
 			 	 // C3: 1: Disk 3 completed operation					 			
@@ -158,7 +158,7 @@ void tick_control_register() {
 	struct disk_register *disk_reg = (struct disk_register*)(general_memory + KERNAL_DAT_BASE + sizeof(struct control_register));
 	if ((disk_reg->status >> 7) & 1) {
 		disk_reg->code = disk_operation_buffer(disk_reg->buffer_length, disk_reg->buffer_address,
-						       disk_reg->status & 0b111, disk_reg->disk_address, (disk_reg->status >> 6) & 1);
+						       disk_reg->status & 0b111, disk_reg->sector, (disk_reg->status >> 6) & 1);
 
 		disk_reg->status &= 0b01000000; // Clear all bits except for R/W
 

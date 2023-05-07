@@ -17,13 +17,13 @@ KERNAL_ENTRY:
         lda #.HIBYTE(COOL_DATA)
         sta 48520
 
-        ; Disk address
+        ; Sector
         lda #$0
         sta 48521
         sta 48522
 
         ; Buffer length
-        lda #$FF
+        lda #$1
         sta 48523
         lda #$0
         sta 48524
@@ -39,13 +39,13 @@ KERNAL_ENTRY:
         lda #.HIBYTE(OTHER_COOL_DATA)
         sta 48520
 
-        ; Disk address
+         ; Sector
         lda #$0
         sta 48521
         sta 48522
 
         ; Buffer length
-        lda #$FF
+        lda #$1
         sta 48523
         lda #$0
         sta 48524
@@ -126,9 +126,10 @@ NMI_HANDLER:
 
 COOL_DATA:
         .asciiz "Hello this is data from the kernal that has been written to a file because the kernel can do stuff"
+        .res 512
 
 OTHER_COOL_DATA:
-
+        .res 512
 
 ; Interrupt Vectors
         .res $FFFA-*

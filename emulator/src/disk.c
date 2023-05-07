@@ -4,7 +4,7 @@
 
 FILE *connected_disks[3];
 
-uint8_t disk_operation_buffer(uint16_t length, uint16_t address, uint8_t device, uint16_t device_address, uint8_t operation) {
+uint8_t disk_operation_buffer(uint16_t sectors, uint16_t address, uint8_t device, uint16_t sector, uint8_t operation) {
 	int disk_index = log2(device & 0b111);
 
 	if (disk_index > 2 || disk_index < 0) {
@@ -17,14 +17,14 @@ uint8_t disk_operation_buffer(uint16_t length, uint16_t address, uint8_t device,
 		return -1; // The selected disk is not connected to the system
 	}
 
-	fseek(connected_disks[disk_index], device_address, SEEK_SET);
+	fseek(connected_disks[disk_index], sector * SECTOR_SIZE, SEEK_SET);
 	
 	if (operation == 1) {
-		DBG(1, printf("Writing disk %d at address 0x%04X from memory 0x%04X for %d bytes", disk_index, device_address, address, length);)
-		fwrite(general_memory + address, 1, length, connected_disks[disk_index]);
+		DBG(1, printf("Writing disk %d at sector 0x%04X from memory 0x%04X for %d sectors", disk_index, sector, address, sectors);)
+		fwrite(general_memory + address, 1, sectors * SECTOR_SIZE, connected_disks[disk_index]);
 	} else {
-		DBG(1, printf("Reading disk %d at address 0x%04X to memory 0x%04X for %d bytes", disk_index, device_address, address, length);)
-		fread(general_memory + address, 1, length, connected_disks[disk_index]);
+		DBG(1, printf("Reading disk %d at sector 0x%04X to memory 0x%04X for %d sectors", disk_index, sector, address, sectors);)
+		fread(general_memory + address, 1, sectors * SECTOR_SIZE, connected_disks[disk_index]);
 	}
 
 	DBG(1, printf("Disk operation completed successfully");)
