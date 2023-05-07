@@ -1,38 +1,40 @@
 #include <control_reg.h>
 #include <ram.h>
+#include <stdio.h>
 #include <video.h>
 #include <audio.h>
 #include <disk.h>
 #include <cpu/cpu.h>
 
 struct control_register {
-        uint16_t address;   // Address 
-        uint8_t mode;       // Mode
-        uint8_t data;       // Data field
-        uint8_t status;     // D(ata)1 R(ead)/W(rite) D(ata)2 B 0 0 0 0
-                            // D1: Indicates new data from CPU -> Video card
-                            // R/W: 0: reading data, 1: writing data
-                            // D2: Indicates new data from Video card -> CPU
-                            // B: 0: Draw background, 1: Don't draw background (text mode)
-        uint8_t foreground; // Foreground to use for text
-        uint8_t background; // Background to use for text (carry set means background is not drawn)
+        uint16_t address;        // Address 								 @ 48512 -> 48513
+        uint8_t mode;            // Mode								 @ 48514
+        uint8_t data;            // Data field								 @ 48515
+        uint8_t status;          // D(ata)1 R(ead)/W(rite) D(ata)2 B 0 0 0 0				 @ 48516
+                                 // D1: Indicates new data from CPU -> Video card			 
+                                 // R/W: 0: reading data, 1: writing data				 
+                                 // D2: Indicates new data from Video card -> CPU			 
+                                 // B: 0: Draw background, 1: Don't draw background (text mode)		 
+        uint8_t foreground;      // Foreground to use for text						 @ 48517
+        uint8_t background;      // Background to use for text (carry set means background is not drawn) @ 48518
 }__attribute__((packed));
 
 struct disk_register {
-	uint16_t buffer_address; // Address of the buffer to read to, or to write from
-				 // in general purpose RAM
-	uint16_t disk_address;   // Address on the disk from which to read from
-	uint16_t buffer_length;  // The length of the buffer
-	uint8_t status; // D1 R/W C3 C2 C1 B3 B2 B1
-			// D1: 1: New data from CPU to Disk
-			// R/W: 0: Read, 1: Write
-			// C3: 1: Disk 3 completed operation
-			// C2: 1: Disk 2 completed operation
-			// C1: 1: Disk 1 completed operation
-			// B3: 1: Operation bound for disk 3
-			// B2: 1: Operation bound for disk 2
-			// B1: 1: Operation bound for disk 1
-	uint8_t code;
+	uint16_t buffer_address; // Address of the buffer to read to, or to write from			 @ 48519 -> 48520					
+				 // in general purpose RAM						 		
+	uint16_t disk_address;   // Address on the disk from which to read from				 @ 48521 -> 48522				
+	uint16_t buffer_length;  // The length of the buffer						 @ 48523 -> 48524		
+	uint8_t status; 	 // D1 R/W C3 C2 C1 B3 B2 B1						 @ 48525		
+			 	 // D1: 1: New data from CPU to Disk					 			
+			 	 // R/W: 0: Read, 1: Write						 		
+			 	 // C3: 1: Disk 3 completed operation					 			
+			 	 // C2: 1: Disk 2 completed operation					 			
+			 	 // C1: 1: Disk 1 completed operation					 			
+			 	 // B3: 1: Operation bound for disk 3					 			
+			 	 // B2: 1: Operation bound for disk 2					 			
+			 	 // B1: 1: Operation bound for disk 1					 			
+	uint8_t code;		 // The exit code of an operation 					 @ 48526			
+				 // ((disk) 0, (disk) 1, or (disk) 2 are success codes)
 }__attribute__((packed));
 
 /*
@@ -107,7 +109,8 @@ struct disk_register {
 
 void tick_control_register() {
 	struct control_register *reg = (struct control_register *)(general_memory + KERNAL_DAT_BASE); // Temporary "KERNAL_DAT_BASE"
-	if ((reg->status >> 7) & 1 == 1) {
+	
+	if ((reg->status >> 7) & 1) {
 		reg->status &= ~(1 << 7); // Clear D1
 		reg->status &= ~(1 << 5); // Clear D2
 		
@@ -117,7 +120,7 @@ void tick_control_register() {
 			if (reg->address >= VRAM_SIZE)
 				break;
 
-			if ((reg->status >> 6) & 1 == 0) { 
+			if (((reg->status >> 6) & 1) == 0) { 
 				// Read
 				reg->data = video_mem_read(reg->address);
 				reg->status |= (1 << 5); // Set D2
@@ -154,10 +157,10 @@ void tick_control_register() {
 
 	struct disk_register *disk_reg = (struct disk_register*)(general_memory + KERNAL_DAT_BASE + sizeof(struct control_register));
 	if ((disk_reg->status >> 7) & 1) {
-		disk_reg->status &= 0b01000000; // Clear all bits except for R/W
-		
 		disk_reg->code = disk_operation_buffer(disk_reg->buffer_length, disk_reg->buffer_address,
 						       disk_reg->status & 0b111, disk_reg->disk_address, (disk_reg->status >> 6) & 1);
+
+		disk_reg->status &= 0b01000000; // Clear all bits except for R/W
 
 		if (disk_reg->code >= 0 && disk_reg->code <= 2)
 			disk_reg->status |= disk_reg->code << 3;

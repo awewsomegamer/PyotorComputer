@@ -44,12 +44,11 @@ int main(int argc, char **argv) {
         init_65C02();
         init_ram();
         init_video();
-        
+
+        connect_disk("disk1.bin", 0);
+
         load_file(KERNAL_MEM_BASE, "bin/kernal.bin");
         
-        connect_disk("bin/kernal.bin", 0);
-        disk_operation_buffer(100, 0x200, 0, 0x0, 0);
-
         pin_RES = 0;
 
         pthread_t emulation_thread;
@@ -60,6 +59,7 @@ int main(int argc, char **argv) {
         
         pthread_join(emulation_thread, NULL);
         destroy_video();
+        disconnect_all();
 
         return 0;
 }

@@ -3,101 +3,65 @@
 KERNAL_ENTRY:
         cli ; Allow for interrupts
 
-        lda #$FF ; Set foreground to white, leave background blank
+        ; Set foreground to white
+        lda #$FF
         sta 48517
-        
-LOOP:
-        sty 48512 ; Low byte of address 
-        tya
-        stx 48513 ; High byte of address
-        lda #$00
-        sta 48514 ; Mode
 
-        sty 48515 ; Data
-
-        lda #%11000000 ; Write to video memory
-        sta 48516
-
-        tya
-        adc #$F
-        tay
-        
-        bcc OVER
-        inx
-OVER:
-        cpx #$FF
-        beq LOOP_END
-
-        jmp LOOP
-
-LOOP_END:
         ldx #$0
         ldy #$0
 
-        lda #.LOBYTE(COOL_STRING)
+        ; Write data to disk
+        ; Buffer address
+        lda #.LOBYTE(COOL_DATA)
+        sta 48519
+        lda #.HIBYTE(COOL_DATA)
+        sta 48520
+
+        ; Disk address
+        lda #$0
+        sta 48521
+        sta 48522
+
+        ; Buffer length
+        lda #$FF
+        sta 48523
+        lda #$0
+        sta 48524
+
+        ; Status
+        lda #%11000001
+        sta 48525
+
+        ; Read data from disk
+        ; Buffer address
+        lda #.LOBYTE(OTHER_COOL_DATA)
+        sta 48519
+        lda #.HIBYTE(OTHER_COOL_DATA)
+        sta 48520
+
+        ; Disk address
+        lda #$0
+        sta 48521
+        sta 48522
+
+        ; Buffer length
+        lda #$FF
+        sta 48523
+        lda #$0
+        sta 48524
+
+        ; Status
+        lda #%10000001
+        sta 48525
+
+        ; Draw string
+        lda #.LOBYTE(OTHER_COOL_DATA)
         sta $6
-        lda #.HIBYTE(COOL_STRING)
+        lda #.HIBYTE(OTHER_COOL_DATA)
         sta $7
         jsr DRAW_STR
 
-; Load address of sprite table
-        lda #$00
-        sta 48512 ; Low byte
-        lda #$20
-        sta 48513 ; High byte
-        lda #$2
-        sta 48514 ; Mode: Set sprite table address
-        lda #%11000000
-        sta 48516 ; Write to video memory
-
-; Store smiley face at first sprite spot
-        lda #%01000010
-        sta $2000
-        lda #%01000010
-        sta $2001
-        lda #%00000000
-        sta $2002
-        lda #%10000001
-        sta $2003
-        lda #%01111110
-        sta $2004
-
-; Change color
-        lda #%00001011
-        sta 48517
-
-; Draw sprite
-        lda #$FF
-        sta 48512 ; Low byte
-        lda #$0
-        sta 48513 ; High byte
-        lda #$0
-        sta 48515 ; Sprite index
-        lda #$1
-        sta 48514 ; Mode: Draw sprite
-        lda #%11010000
-        sta 48516 ; Write to video memory
-        wai
-
-        lda #.LOBYTE(44100)
-        sta 48512 ; Low byte
-        lda #.HIBYTE(44100)
-        sta 48513 ; High byte
-
-        lda #$4
-        sta 48514 ; Audio mode
-
-        lda #128
-        sta 48515 ; Play for 1 second
-
-        lda #%11000000
-        sta 48516 ; Write to video memory
-
-
-
-TERMINATE:
-        nop
-        jmp TERMINATE
+        stp
 
 
 ; $48515 - Char to draw
@@ -155,38 +119,16 @@ DRAW_STR_END:
         rts
 
 IRQ_HANDLER:
-        phy
-        ldy $3
-        lda ALPHABET, y
-        ply
-
-        sta 48515
-        jsr DRAW_CHAR
-
-; Increment to next char
-        php
-        clc
-        txa
-        adc #1
-        tax
-        bcc IRQ_HANDLER_OVER
-        iny
-IRQ_HANDLER_OVER:
-        plp
-
         rti
-
-ALPHABET:
-	.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ                    "
 
 NMI_HANDLER:
         rti
 
-INCREMENTER:
-        .byte $00
+COOL_DATA:
+        .asciiz "Hello this is data from the kernal that has been written to a file because the kernel can do stuff"
 
-COOL_STRING:
-        .asciiz "Hello Nagyi"
+OTHER_COOL_DATA:
+
 
 ; Interrupt Vectors
         .res $FFFA-*

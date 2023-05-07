@@ -20,7 +20,7 @@ uint8_t disk_operation_buffer(uint16_t length, uint16_t address, uint8_t device,
 	fseek(connected_disks[disk_index], device_address, SEEK_SET);
 	
 	if (operation == 1) {
-		DBG(1, printf("Writing disk %d at address 0x%04X to memory 0x%04X for %d bytes", disk_index, device_address, address, length);)
+		DBG(1, printf("Writing disk %d at address 0x%04X from memory 0x%04X for %d bytes", disk_index, device_address, address, length);)
 		fwrite(general_memory + address, 1, length, connected_disks[disk_index]);
 	} else {
 		DBG(1, printf("Reading disk %d at address 0x%04X to memory 0x%04X for %d bytes", disk_index, device_address, address, length);)
@@ -34,7 +34,8 @@ uint8_t disk_operation_buffer(uint16_t length, uint16_t address, uint8_t device,
 
 void connect_disk(char *name, uint8_t number) {
 	DBG(1, printf("Connecting file \"%s\" to disk number %d", name, number);)
-	connected_disks[number] = fopen(name, "rw");
+	fclose(fopen(name, "w+"));
+	connected_disks[number] = fopen(name, "r+");
 	ASSERT(connected_disks[number] != NULL)
 	DBG(1, printf("Disk connected");)
 }
@@ -43,4 +44,12 @@ void disconnect_disk(uint8_t number) {
 	fclose(connected_disks[number]);
 	connected_disks[number] = NULL;
 	DBG(1, printf("Disconnected disk %d", number);)
+}
+
+void disconnect_all() {
+	for (int i = 0; i < 3; i++) {
+		fclose(connected_disks[i]);
+		connected_disks[i] = NULL;
+		DBG(1, printf("Disconnected disk %d", i);)
+	}
 }
