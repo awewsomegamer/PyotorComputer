@@ -34,7 +34,6 @@ uint8_t disk_operation_buffer(uint16_t sectors, uint16_t address, uint8_t device
 
 void connect_disk(char *name, uint8_t number) {
 	DBG(1, printf("Connecting file \"%s\" to disk number %d", name, number);)
-	fclose(fopen(name, "w+"));
 	connected_disks[number] = fopen(name, "r+");
 	ASSERT(connected_disks[number] != NULL)
 	DBG(1, printf("Disk connected");)
