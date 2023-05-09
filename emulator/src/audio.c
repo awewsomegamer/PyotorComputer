@@ -41,5 +41,6 @@ void init_speaker() {
 }
 
 void destroy_speaker() {
+	DBG(1, printf("Destroying Audio");)
 	SDL_CloseAudioDevice(audio_device);
 }

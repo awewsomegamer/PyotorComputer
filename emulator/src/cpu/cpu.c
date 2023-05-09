@@ -254,3 +254,8 @@ void init_65C02() {
 
         DBG(1, printf("Initialized 65C02 CPU, %d opcodes installed", installed_instructions + 37);)
 }
+
+void destroy_65C02() {
+        DBG(1, printf("Destroying 65C02");)
+        free(general_memory);
+}

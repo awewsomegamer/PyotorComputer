@@ -3,8 +3,8 @@
 #include <ram.h>
 
 void keyboard_request(uint8_t scan) {
-        printf("%X\n", scan);
-    
+        DBG(1, printf("Key %X requested", scan);)
+
         *(general_memory + 0x3) = scan;
         *(general_memory + 0x4) |= 0x1;
 

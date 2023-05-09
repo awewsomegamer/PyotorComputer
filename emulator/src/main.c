@@ -15,7 +15,7 @@ void *emulate(void *arg) {
         uint64_t ticks = 0;
         uint64_t cycle_delta_sum = 0;
         while (running) {
-                reg_dump_65C02();
+                // reg_dump_65C02();
 
                 uint64_t cycle_start = cycle_count;
                 tick_65C02();
@@ -36,6 +36,8 @@ void *emulate(void *arg) {
 
                 tick_control_register();
         }
+
+        DBG(1, printf("Emulation thread finished execution");)
 
         return NULL;
 }
@@ -59,7 +61,10 @@ int main(int argc, char **argv) {
         
         pthread_join(emulation_thread, NULL);
         destroy_video();
+        destroy_65C02();
         disconnect_all();
+
+        DBG(1, printf("Emulator stopped");)
 
         return 0;
 }

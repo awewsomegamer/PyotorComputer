@@ -36,5 +36,6 @@ extern int installed_instructions;
 void tick_65C02();
 void reg_dump_65C02();
 void init_65C02();
+void destroy_65C02();
 
 #endif

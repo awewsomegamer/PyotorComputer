@@ -1,3 +1,4 @@
+#include "global.h"
 #include <video.h>
 #include <ram.h>
 #include <cpu/cpu.h>
@@ -9,7 +10,6 @@
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 SDL_Texture* texture = NULL;
-SDL_Surface* surface = NULL;
 SDL_Event event;
 uint8_t *video_memory = NULL;
 uint8_t *font = NULL;
@@ -83,6 +83,7 @@ void update() {
 
         switch (event.type) {
         case SDL_QUIT:
+                DBG(1, printf("Quitting");)
                 running = 0;
                 break;
         case SDL_KEYDOWN:
@@ -138,9 +139,11 @@ void init_video() {
 }
 
 void destroy_video() {
+        DBG(1, printf("Destroying Video");)
+
         SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
         SDL_DestroyTexture(texture);
+        SDL_DestroyWindow(window);
         free(video_memory);
         free(font);
 
