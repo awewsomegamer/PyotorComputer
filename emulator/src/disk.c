@@ -47,6 +47,9 @@ void disconnect_disk(uint8_t number) {
 
 void disconnect_all() {
 	for (int i = 0; i < 3; i++) {
+		if (connected_disks[i] == NULL)
+			continue;
+
 		fclose(connected_disks[i]);
 		connected_disks[i] = NULL;
 		DBG(1, printf("Disconnected disk %d", i);)

@@ -1,6 +1,10 @@
+#include <ctype.h>
 #include <global.h>
 #include <cpu/cpu.h>
 #include <ram.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <video.h>
 #include <control_reg.h>
 #include <disk.h>
@@ -47,9 +51,27 @@ int main(int argc, char **argv) {
         init_ram();
         init_video();
 
-        connect_disk("disk1.bin", 0);
+        for (int i = 1; i < argc; i++) {
+                if (strcmp(argv[i], "-disk") == 0) {
+                        // -disk disk_number disk_file
+                        connect_disk(argv[i + 2], atoi(argv[i + 1]));
+                        i += 3;
+                }
+                if (strcmp(argv[i], "-load") == 0) {
+                        // -load mem mem_file
+                        // mem: can be an address (i.e. 0xDCC0) which must be expressed in hex (prefixed with 0x)
+                        uint16_t address = 0;
 
-        load_file(KERNAL_MEM_BASE, "bin/kernal.bin");
+                        if (argv[i + 1][0] == '0' && toupper(argv[i + 1][1]) == 'X') {
+                                address = strtol(argv[i + 1], NULL, 16);
+                        } else {
+                                printf("Couldn't load file %s to address %s, not a valid hexadecimal value.\n", argv[i + 2], argv[i + 1]);
+                                exit(1);
+                        }
+                        
+                        load_file(address, argv[i + 2]);
+                }
+        }
         
         pin_RES = 0;
 
