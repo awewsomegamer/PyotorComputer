@@ -10,16 +10,16 @@
 	.importzp	sp, sreg, regsave, regbank
 	.importzp	tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
 	.macpack	longbranch
+	.forceimport	__STARTUP__
 	.export		_cursor_index
 	.export		_s
-	.export		_i
+	.export		_ind
 	.export		_putc
-	.export		_puts
 	.export		_set_fg
 	.export		_set_bg
 	.export		_NMI_HANDLER
 	.export		_IRQ_HANDLER
-	.export		__main
+	.export		_main
 
 .segment	"DATA"
 
@@ -27,16 +27,13 @@ _cursor_index:
 	.word	$0000
 _s:
 	.addr	L0002
+_ind:
+	.word	$0000
 
 .segment	"RODATA"
 
 L0002:
-	.byte	$48,$65,$6C,$6C,$6F,$20,$57,$6F,$72,$6C,$64,$00
-
-.segment	"BSS"
-
-_i:
-	.res	2,$00
+	.byte	$48,$65,$6C,$6C,$6F,$20,$4D,$72,$2E,$20,$43,$72,$61,$73,$68,$00
 
 ; ---------------------------------------------------------------
 ; void __near__ putc (unsigned char)
@@ -49,73 +46,33 @@ _i:
 .segment	"CODE"
 
 	jsr     pusha
-	lda     _cursor_index+1
-	sta     $BD80+1
 	lda     _cursor_index
+	ldx     _cursor_index+1
 	sta     $BD80
+	stx     $BD80+1
+	ldx     #$00
 	lda     #$03
 	sta     $BD82
-	lda     (sp)
+	ldy     #$00
+	ldx     #$00
+	lda     (sp),y
 	sta     $BD83
+	ldx     #$00
 	lda     #$C0
 	sta     $BD84
 	lda     _cursor_index
 	ldx     _cursor_index+1
-	ina
-	bne     L0012
-	inx
-L0012:	sta     _cursor_index
-	stx     _cursor_index+1
-	jmp     incsp1
-
-.endproc
-
-; ---------------------------------------------------------------
-; void __near__ puts (__near__ unsigned char *)
-; ---------------------------------------------------------------
-
-.segment	"CODE"
-
-.proc	_puts: near
-
-.segment	"CODE"
-
-	jsr     pushax
-	jsr     push0
-	bra     L0017
-L0015:	ldy     #$05
-	jsr     pushwysp
-	ldy     #$03
-	lda     (sp),y
-	tax
-	dey
-	lda     (sp),y
 	sta     regsave
 	stx     regsave+1
 	ina
-	bne     L001D
+	bne     L0013
 	inx
-L001D:	jsr     staxysp
+L0013:	sta     _cursor_index
+	stx     _cursor_index+1
 	lda     regsave
 	ldx     regsave+1
-	jsr     tosaddax
-	sta     ptr1
-	stx     ptr1+1
-	lda     (ptr1)
-	jsr     _putc
-L0017:	ldy     #$02
-	lda     (sp),y
-	clc
-	adc     (sp)
-	sta     ptr1
-	iny
-	lda     (sp),y
-	ldy     #$01
-	adc     (sp),y
-	sta     ptr1+1
-	lda     (ptr1)
-	bne     L0015
-	jmp     incsp4
+	jsr     incsp1
+	rts
 
 .endproc
 
@@ -130,9 +87,12 @@ L0017:	ldy     #$02
 .segment	"CODE"
 
 	jsr     pusha
-	lda     (sp)
+	ldy     #$00
+	ldx     #$00
+	lda     (sp),y
 	sta     $BD85
-	jmp     incsp1
+	jsr     incsp1
+	rts
 
 .endproc
 
@@ -147,9 +107,12 @@ L0017:	ldy     #$02
 .segment	"CODE"
 
 	jsr     pusha
-	lda     (sp)
+	ldy     #$00
+	ldx     #$00
+	lda     (sp),y
 	sta     $BD86
-	jmp     incsp1
+	jsr     incsp1
+	rts
 
 .endproc
 
@@ -182,56 +145,63 @@ L0017:	ldy     #$02
 .endproc
 
 ; ---------------------------------------------------------------
-; void __near__ _main (void)
+; int __near__ main (void)
 ; ---------------------------------------------------------------
 
 .segment	"CODE"
 
-.proc	__main: near
+.proc	_main: near
 
 .segment	"CODE"
 
 	lda     #$FF
 	jsr     _set_fg
-	lda     #$41
+	ldx     #$00
+	lda     #$00
+	sta     _ind
+	stx     _ind+1
+L0021:	lda     _s
+	ldx     _s+1
+	jsr     pushax
+	lda     _ind
+	ldx     _ind+1
+	jsr     tosaddax
+	ldy     #$00
+	jsr     ldauidx
+	cmp     #$00
+	jsr     boolne
+	jne     L0024
+	jmp     L0022
+L0024:	lda     _s
+	ldx     _s+1
+	jsr     pushax
+	lda     _ind
+	ldx     _ind+1
+	jsr     tosaddax
+	ldy     #$00
+	jsr     ldauidx
 	jsr     _putc
-	lda     #$03
-	jsr     _set_fg
-	lda     #$41
-	jsr     _putc
-	lda     #$FF
-	jsr     _set_fg
-	stz     _i
-	stz     _i+1
-L0033:	lda     _i
-	cmp     #$0A
-	lda     _i+1
-	sbc     #$00
-	bvc     L003A
-	eor     #$80
-L003A:	bpl     L0034
-	lda     _s
-	clc
-	adc     _i
-	sta     ptr1
-	lda     _s+1
-	adc     _i+1
-	sta     ptr1+1
-	lda     (ptr1)
-	jsr     _putc
-	lda     _i
-	ldx     _i+1
+	lda     _ind
+	ldx     _ind+1
+	sta     regsave
+	stx     regsave+1
 	ina
-	bne     L003C
+	bne     L002A
 	inx
-L003C:	sta     _i
-	stx     _i+1
-	bra     L0033
-L0034:	lda     _i
-	clc
-	adc     #$41
+L002A:	sta     _ind
+	stx     _ind+1
+	lda     regsave
+	ldx     regsave+1
+	jmp     L0021
+L0022:	lda     #$41
 	jsr     _putc
-L0045:	bra     L0045
+L0030:	jmp     L0033
+L0032:	jmp     L0030
+L0033:	jmp     L0032
+	ldx     #$00
+	lda     #$00
+	jmp     L001E
+L001E:	rts
 
 .endproc
 

@@ -18,9 +18,8 @@ void *emulate(void *arg) {
         time_t last_second = time(NULL);
         uint64_t ticks = 0;
         uint64_t cycle_delta_sum = 0;
+        
         while (running) {
-                // reg_dump_65C02();
-
                 uint64_t cycle_start = cycle_count;
                 tick_65C02();
                 ticks++;

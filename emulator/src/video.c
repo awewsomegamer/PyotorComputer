@@ -1,4 +1,5 @@
 #include "global.h"
+#include <stdio.h>
 #include <video.h>
 #include <ram.h>
 #include <cpu/cpu.h>
