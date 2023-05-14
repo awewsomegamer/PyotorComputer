@@ -126,6 +126,7 @@ void tick_control_register() {
 				reg->status |= (1 << 5); // Set D2
 			} else {
 				// Write
+				printf("Drawing pixel with color %X at %X\n", reg->data, reg->address);
 				video_mem_write(reg->address, reg->data);
 			}
 
