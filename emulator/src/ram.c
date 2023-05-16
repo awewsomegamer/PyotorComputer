@@ -1,4 +1,5 @@
 #include <ram.h>
+#include <stdio.h>
 #include <video.h>
 #include <cpu/cpu.h>
 
@@ -11,6 +12,13 @@ uint8_t mem_byte_read(uint16_t address) {
 void mem_byte_write(uint8_t byte, uint16_t address) {
         if (KERNAL_MEM(address)) {
                 DBG(1, printf("Tried to write to KERNAL ROM address");)
+                
+                for (int i = 0; i < 16; i++)
+                        printf("%02X ", *(general_memory + i));
+                printf("\n");
+
+                DBG(1, reg_dump_65C02();)
+                
                 return;
         }
 

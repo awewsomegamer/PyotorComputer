@@ -53,9 +53,10 @@ void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, ui
 }
 
 void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_background) {
+        printf("Drawing sprite %d\n", data);
         uint8_t *spr_data = (uint8_t *)general_memory + (data * SPRITE_WIDTH * SPRITE_HEIGHT + sprite_table_address);
 
-        int cx = (address % 64) * FONT_WIDTH;
+        int cx = (address % 40) * FONT_WIDTH;
         int cy = (address / 40) * FONT_HEIGHT;
         for (int i = 0; i < SPRITE_HEIGHT; i++) {
                 int rx = 0;
