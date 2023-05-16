@@ -14,5 +14,8 @@ kern:
 clean:
 	rm -rf ./bin/*
 
+run: all
+	./emulator.out -load 0xDCC0 ./kernal/kernal_rom.bin
+
 debug: DBG += debug
 debug: all

@@ -1,0 +1,9 @@
+MEMORY {
+	ROM1: start = $DCC0, size = $2340;
+}
+
+SEGMENTS {
+	CODE: load = ROM1, type = ro;
+	VECTORS: load = ROM1, start = $FFFA, type = ro;
+	RODATA: load = ROM1, type = ro;
+}
