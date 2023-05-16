@@ -26,6 +26,7 @@ void video_mem_write(uint16_t address, uint8_t byte) {
 }
 
 void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_background) {
+        printf("Drawing character %X\n", data);
         uint8_t* chr_data = font + data * FONT_HEIGHT;
 
         int cx = (address % 40) * FONT_WIDTH;
