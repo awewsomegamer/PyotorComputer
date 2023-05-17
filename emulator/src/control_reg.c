@@ -139,16 +139,11 @@ void tick_control_register() {
 		}
 
 		case 0x02: // Set Sprite Table Address
-			printf("Setting sprite table address to %X\n", reg->address);
 			video_set_sprite_table_address(reg->address);
 			break;
 		
 		case 0x03: // 40x12 Terminal Mode
 			// Address behaves like index into screen: y * 40 + x
-			// for (int i = 7; i >= 0; i--)
-			// 	printf("%c", (((reg->data >> i) & 1) ? '1' : '0'));
-			// printf(" (%d %d)\n", reg->data, reg->data % 3);
-
 			video_draw_character(reg->address, reg->data, reg->foreground, reg->background, (reg->status >> 4) & 1);
 
 			break;

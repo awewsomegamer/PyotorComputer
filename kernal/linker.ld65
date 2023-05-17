@@ -4,6 +4,6 @@ MEMORY {
 
 SEGMENTS {
 	CODE: load = ROM1, type = ro;
-	VECTORS: load = ROM1, start = $FFFA, type = ro;
 	RODATA: load = ROM1, type = ro;
+	VECTORS: load = ROM1, start = $FFFA, type = ro;
 }

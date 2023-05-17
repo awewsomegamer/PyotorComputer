@@ -21,6 +21,8 @@ void *emulate(void *arg) {
         uint64_t cycle_delta_sum = 0;
         
         while (running) {
+                reg_dump_65C02();
+
                 uint64_t cycle_start = cycle_count;
                 tick_65C02();
                 ticks++;
@@ -55,7 +57,6 @@ int main(int argc, char **argv) {
                 if (strcmp(argv[i], "-disk") == 0) {
                         // -disk disk_number disk_file
                         connect_disk(argv[i + 2], atoi(argv[i + 1]));
-                        i += 3;
                 }
                 if (strcmp(argv[i], "-load") == 0) {
                         // -load mem mem_file
