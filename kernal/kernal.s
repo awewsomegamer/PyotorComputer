@@ -1,14 +1,23 @@
 			.org 56512
 
+			DISK_BUFF_ADDR_LO := 48519
+			DISK_BUFF_ADDR_HI := 48520
+			DISK_SECTOR_LO := 48521
+			DISK_SECTOR_HI := 48522
+			DISK_SECTOR_COUNT_LO := 48523
+			DISK_SECTOR_COUNT_HI := 48524
+			DISK_REG_STATUS := 48525
+			DISK_REG_CODE := 48526
+
+
 _entry:			lda #$FF
 			sta 48517
 
 			; Sector start number is 0
 			lda #$2
-			sta $8 ; High byte of buffer address
+			sta DISK_BUFF_ADDR_HI ; High byte of buffer address
 			lda #$1
-			sta $9 ; Low byte of sectors to read
-			lda #$1 ; Disk number
+			sta DISK_SECTOR_COUNT_LO ; Low byte of sectors to read
 			jsr read_disk
 
 			lda #$0 ; #.LOBYTE(COOL_STRING)
@@ -18,13 +27,11 @@ _entry:			lda #$FF
 			jsr putstr
 
 			lda #$1
-			sta $5 ; Sector number is 1
-			lda #$0
-			sta $6 ; Sector higher half is 0 (silly putstr)
+			sta DISK_SECTOR_LO ; Sector number is 1
 			lda #$2
-			sta $8 ; High byte of buffer address
+			sta DISK_BUFF_ADDR_HI ; High byte of buffer address
 			lda #$1
-			sta $9 ; Low byte of sectors to read
+			sta DISK_SECTOR_COUNT_LO ; Low byte of sectors to read
 			lda #$1 ; Disk number
 			jsr read_disk
 			jmp $0200 ; Jump to loaded program
@@ -84,29 +91,17 @@ _end:			pla 			; Restore A
 ; ($5) - Sector number
 ; ($7) - Memory buffer base address
 ; ($9) - Sectors to read
-read_disk:		pha 		; Save A
-			lda $5 		; Load lower half of starting sector number
-			sta 48521 	; Store lower half of starting sector number
-			lda $6 		; Load higher half of starting sector number
-			sta 48522 	; Store higher half of starting sector number
-			lda $7 		; Load lower half of buffer address
-			sta 48519 	; Store lower half of buffer address
-			lda $8 		; Load higher half of buffer address
-			sta 48520 	; Store higher half of buffer address
-			lda $9 		; Load lower half of sectors to read
-			sta 48523 	; Store lower half of sectors to read
-			lda $A 		; Load higher half of sectors to read
-			sta 48524 	; Store higher half of sectors to read
-			lda #$01
-			sta 48525 	; Set the status to 1
-			pla 		; Restore A
-_left_shift:		dec 		; Decrement A register
-			beq _ls_over 	; A is zero, we are done
-			rol 48525 	; Bit shift disk bound bit left by 1
-			bra _left_shift ; Loop
-_ls_over:		lda #$80 	; Set D1
-			ora 48525 	; Or D1 together with bound bit
-			sta 48525	; Store final status
+read_disk:		pha
+			lda #$1
+			sta DISK_REG_STATUS
+			pla 
+_left_shift:		dec 			; Decrement A register
+			beq _ls_over 		; A is zero, we are done
+			rol DISK_REG_STATUS 	; Bit shift disk bound bit left by 1
+			bra _left_shift 	; Loop
+_ls_over:		lda #$80 		; Set D1
+			ora DISK_REG_STATUS	; Or D1 together with bound bit
+			sta 48525		; Store final status
 			; TODO - Add code to wait for the
 			;	 disk operation to finish.
 
