@@ -25,7 +25,7 @@ void video_mem_write(uint16_t address, uint8_t byte) {
         *(video_memory + address) = byte;
 }
 
-void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_background) {
+void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_fg_bg) {
         uint8_t* chr_data = font + data * FONT_HEIGHT;
 
         int cx = (address % 40) * FONT_WIDTH;
@@ -41,9 +41,9 @@ void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, ui
                         if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
                                 break;
 
-                        if ((chr_data[i] >> j) & 1) {
+                        if (((chr_data[i] >> j) & 1) && !((draw_fg_bg >> 1) & 1)) {
                                 *(video_memory + (i + cy) * 320 + (rx + cx)) = foreground;
-                        } else if (!draw_background) {
+                        } else if (!((chr_data[i] >> j) & 1) && !(draw_fg_bg & 1)) {
                                 *(video_memory + (i + cy) * 320 + (rx + cx)) = background;
                         }
                         
@@ -52,7 +52,7 @@ void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, ui
         }
 }
 
-void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_background) {
+void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_fg_bg) {
         uint8_t *spr_data = (uint8_t *)general_memory + (data * SPRITE_WIDTH * SPRITE_HEIGHT + sprite_table_address);
 
         int cx = (address % 40) * FONT_WIDTH;
@@ -63,9 +63,9 @@ void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8
                         if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
                                 break;
 
-                        if ((spr_data[i] >> j) & 1) {
+                        if (((spr_data[i] >> j) & 1) && !((draw_fg_bg >> 1) & 1)) {
                                 *(video_memory + (i + cy) * 320 + (rx + cx)) = foreground;
-                        } else if (!draw_background) {
+                        } else if (!((spr_data[i] >> j) & 1) && !(draw_fg_bg & 1)) {
                                 *(video_memory + (i + cy) * 320 + (rx + cx)) = background;
                         }
 

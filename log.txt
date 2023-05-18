@@ -1,0 +1,82 @@
+make -C assembler
+make[1]: Entering directory '/home/awewsomegamer/git/PyotorComputer/assembler'
+gcc ./main.c ./isa.c -o ../assembler.out -I./include/
+make[1]: Leaving directory '/home/awewsomegamer/git/PyotorComputer/assembler'
+make -C emulator debug
+make[1]: Entering directory '/home/awewsomegamer/git/PyotorComputer/emulator'
+gcc ./src/control_reg.c ./src/disk.c ./src/audio.c ./src/main.c ./src/video.c ./src/ram.c ./src/cpu/cpu.c ./src/cpu/instructions/inst_logical.c ./src/cpu/instructions/inst_control_flow.c ./src/cpu/instructions/inst_transfer.c ./src/cpu/instructions/inst_flag.c ./src/cpu/instructions/inst_load.c ./src/cpu/instructions/inst_store.c ./src/cpu/instructions/inst_arithmetic.c ./src/cpu/instructions/inst_inc_dec.c ./src/cpu/instructions/inst_stack.c ./src/cpu/instructions/inst_comparison.c ./src/keyboard.c -o ../emulator.out -I./src/include/ -DDEBUG -g -lSDL2 -lm
+make[1]: Leaving directory '/home/awewsomegamer/git/PyotorComputer/emulator'
+make -C kernal
+make[1]: Entering directory '/home/awewsomegamer/git/PyotorComputer/kernal'
+ca65 -g --cpu 65C02 kernal.s -o bin/kernal.o
+ld65 -C linker.ld65 -Ln labels.txt bin/*.o -o ./kernal_rom.bin
+make -C test_prg
+make[2]: Entering directory '/home/awewsomegamer/git/PyotorComputer/kernal/test_prg'
+ca65 --cpu 65C02 test1.s -o bin/test1.o
+ld65 -C linker.ld65 bin/test1.o -o bin/test1.bin
+cat ../../emulator/disk1.bin bin/test1.bin > test1_prg_disk.bin
+make[2]: Leaving directory '/home/awewsomegamer/git/PyotorComputer/kernal/test_prg'
+make[1]: Leaving directory '/home/awewsomegamer/git/PyotorComputer/kernal'
+./emulator.out -load 0xDCC0 ./kernal/kernal_rom.bin -disk 0 ./kernal/test_prg/test1_prg_disk.bin
+[./src/cpu/cpu.c@236] : Initializing 65C02 CPU
+[./src/cpu/instructions/inst_arithmetic.c@42] : Installed arithmetic instructions
+[./src/cpu/instructions/inst_comparison.c@36] : Installed comparison instructions
+[./src/cpu/instructions/inst_control_flow.c@53] : Installed control flow instructions
+[./src/cpu/instructions/inst_flag.c@20] : Installed flag instructions
+[./src/cpu/instructions/inst_inc_dec.c@34] : Installed increment / decrement instructions
+[./src/cpu/instructions/inst_load.c@44] : Installed load instructions
+[./src/cpu/instructions/inst_logical.c@144] : Installing logical instructions
+[./src/cpu/instructions/inst_stack.c@22] : Installed stack instructions
+[./src/cpu/instructions/inst_store.c@42] : Installed store instructions
+[./src/cpu/instructions/inst_transfer.c@18] : Installed transfer instructions
+[./src/cpu/cpu.c@259] : Initialized 65C02 CPU, 212 opcodes installed
+[./src/ram.c@46] : Initializing RAM
+[./src/ram.c@52] : Initialized RAM
+[./src/video.c@103] : Initializing Video
+[./src/video.c@137] : Initialized Video
+[./src/audio.c@27] : Initializing Audio
+[./src/audio.c@40] : Initialized Audio
+[./src/ram.c@33] : Loading file "./kernal/kernal_rom.bin" at 0xDCC0
+[./src/ram.c@40] : Loaded file "./kernal/kernal_rom.bin" at 0xDCC0
+[./src/disk.c@36] : Connecting file "./kernal/test_prg/test1_prg_disk.bin" to disk number 0
+[./src/disk.c@39] : Disk connected
+[./src/disk.c@26] : Reading disk 0 at sector 0x0000 to memory 0x0200 for 1 sectors
+[./src/disk.c@30] : Disk operation completed successfully
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DCD7
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/instructions/inst_control_flow.c@20] : Returning to: DD36
+[./src/cpu/in

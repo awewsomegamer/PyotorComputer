@@ -1,8 +1,11 @@
+; .word $ECEC
+
 _start: 		lda #.LOBYTE(COOL_TEXT)
 			sta $5
 			lda #.HIBYTE(COOL_TEXT)
 			sta $6
-			jsr $DD19
+			lda #16
+			jsr $DD3A
 _quit:			bra _quit
 
 

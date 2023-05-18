@@ -10,11 +10,12 @@ struct control_register {
         uint16_t address;        // Address 								 @ 48512 -> 48513
         uint8_t mode;            // Mode								 @ 48514
         uint8_t data;            // Data field								 @ 48515
-        uint8_t status;          // D(ata)1 R(ead)/W(rite) D(ata)2 B 0 0 0 0				 @ 48516
+        uint8_t status;          // D(ata)1 R(ead)/W(rite) D(ata)2 B F 0 0 0				 @ 48516
                                  // D1: Indicates new data from CPU -> Video card			 
                                  // R/W: 0: reading data, 1: writing data				 
                                  // D2: Indicates new data from Video card -> CPU			 
-                                 // B: 0: Draw background, 1: Don't draw background (text mode)		 
+                                 // B: 0: Draw background, 1: Don't draw background (text mode, sprite mode)	
+				 // F: 0: Draw foreground, 1: Don't draw foreground (text mode, sprite mode)	 
         uint8_t foreground;      // Foreground to use for text						 @ 48517
         uint8_t background;      // Background to use for text (carry set means background is not drawn) @ 48518
 }__attribute__((packed));
@@ -55,10 +56,11 @@ struct disk_register {
 			Bit 5 (D2):   Flag to notify the CPU that there is new data from
 				      the controller to the CPU.
 			Bit 4 (B):    This bit only applies to the video controller, and
-				      simply states whether to draw the backgroudn of a
+				      simply states whether to draw the background of a
 				      video operation or not. 0: Draw background, 1:
 				      Don't draw background.
-			Bit 3:        Unused
+			Bit 3:        This bit is like bit 4 but instead applies to the
+				      foreground.
 			Bit 2:        Unused
 			Bit 1:        Unused
 			Bit 0:        Unused
@@ -133,7 +135,7 @@ void tick_control_register() {
 		
 		case 0x01: { // Sprite Mode (40x40)
 			// 8 bytes wide, 5 bytes tall
-			video_draw_sprite(reg->address, reg->data, reg->foreground, reg->background, (reg->status >> 4) & 1);
+			video_draw_sprite(reg->address, reg->data, reg->foreground, reg->background, ((reg->status >> 4) & 1) | (((reg->status >> 3) & 1) << 1));
 
 			break;
 		}
@@ -144,7 +146,7 @@ void tick_control_register() {
 		
 		case 0x03: // 40x12 Terminal Mode
 			// Address behaves like index into screen: y * 40 + x
-			video_draw_character(reg->address, reg->data, reg->foreground, reg->background, (reg->status >> 4) & 1);
+			video_draw_character(reg->address, reg->data, reg->foreground, reg->background, ((reg->status >> 4) & 1) | (((reg->status >> 3) & 1) << 1));
 
 			break;
 		

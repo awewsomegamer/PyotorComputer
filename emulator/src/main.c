@@ -22,6 +22,7 @@ void *emulate(void *arg) {
         
         while (running) {
                 uint64_t cycle_start = cycle_count;
+                
                 tick_65C02();
                 ticks++;
                 cycle_delta_sum += cycle_count - cycle_start;

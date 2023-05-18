@@ -14,8 +14,8 @@
 uint8_t video_mem_read(uint16_t address);
 void video_mem_write(uint16_t address, uint8_t byte);
 
-void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_background);
-void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_background);
+void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_fg_bg);
+void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_fg_bg);
 void video_set_sprite_table_address(uint16_t address);
 
 void update();

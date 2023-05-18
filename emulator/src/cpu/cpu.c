@@ -1,3 +1,4 @@
+#include "global.h"
 #include <cpu/cpu.h>
 #include <cpu/instructions/instruction_macros.h>
 #include <ram.h>
@@ -172,6 +173,9 @@ void tick_65C02() {
                 INST_BIT(opcode);
                 goto TICK_RET;
         }
+
+        // Check if opcode is valid
+        DBG(0, if (instruction[opcode] == NULL) printf("! Invalid opcode %02X at %04X !\n", opcode, pc);)
 
         // Consult instruction table
         (*instruction[opcode])();
