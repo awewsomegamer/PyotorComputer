@@ -22,33 +22,19 @@ _entry:			lda #$FF
 			sta VIDEO_REG_FG
 			lda #$FF
 			sta VIDEO_REG_BG
-
-			; Sector start number is 0
-			lda #$2
-			sta DISK_BUFF_ADDR_HI 			; High byte of buffer address
-			lda #$1
-			sta DISK_SECTOR_COUNT_LO 		; Low byte of sectors to read
-			jsr read_disk
 			
-			; ldx #$0
-			; ldy #$0
-			; lda #$1
-; _draw_bg:		jsr put_pixel
-; 			inx
-; 			bne @over
-; 			iny
-; 			beq @end
-; 			beq @end
-; @over:			bra _draw_bg
-; @end:			ldx #$0
-; 			ldy #$0
-
-			lda #$0 				; #.LOBYTE(COOL_STRING)
-			sta $5
-			lda #$2 				; #.HIBYTE(COOL_STRING)
-			sta $6
-			lda #%00001000
-			jsr putstr
+			ldx #$0
+			ldy #$0
+			lda #$1
+_draw_bg:		jsr put_pixel
+			asl a
+			inx
+			bne @over
+			iny
+			beq @end
+@over:			bra _draw_bg
+@end:			ldx #$0
+			ldy #$0
 
 			lda #$0
 			sta $5
@@ -56,8 +42,8 @@ _entry:			lda #$FF
 			sta $6
 			lda #$1
 			sta DISK_SECTOR_LO
+			sta DISK_SECTOR_COUNT_LO 
 			jsr run_program
-
 
 _quit:			bra _quit
 
@@ -89,9 +75,9 @@ put_pixel:		stx VIDEO_ADDR_LO
 			rts
 
 ; ($5) - Address of string
-; A - Foreground / Background mask (0: Draw both, 16: Draw only foreground, 32: Draw only background, 48: Draw none)
-; X - Lower byte of address
-; Y - Higher byte of address
+; A    - Foreground / Background mask (0: Draw both, 8: Draw only background, 16: Draw only foreground, 24: Draw none)
+; X    - Lower byte of address
+; Y    - Higher byte of address
 putstr:			pha 					; Save A
 _putstr:		pla					; Restore A
 			sta VIDEO_REG_STATUS			; Write A to the status (will set B or F flags depending on user selection)
@@ -114,11 +100,11 @@ _inc_lwr_addr_ovr:	bra _putstr 				; Loop
 _end:		 	pla 					; Restore A
 			rts
 
-; A - Disk to read (values must be: 1,2, or 3), contents
-;     are not preserved.
-; Set bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI, DISK_SECTOR_LO, 
-; DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
-; apropriate values.
+; A   - Disk to read (values must be: 1,2, or 3), contents
+;       are not preserved.
+; MEM - Set bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI, DISK_SECTOR_LO, 
+;       DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
+;       apropriate values.
 read_disk:		pha					; Save A
 			lda #$1					; Load A with 1
 			sta DISK_REG_STATUS			; Put it in the disk status #%00000001
@@ -140,12 +126,12 @@ _ls_over:		lda #$80 				; Set D1
 
 			rts
 
-; A - Disk to read (values must be: 1,2, or 3), contents
-;     are not preserved.
-; Bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI should be set in
-; ($5)
-; Set bytes DISK_SECTOR_LO, DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
-; apropriate values.
+; A   - Disk to read (values must be: 1,2, or 3), contents
+;       are not preserved.
+; MEM - Bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI should be set in
+;       ($5).
+;       Set bytes DISK_SECTOR_LO, DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
+;       apropriate values.
 run_program:		pha					; Save A
 			lda $5					; Load DISK_BUFF_ADDR_LO
 			sta DISK_BUFF_ADDR_LO			; Store it in its proper place
@@ -189,7 +175,6 @@ _dont_run:		ply
 			lda #$FF				; Error code $FF
 			rts					; Return to caller (code $FF, error occurred)
 								; * For some reason the above RTS returns to weird places *
-
 
 _irq_handler:
 _nmi_handler: 		rti

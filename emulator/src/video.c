@@ -36,7 +36,7 @@ void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, ui
 
         for (int i = 0; i < FONT_HEIGHT; i++) {
                 int rx = 0;
-                for (int j = FONT_WIDTH; j >= 0; j--) {
+                for (int j = FONT_WIDTH - 1; j >= 0; j--) {
                         // We are outside of the screen, do not write.
                         if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
                                 break;
