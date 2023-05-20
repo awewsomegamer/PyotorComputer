@@ -35,14 +35,28 @@ _draw_bg:		jsr put_pixel
 @over:			bra _draw_bg
 @end:			ldx #$0
 			ldy #$0
+			
+			lda #$55
+			sta $0200
+			sta $0201
+			sta $0202
+			sta $0203
+			sta $0204
 
 			lda #$0
+			sta DISK_BUFF_ADDR_LO
 			sta $5
 			lda #$2
+			sta DISK_BUFF_ADDR_HI
 			sta $6
-			lda #$1
 			sta DISK_SECTOR_LO
-			sta DISK_SECTOR_COUNT_LO 
+			lda #$1
+			sta DISK_SECTOR_COUNT_LO
+			jsr write_disk
+
+			lda #$1
+			sta DISK_SECTOR_COUNT_LO
+			sta DISK_SECTOR_LO
 			jsr run_program
 
 _quit:			bra _quit
@@ -109,11 +123,11 @@ read_disk:		pha					; Save A
 			lda #$1					; Load A with 1
 			sta DISK_REG_STATUS			; Put it in the disk status #%00000001
 			pla 					; Restore A
-_left_shift:		dec 					; Decrement A register
-			beq _ls_over 				; A is zero, we are done
+@left_shift:		dec 					; Decrement A register
+			beq @ls_over 				; A is zero, we are done
 			rol DISK_REG_STATUS 			; Bit shift disk bound bit left by 1
-			bra _left_shift 			; Loop
-_ls_over:		lda #$80 				; Set D1
+			bra @left_shift 			; Loop
+@ls_over:		lda #$80 				; Set D1
 			ora DISK_REG_STATUS			; Or D1 together with bound bit
 			sta 48525				; Store final status
 			; TODO - Add code to wait for the
@@ -125,6 +139,33 @@ _ls_over:		lda #$80 				; Set D1
 			;	 the screen.
 
 			rts
+
+; A   - Disk to read (values must be: 1,2, or 3), contents
+;       are not preserved.
+; MEM - Set bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI, DISK_SECTOR_LO, 
+;       DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
+;       apropriate values.
+write_disk:		pha					; Save A
+			lda #$1					; Load A with 1
+			sta DISK_REG_STATUS			; Put it in the disk status #%00000001
+			pla 					; Restore A
+@left_shift:		dec 					; Decrement A register
+			beq @ls_over 				; A is zero, we are done
+			rol DISK_REG_STATUS 			; Bit shift disk bound bit left by 1
+			bra @left_shift 			; Loop
+@ls_over:		lda #$C0 				; Set D1 | R/W
+			ora DISK_REG_STATUS			; Or D1 together with bound bit
+			sta 48525				; Store final status
+			; TODO - Add code to wait for the
+			;	 disk operation to finish.
+
+			; TODO - Add code to error check.
+			; 	 If there was an error: print
+			; 	 the code field in hex onto
+			;	 the screen.
+
+			rts
+
 
 ; A   - Disk to read (values must be: 1,2, or 3), contents
 ;       are not preserved.
