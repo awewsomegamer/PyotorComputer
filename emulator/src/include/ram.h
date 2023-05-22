@@ -20,10 +20,10 @@
                 0x?? - 0x?? : User
 
                 Detailed:
-                0x00 : Unused
+                0x00 : Reserved
                 0x01 : Memory Map Mask
-                0x02 : Keyboard Scancode
-                0x04 : Keyboard Status
+                0x03 : Keyboard Scancode
+                0x04 : Reserved
 
 */
 

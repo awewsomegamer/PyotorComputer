@@ -17,6 +17,9 @@
 			.define VIDEO_REG_FG 		48517
 			.define VIDEO_REG_BG 		48518
 
+			.define CURRENT_PROGRAM_BASE	48527
+			.define CURRENT_PROGRAM_IRQ	48529
+			.define CURRENT_PROGRAM_NMI	48531
 
 _entry:			lda #$FF
 			sta VIDEO_REG_FG
@@ -166,7 +169,6 @@ write_disk:		pha					; Save A
 
 			rts
 
-
 ; A   - Disk to read (values must be: 1,2, or 3), contents
 ;       are not preserved.
 ; MEM - Bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI should be set in
@@ -183,12 +185,26 @@ run_program:		pha					; Save A
 			phy					; Save Y
 			ldy #$0					; 0 the Y register
 			lda ($5), y				; Load in the first byte of program
+			sta CURRENT_PROGRAM_BASE		; Set the low byte of the current program address
 			cmp #$EC				; Ensure it meets the magic number
 			bne _dont_run				; If it doesn't, error and return to caller
 			iny					; Increment to the next byte of program
 			lda ($5), y				; Load it
+			sta CURRENT_PROGRAM_BASE + 1		; Set the high byte of the current progrma address
 			cmp #$EC				; Ensure it meets the magic number
 			bne _dont_run				; If it doesn't, error and return to caller
+			iny					; IRQ Handler address low byte
+			lda ($5), y				; Load it
+			sta CURRENT_PROGRAM_IRQ			; Store it
+			iny					; IRQ Handler address high byte
+			lda ($5), y				; Load it
+			sta CURRENT_PROGRAM_IRQ + 1		; Store it
+			iny					; NMI Handler address low byte
+			lda ($5), y				; Load it
+			sta CURRENT_PROGRAM_NMI			; Store it
+			iny					; NMI Handler address high byte
+			lda ($5), y				; Load it
+			sta CURRENT_PROGRAM_NMI + 1		; Store it
 			ply					; Restore Y
 			php					; Save status flags
 			lda $5					; Load DISK_BUFF_ADDR_LO
@@ -217,8 +233,20 @@ _dont_run:		ply
 			rts					; Return to caller (code $FF, error occurred)
 								; * For some reason the above RTS returns to weird places *
 
-_irq_handler:
-_nmi_handler: 		rti
+_irq_handler:		; Kernal IRQ handler code here
+			lda CURRENT_PROGRAM_IRQ			; Check if user defined IRQ (non-zero)
+			lda CURRENT_PROGRAM_IRQ + 1		; Check if user defined IRQ (non-zero)
+			beq @over				; Zero, jump over
+			jmp (CURRENT_PROGRAM_IRQ)		; Jump to user handler
+@over:			rti
+
+_nmi_handler:		; Kernal NMI handler code here
+			lda CURRENT_PROGRAM_IRQ			; Check if user defined NMI (non-zero)
+			lda CURRENT_PROGRAM_IRQ + 1		; Check if user defined NMI (non-zero)
+			beq @over				; Zero, jump over
+			jmp (CURRENT_PROGRAM_NMI)		; Jump to user handler
+@over:			rti
+			
 
 .segment "RODATA"
 COULDNT_RUN_PROGRAM:	.asciiz "Could not run the program, does not start with the signature $ECEC"

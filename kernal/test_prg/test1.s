@@ -1,4 +1,6 @@
-.word $ECEC
+.word $ECEC ; Eexecutable Signature
+.word $0000 ; IRQ Handler Address
+.word $0000 ; NMI Handler Address
 
 			lda #$00
 	 		sta 48518

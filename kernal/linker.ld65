@@ -1,9 +1,14 @@
 MEMORY {
 	ROM1: start = $DCC0, size = $2340;
+	RAM1: start = $BD80, size = $1F40;
+	ZP:   start = $0000, size = $0100;
 }
 
 SEGMENTS {
 	CODE: load = ROM1, type = ro;
 	RODATA: load = ROM1, type = ro;
+	DATA: load = RAM1, type = rw;
+	BSS: load = RAM1, type = rw;
+	ZEROPAGE: load = ZP, type = rw;
 	VECTORS: load = ROM1, start = $FFFA, type = ro;
 }

@@ -1,8 +1,10 @@
-al 00DDE3 ._nmi_handler
-al 00DDE3 ._irq_handler
-al 00DDE4 .COULDNT_RUN_PROGRAM
-al 00DDC4 .@over
-al 00DDC8 ._dont_run
+al 00DE18 .@over
+al 00DE0D ._nmi_handler
+al 00DE0C .@over
+al 00DE01 ._irq_handler
+al 00DE19 .COULDNT_RUN_PROGRAM
+al 00DDE2 .@over
+al 00DDE6 ._dont_run
 al 00DD8C .@ls_over
 al 00DD84 .@left_shift
 al 00DD74 .@ls_over
