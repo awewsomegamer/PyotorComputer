@@ -1,12 +1,13 @@
 all: asm emu kern
 
-DBG ?=
+DBG =
+SPEED ?=
 
 asm:
 	make -C assembler
 
 emu:
-	make -C emulator $(DBG)
+	make -C emulator $(DBG) SPD=$(SPEED)
 
 kern:
 	make -C kernal

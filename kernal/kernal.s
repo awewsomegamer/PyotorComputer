@@ -30,7 +30,7 @@ _entry:			lda #$FF
 			ldy #$0
 			lda #$1
 _draw_bg:		jsr put_pixel
-			asl a
+			adc #11
 			inx
 			bne @over
 			iny

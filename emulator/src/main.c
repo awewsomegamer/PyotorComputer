@@ -1,3 +1,4 @@
+#include <SDL2/SDL_timer.h>
 #include <ctype.h>
 #include <global.h>
 #include <cpu/cpu.h>
@@ -10,36 +11,34 @@
 #include <control_reg.h>
 #include <disk.h>
 
-#define SYSCLOCK_SPEED_MHZ 10
-#define SYS_MICRO_SPEED 1 / SYSCLOCK_SPEED_MHZ
+#ifndef SYS_IPS
+#define SYS_IPS 3500000 // Default rated number of instructions per second for a modern 65C02
+#endif
 
 uint8_t running = 1;
 
 void *emulate(void *arg) {
         time_t last_second = time(NULL);
-        uint64_t ticks = 0;
-        uint64_t cycle_delta_sum = 0;
-        
+        uint64_t instructions = 0;
+        uint64_t last_tick_base = SDL_GetTicks64();
+
         while (running) {
-                uint64_t cycle_start = cycle_count;
-                
                 tick_65C02();
-                ticks++;
-                cycle_delta_sum += cycle_count - cycle_start;
-                
-                if (cycle_delta_sum >= SYSCLOCK_SPEED_MHZ) {
-                        usleep(SYS_MICRO_SPEED);
-                        cycle_delta_sum -= SYSCLOCK_SPEED_MHZ;
-                }
+                tick_control_register();
+                instructions++;
         
                 if (time(NULL) - last_second == 1) {
-                        // printf("%d Ticks, %d cycles \n", ticks, cycle_count);
-                        ticks = 0;
+                        DBG(1, printf("%d IPS %d Cycles", instructions, cycle_count);)
+                        instructions = 0;
                         cycle_count = 0;
+                        last_tick_base = SDL_GetTicks64();
                         last_second = time(NULL);
                 }
 
-                tick_control_register();
+                if (instructions >= SYS_IPS) {
+                        for (; (last_tick_base + 1000) - SDL_GetTicks64(); );
+                }
+
         }
 
         DBG(1, printf("Emulation thread finished execution");)

@@ -9,7 +9,7 @@ _start:			lda #.LOBYTE(COOL_TEXT)
 			lda #.HIBYTE(COOL_TEXT)
 			sta $6
 			lda #8
-			jsr $DD44
+			jsr $DD45
 			cpy #$50
 			beq _quit
 			bra _start
