@@ -2,7 +2,7 @@
 .addr _irq_handler ; IRQ Handler Address
 .word $0000 ; NMI Handler Address
 
-			lda #$FF
+			lda #$00
 	 		sta 48518
 ; _start:			lda #.LOBYTE(COOL_TEXT)
 ; 			sta $5
@@ -20,7 +20,7 @@ _irq_handler:		lda #.LOBYTE(COOL_TEXT)
 			lda #.HIBYTE(COOL_TEXT)
 			sta $6
 			lda #8
-			jsr $DD46
+			jsr $DD51
 			rti
 
 COOL_TEXT:		.asciiz "  ! H A V E  A  G O O D  S U M M E R !  "

@@ -21,8 +21,7 @@
 			.define CURRENT_PROGRAM_IRQ	48529
 			.define CURRENT_PROGRAM_NMI	48531
 
-_entry:			cli
-			lda #$FF
+_entry:			lda #$FF
 			sta VIDEO_REG_FG
 			lda #$FF
 			sta VIDEO_REG_BG
@@ -31,7 +30,14 @@ _entry:			cli
 			ldy #$0
 			lda #$1
 _draw_bg:		jsr put_pixel
-			adc #11
+			lda $0
+			txa
+			adc $0
+			tya
+			sbc $0
+			asl a
+			adc $0
+			sta $0
 			inx
 			bne @over
 			iny
@@ -40,6 +46,8 @@ _draw_bg:		jsr put_pixel
 @end:			ldx #$0
 			ldy #$0
 			
+			cli
+
 			lda #$55
 			sta $0200
 			sta $0201
