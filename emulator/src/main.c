@@ -26,6 +26,10 @@ void *emulate(void *arg) {
                 tick_65C02();
                 tick_control_register();
                 instructions++;
+
+                // for (int i = 0; i < 4; i++) 
+                //         printf("%02X ", *(general_memory + 48529 + i));
+                // printf("\n");
         
                 if (time(NULL) - last_second == 1) {
                         DBG(1, printf("%d IPS %d Cycles", instructions, cycle_count);)
@@ -34,11 +38,10 @@ void *emulate(void *arg) {
                         last_tick_base = SDL_GetTicks64();
                         last_second = time(NULL);
                 }
-
-                if (instructions >= SYS_IPS) {
+                
+                if (instructions >= SYS_IPS - 1) {
                         for (; (last_tick_base + 1000) - SDL_GetTicks64(); );
                 }
-
         }
 
         DBG(1, printf("Emulation thread finished execution");)

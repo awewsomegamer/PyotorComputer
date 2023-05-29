@@ -21,7 +21,8 @@
 			.define CURRENT_PROGRAM_IRQ	48529
 			.define CURRENT_PROGRAM_NMI	48531
 
-_entry:			lda #$FF
+_entry:			cli
+			lda #$FF
 			sta VIDEO_REG_FG
 			lda #$FF
 			sta VIDEO_REG_BG
@@ -132,7 +133,7 @@ read_disk:		pha					; Save A
 			bra @left_shift 			; Loop
 @ls_over:		lda #$80 				; Set D1
 			ora DISK_REG_STATUS			; Or D1 together with bound bit
-			sta 48525				; Store final status
+			sta DISK_REG_STATUS			; Store final status
 			; TODO - Add code to wait for the
 			;	 disk operation to finish.
 
@@ -158,7 +159,7 @@ write_disk:		pha					; Save A
 			bra @left_shift 			; Loop
 @ls_over:		lda #$C0 				; Set D1 | R/W
 			ora DISK_REG_STATUS			; Or D1 together with bound bit
-			sta 48525				; Store final status
+			sta DISK_REG_STATUS			; Store final status
 			; TODO - Add code to wait for the
 			;	 disk operation to finish.
 
@@ -209,7 +210,7 @@ run_program:		pha					; Save A
 			php					; Save status flags
 			lda $5					; Load DISK_BUFF_ADDR_LO
 			clc					; Clear carry flag
-			adc #2					; Add with carry
+			adc #6					; Add with carry
 			sta $5					; Store it back to its place
 			bcc @over				; If the operation didn't roll over, jump over this block
 			lda $6					; Load DISK_BUFF_ADDR_HI
@@ -231,19 +232,32 @@ _dont_run:		ply
 			jsr putstr				; Put it on the screen
 			lda #$FF				; Error code $FF
 			rts					; Return to caller (code $FF, error occurred)
-								; * For some reason the above RTS returns to weird places *
 
 _irq_handler:		; Kernal IRQ handler code here
 			lda CURRENT_PROGRAM_IRQ			; Check if user defined IRQ (non-zero)
+			php					; Load the current status into stack
+			pla					; Load status into A
+			sta $0					; Store in tmp value
 			lda CURRENT_PROGRAM_IRQ + 1		; Check if user defined IRQ (non-zero)
-			beq @over				; Zero, jump over
+			php					; Load the current status into stack
+			pla					; Load status into A
+			ora $0					; OR the two statuses together
+			sta $0					; Store A back to 0 for BBS
+			bbs1 $0, @over				; Jump over if the zero flag is set
 			jmp (CURRENT_PROGRAM_IRQ)		; Jump to user handler
 @over:			rti
 
 _nmi_handler:		; Kernal NMI handler code here
-			lda CURRENT_PROGRAM_IRQ			; Check if user defined NMI (non-zero)
-			lda CURRENT_PROGRAM_IRQ + 1		; Check if user defined NMI (non-zero)
-			beq @over				; Zero, jump over
+			lda CURRENT_PROGRAM_NMI			; Check if user defined NMI (non-zero)
+			php					; Load the current status into stack
+			pla					; Load status into A
+			sta $0					; Store in tmp value
+			lda CURRENT_PROGRAM_NMI + 1		; Check if user defined NMI (non-zero)
+			php					; Load the current status into stack
+			pla					; Load status into A
+			ora $0					; OR the two statuses together
+			sta $0					; Store A back to 0 for BBS
+			bbs1 $0, @over				; Jump over if the zero flag is set
 			jmp (CURRENT_PROGRAM_NMI)		; Jump to user handler
 @over:			rti
 			
@@ -252,6 +266,6 @@ _nmi_handler:		; Kernal NMI handler code here
 COULDNT_RUN_PROGRAM:	.asciiz "Could not run the program, does not start with the signature $ECEC"
 
 .segment "VECTORS"
-			.addr _irq_handler
-			.addr _entry
 			.addr _nmi_handler
+			.addr _entry
+			.addr _irq_handler

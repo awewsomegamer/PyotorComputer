@@ -3,6 +3,7 @@
 #include <cpu/instructions/instruction_macros.h>
 #include <ram.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <sys/types.h>
 
 // ** TODO: Implement BCD mode
@@ -50,21 +51,23 @@ uint8_t cycles[256] = {  7, 6, 0, 0, 5, 3, 5, 0, 0, 2, 2, 0, 6, 4, 6, 0,   // 0
 
 // Run-time instructions
 void INST_BBS(int index) {
-        uint16_t address = NEXT_WORD;
+        uint8_t addr = NEXT_BYTE;
+        uint8_t off = NEXT_BYTE;
 
-        cycle_count += 5 + ((pc / PAGE_SIZE == address / PAGE_SIZE) ? 1 : 2);
+        cycle_count += 5 + (((pc + (int8_t)off) / PAGE_SIZE == pc / PAGE_SIZE) ? 1 : 2);
 
-        if (((PTR(NEXT_BYTE) >> index) & 1) == 1)
-                pc = address;
+        if (((PTR(addr) >> index) & 1) == 1)
+                pc += (int8_t)off;
 }
 
 void INST_BBR(int index) {
-        uint16_t address = NEXT_WORD;
-        
-        cycle_count += 5 + ((pc / PAGE_SIZE == address / PAGE_SIZE) ? 1 : 2);
+        uint8_t addr = NEXT_BYTE;
+        uint8_t off = NEXT_BYTE;
 
-        if (((PTR(NEXT_BYTE) >> index) & 1) == 0)
-                pc = NEXT_WORD;
+        cycle_count += 5 + (((pc + (int8_t)off) / PAGE_SIZE == pc / PAGE_SIZE) ? 1 : 2);
+
+        if (((PTR(addr) >> index) & 1) == 0)
+                pc += (int8_t)off;
 }
 
 void INST_SMB(int index) { mem_byte_write(PTR(CUR_BYTE) | (1 << index), NEXT_BYTE); cycle_count += 5; }
@@ -141,6 +144,7 @@ void tick_65C02() {
                 call_interrupt();
 
         uint8_t opcode = NEXT_BYTE;
+        
         uint8_t high_nibble = ((opcode >> 4) & 0xF);
         uint8_t low_nibble = (opcode & 0xF);
 
@@ -175,7 +179,7 @@ void tick_65C02() {
         }
 
         // Check if opcode is valid
-        DBG(0, if (instruction[opcode] == NULL) printf("! Invalid opcode %02X at %04X !\n", opcode, pc);)
+        DBG(0, if (instruction[opcode] == NULL) printf("! Invalid opcode %02X at %04X !\n", opcode, pc - 1);)
 
         // Consult instruction table
         (*instruction[opcode])();
