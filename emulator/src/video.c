@@ -53,13 +53,14 @@ void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, ui
 }
 
 void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_fg_bg) {
-        uint8_t *spr_data = (uint8_t *)general_memory + (data * SPRITE_WIDTH * SPRITE_HEIGHT + sprite_table_address);
+        uint8_t *spr_data = (uint8_t *)(general_memory + (data * SPRITE_HEIGHT + sprite_table_address));
 
-        int cx = (address % 40) * FONT_WIDTH;
-        int cy = (address / 40) * FONT_HEIGHT;
+        int cx = (address & 0xFF) * SPRITE_WIDTH;
+        int cy = ((address >> 8) & 0xFF) * SPRITE_HEIGHT;
+
         for (int i = 0; i < SPRITE_HEIGHT; i++) {
                 int rx = 0;
-                for (int j = 0; j < SPRITE_WIDTH; j++) {
+                for (int j = SPRITE_WIDTH - 1; j >= 0; j--) {
                         if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
                                 break;
 

@@ -20,7 +20,7 @@ _irq_handler:		lda #.LOBYTE(COOL_TEXT)
 			lda #.HIBYTE(COOL_TEXT)
 			sta $6
 			lda #8
-			jsr $DD51
+			; jsr $DD51
 			rti
 
 COOL_TEXT:		.asciiz "  ! H A V E  A  G O O D  S U M M E R !  "
