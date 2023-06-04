@@ -78,6 +78,9 @@ void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8
 void video_set_sprite_table_address(uint16_t address) {
         sprite_table_address = address;
 }
+uint16_t video_get_sprite_table_address() {
+        return sprite_table_address;
+}
 
 void update() {
         // Update

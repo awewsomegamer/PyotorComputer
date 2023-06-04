@@ -2,6 +2,7 @@
 #define CGA_H
 
 #include <global.h>
+#include <stdint.h>
 
 #define VRAM_WIDTH 320
 #define VRAM_HEIGHT 200
@@ -17,6 +18,7 @@ void video_mem_write(uint16_t address, uint8_t byte);
 void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_fg_bg);
 void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_fg_bg);
 void video_set_sprite_table_address(uint16_t address);
+uint16_t video_get_sprite_table_address();
 
 void update();
 

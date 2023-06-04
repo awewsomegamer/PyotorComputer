@@ -140,8 +140,15 @@ void tick_control_register() {
 			break;
 		}
 
-		case 0x02: // Set Sprite Table Address
-			video_set_sprite_table_address(reg->address);
+		case 0x02: // Set / Get Sprite Table Address
+			if (((reg->status >> 6) & 1) == 0) { 
+				// Read
+				reg->address = video_get_sprite_table_address();
+			} else {
+				// Write
+				video_set_sprite_table_address(reg->address);
+			}
+
 			break;
 		
 		case 0x03: // 40x12 Terminal Mode

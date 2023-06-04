@@ -58,34 +58,38 @@ _draw_bg:		jsr put_pixel
 			sta VIDEO_ADDR_HI
 			lda #$2
 			sta VIDEO_REG_MODE
-			lda #$80
+			lda #$C0
 			sta VIDEO_REG_STATUS
 
-			ldx #LOGO_START_X
-			ldy #LOGO_START_Y
-			lda #$0
-			sta $0
-_draw_logo:		stx VIDEO_ADDR_LO
-			sty VIDEO_ADDR_HI
-			lda #$1
-			sta VIDEO_REG_MODE
-			lda $0
-			cmp #LOGO_SPRITE_COUNT
-			beq @done
-			sta VIDEO_REG_DATA
-			inc
-			sta $0
-			lda #%11010000
-			sta VIDEO_REG_STATUS
-			inx
-			cpx #(LOGO_WIDTH + LOGO_START_X)
-			bne @over
-			ldx #LOGO_START_X
-			iny
-			cmp #(LOGO_HEIGHT + LOGO_START_Y)
-			beq @done
-@over:			bra _draw_logo
-@done:
+			ldx #LOGO_START_X			; Load the starting x-coordinate
+			ldy #LOGO_START_Y			; Load the starting y-coordinate
+			lda #$0					; Load the starting sprite index
+			sta $0					; Zero temporary kernal value 0 (current sprite index)
+_draw_logo:		stx VIDEO_ADDR_LO			; Set address low
+			sty VIDEO_ADDR_HI			; Set address high
+			lda #$1					; Draw sprite (8x5) video mode
+			sta VIDEO_REG_MODE			; Set video mode
+			lda $0					; Load current sprite index
+			cmp #LOGO_SPRITE_COUNT			; Compare to maximum number of sprites allowed
+			beq @done				; The routine is done if the maximum sprite number is reached
+			sta VIDEO_REG_DATA			; The routine is not done yet, draw this sprite
+			inc					; Increment to the next sprite
+			sta $0					; Store the incremented sprite index
+			lda #%11010000				; Load A with D1 | R/W | B
+			sta VIDEO_REG_STATUS			; Set status
+			inx					; Increment current x-coordinate
+			cpx #(LOGO_WIDTH + LOGO_START_X)	; Is this x-coordinate at the right most edge of the image?
+			bne @over				; If not, jump over
+			ldx #LOGO_START_X			; If so, reset x-coordinate to starting coordinate
+			iny					; Increment y-coordinate
+			cmp #(LOGO_HEIGHT + LOGO_START_Y)	; Is this y-coordinate at the bottom most edge of the image?
+			beq @done				; The image is fully drawn
+@over:			bra _draw_logo				; Loop back
+@done:			ldx #$0					; Zero X register
+			ldy #$0					; Zero Y register
+
+			stx VIDEO_REG_FG
+			jsr clrscr
 
 			cli
 
@@ -146,25 +150,72 @@ put_pixel:		stx VIDEO_ADDR_LO
 ; X    - Lower byte of address
 ; Y    - Higher byte of address
 putstr:			pha 					; Save A
-_putstr:		pla					; Restore A
+@putstr:		pla					; Restore A
 			sta VIDEO_REG_STATUS			; Write A to the status (will set B or F flags depending on user selection)
 			pha					; Save A
 			lda ($5) 				; Load character
-			beq _end 				; If the character is a '\0' terminate
+			beq @end 				; If the character is a '\0' terminate
 			jsr putchar 				; Put the character
 			inx 					; Increment the lower index address
-			bne _inc_y_over 			; If it doesn't roll over, jump over higher index address
+			bne @inc_y_over 			; If it doesn't roll over, jump over higher index address
 			iny 					; Increment the higher index address
-_inc_y_over:		lda $05 				; Load lower half of character address
+@inc_y_over:		lda $05 				; Load lower half of character address
 			inc 					; Increment
 			sta $05 				; Store lower half of character address
-			bne _inc_lwr_addr_ovr 			; If the lower half didn't roll over to 0, jump over
+			bne @inc_lwr_addr_ovr 			; If the lower half didn't roll over to 0, jump over
 					      			; higher half incrementation
 			lda $06 				; Load higher half of character address
 			inc 					; Increment
 			sta $06 				; Store higher of character address
-_inc_lwr_addr_ovr:	bra _putstr 				; Loop
-_end:		 	pla 					; Restore A
+@inc_lwr_addr_ovr:	bra @putstr 				; Loop
+@end:		 	pla 					; Restore A
+			rts
+
+; Foreground field in video register is the color to clear with
+clrscr:			phx					; Save X
+			phy					; Save Y
+			pha					; Save A
+			; Save the previous sprite table address
+			lda #$02				; Sprite Table Mode number
+			sta VIDEO_REG_MODE			; Set current mode to Sprite Table Mode
+			lda #$80 				; D1
+			sta VIDEO_REG_STATUS			; Set status
+			lda VIDEO_ADDR_LO			; Get low byte of sprite table address
+			pha					; Save low byte of sprite table address
+			lda VIDEO_ADDR_HI			; Get high byte of sprite table address
+			pha					; Save high byte of sprite table address
+			ldx #$0					; Zero x-coordinate
+			ldy #$0					; Zero y-coordinate
+@loop:			stx VIDEO_ADDR_LO			; Set x-coordinate
+			sty VIDEO_ADDR_HI			; Set  y-coordinate
+			pha					; Save A
+			lda #$0					; Load A with 0
+			sta VIDEO_REG_DATA 			; Set current sprite to sprite 0
+			lda #$01				; Draw sprite mode
+			sta VIDEO_REG_MODE			; Set the mode to Sprite Drawing Mode
+			lda #$C0				; D1 | R/W
+			sta VIDEO_REG_STATUS			; Set status, draw sprite
+			pla					; Restore A
+			inx					; Increment current x-coordinate
+			cpx #40					; Do we need to go to the next line?
+			bne @over_x				; We do not need to go to the next line
+			ldx #$0					; Zero the x-coordinate
+			iny					; Increment the y-coordinate
+			cpy #40					; Is the screen cleared?
+			beq @end				; The screen is cleared
+@over_x:		jmp @loop				; Loop
+@end:			; Restore the previous sprite table address
+			pla					; Get the high byte of the previous sprite table address
+			sta VIDEO_ADDR_HI			; Store it in the high byte of the address field
+			pla					; Get the low byte of the previous sprite table address
+			sta VIDEO_ADDR_HI			; Store it in the low byte of the address field
+			lda #$02				; Sprite Table Address Mode
+			sta VIDEO_REG_MODE			; Store it in the mode field
+			lda #$C0 				; D1 | R/W
+			sta VIDEO_REG_STATUS			; Put the address in the status field
+			pla					; Restore A
+			ply					; Restore Y
+			plx					; Restore X
 			rts
 
 ; A   - Disk to read (values must be: 1,2, or 3), contents
@@ -282,6 +333,8 @@ _dont_run:		ply
 			lda #$FF				; Error code $FF
 			rts					; Return to caller (code $FF, error occurred)
 
+; TODO - Add standard kernal IRQ / NMI save and restore functions
+
 _irq_handler:		; Kernal IRQ handler code here
 			lda CURRENT_PROGRAM_IRQ			; Check if user defined IRQ (non-zero)
 			php					; Load the current status into stack
@@ -310,7 +363,6 @@ _nmi_handler:		; Kernal NMI handler code here
 			jmp (CURRENT_PROGRAM_NMI)		; Jump to user handler
 @over:			rti
 			
-
 .segment "RODATA"
 ASZ_LOGO_BMP: 		.byte 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 192, 128, 255, 255, 255, 0, 0, 255, 255, 255, 15, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 0, 0, 0, 0, 0, 0, 48, 120, 252, 252, 3, 1, 1, 0, 0, 255, 255, 255, 255, 127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 240, 224, 192, 128, 128, 1, 3, 7, 15, 15, 254, 255, 255, 255, 255, 0, 0, 128, 192, 192, 63, 31, 15, 7, 3, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 240, 0, 0, 0, 0, 1, 31, 63, 127, 255, 255, 255, 255, 255, 255, 255, 224, 240, 248, 252, 254, 3, 1, 0, 0, 0, 255, 255, 255, 127, 63, 255, 255, 255, 255, 255, 255, 255, 224, 224, 255, 255, 255, 0, 0, 254, 224, 192, 0, 0, 0, 1, 1, 0, 0, 31, 255, 255, 0, 3, 255, 255, 255, 255, 255, 255, 255, 255, 128, 0, 255, 255, 255, 0, 0, 255, 255, 255, 7, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 240, 224, 0, 0, 0, 0, 1, 63, 63, 127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 240, 248, 248, 252, 254, 1, 0, 0, 0, 0, 255, 255, 127, 63, 31, 255, 255, 255, 255, 255, 192, 192, 255, 255, 255, 3, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 128, 255, 255, 255, 15, 15, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
 
