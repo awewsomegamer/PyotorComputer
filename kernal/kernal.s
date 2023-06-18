@@ -88,8 +88,24 @@ _draw_logo:		stx VIDEO_ADDR_LO			; Set address low
 @done:			ldx #$0					; Zero X register
 			ldy #$0					; Zero Y register
 
-			stx VIDEO_REG_FG
-			jsr clrscr
+			lda #$05				; Get current second mode
+			sta VIDEO_REG_MODE			; Store the mode
+			lda #$80				; D1
+			sta VIDEO_REG_STATUS			; Store the status
+			lda VIDEO_REG_DATA			; Load A with the current second
+			sta $0					; Store it in the temporary value
+@check_rtc:		lda #$05				; Get current second mode
+			sta VIDEO_REG_MODE			; Store the mode
+			lda #$80				; D1
+			sta VIDEO_REG_STATUS			; Store the status
+			lda VIDEO_REG_DATA			; Load A with the current second	
+			sbc $0					; Get the difference between when we started and are current time
+			cmp #$3					; Has three seconds elapsed?
+			beq @check_rtc_end			; If so, end loop
+			bra @check_rtc				; Otherwise, loop
+@check_rtc_end:		ldx #$0					; Zero X
+			stx VIDEO_REG_FG			; Store it in the foreground
+			jsr clrscr				; Clear the screen
 
 			cli
 

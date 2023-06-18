@@ -1,6 +1,7 @@
 #include <control_reg.h>
 #include <ram.h>
 #include <stdio.h>
+#include <time.h>
 #include <video.h>
 #include <audio.h>
 #include <disk.h>
@@ -108,14 +109,16 @@ struct disk_register {
 	zero value.
 */
 
-
 void tick_control_register() {
 	struct control_register *reg = (struct control_register *)(general_memory + KERNAL_DAT_BASE); // Temporary "KERNAL_DAT_BASE"
 	
 	if ((reg->status >> 7) & 1) {
 		reg->status &= ~(1 << 7); // Clear D1
 		reg->status &= ~(1 << 5); // Clear D2
-		
+
+		time_t now = time(NULL);
+		struct tm *tm_struct = localtime(&now);
+
 		switch (reg->mode) {
 		case 0x00: // 320x200 8-bit Color
 			// We are outside of the screen, do not write.
@@ -161,6 +164,38 @@ void tick_control_register() {
 			tick_speaker(reg->address, reg->data);
 
 			break;
+
+		case 0x05: // RTC Second of day
+		
+			reg->data = tm_struct->tm_sec;
+
+			break;
+
+		case 0x06: // RTC Minute of day
+			reg->data = tm_struct->tm_min;
+
+			break;
+
+		case 0x07: // RTC Hour of day
+			reg->data = tm_struct->tm_hour;
+
+			break;
+
+		case 0x08: // RTC Day of month
+			reg->data = tm_struct->tm_mday;
+
+			break;
+
+		case 0x09: // RTC Month of year
+			reg->data = tm_struct->tm_mon;
+
+			break;
+
+		case 0x0A: // RTC Year
+			reg->address = tm_struct->tm_year;
+
+			break;
+
 		}
 	}
 
