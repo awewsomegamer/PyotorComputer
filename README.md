@@ -2,11 +2,11 @@
 An 8-bit computer I built for my parents
 
 # What
-This is an 8-bit computer. It is meant to be like a Commodore 64 with some improvements.
-There will be a custom assembler that will be used for `.asm` files and a custom emulator used for emulating the operating system and hardware components.
+This is an 8-bit computer.
+There will be a custom assembler that will be used for `.asm` files and a custom emulator used for emulating the kernal and hardware components.
 
 ## Emulator
-The emulator is designed to follow closely with how the real hardware will work. Optimizations will be prevalent on the smaller steps (not using a PLA and suc (as the real CPU would), just directly preforming the instruction).
+The emulator is designed to follow closely with how the real hardware will work. Optimizations will be prevalent on the smaller steps (not using a PLA and such (as the real CPU would), just directly preforming the instruction).
 
 # Specs
 `Processor` - 65C02<br>
