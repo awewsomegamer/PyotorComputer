@@ -3,7 +3,7 @@
 void INST_CPX_IMM() { CMP_SET(register_x, NEXT_BYTE) }
 void INST_CPY_IMM() { CMP_SET(register_y, NEXT_BYTE) }
 void INST_CMP_IND_X() { CMP_SET(register_a, PTR(PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8))) }
-void INST_CMP_IND_Y() { CMP_SET(register_a, PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE) << 8)))) }
+void INST_CMP_IND_Y() { CMP_SET(register_a, PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)))) }
 void INST_CPX_ZPG() { CMP_SET(register_x, PTR(NEXT_BYTE)) }
 void INST_CPY_ZPG() { CMP_SET(register_y, PTR(NEXT_BYTE)) }
 void INST_CMP_ZPG() { CMP_SET(register_a, PTR(NEXT_BYTE)) }

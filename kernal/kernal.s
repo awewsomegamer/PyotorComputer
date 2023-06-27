@@ -1,5 +1,13 @@
 			.org 56512
 
+			.define VIDEO_ADDR_LO 		48512
+			.define VIDEO_ADDR_HI 		48513
+			.define VIDEO_REG_MODE 		48514
+			.define VIDEO_REG_DATA 		48515
+			.define VIDEO_REG_STATUS 	48516
+			.define VIDEO_REG_FG 		48517
+			.define VIDEO_REG_BG 		48518
+
 			.define DISK_BUFF_ADDR_LO 	48519
 			.define DISK_BUFF_ADDR_HI 	48520
 			.define DISK_SECTOR_LO 		48521
@@ -9,63 +17,66 @@
 			.define DISK_REG_STATUS 	48525
 			.define DISK_REG_CODE 		48526
 
-			.define VIDEO_ADDR_LO 		48512
-			.define VIDEO_ADDR_HI 		48513
-			.define VIDEO_REG_MODE 		48514
-			.define VIDEO_REG_DATA 		48515
-			.define VIDEO_REG_STATUS 	48516
-			.define VIDEO_REG_FG 		48517
-			.define VIDEO_REG_BG 		48518
-
 			.define CURRENT_PROGRAM_BASE	48527
 			.define CURRENT_PROGRAM_IRQ	48529
 			.define CURRENT_PROGRAM_NMI	48531
+
+			.define TERMINAL_BUFFER 	48532
+			.define TERMINAL_BUFFER_LEN	40
+			.define TERMINAL_INDEX		48572
+			.define TERMINAL_CHAR_X		48573
+			.define TERMINAL_CHAR_Y		48574
+			.define CHAR_BACKSPACE		$2A
+			.define CHAR_ENTER		$28
 
 			.define LOGO_WIDTH 		10
 			.define LOGO_HEIGHT		10
 			.define LOGO_START_X		15
 			.define LOGO_START_Y		15
 			.define LOGO_SPRITE_COUNT	LOGO_WIDTH * LOGO_HEIGHT
-
-_entry:			lda #$00
-			sta VIDEO_REG_FG
-			lda #$00
-			sta VIDEO_REG_BG
 			
-			ldx #$0
-			ldy #$0
-			lda #$1
-_draw_bg:		jsr put_pixel
-			lda $0
-			txa
-			adc $0
-			tya
-			sbc $0
-			asl a
-			adc $0
-			sta $0
-			inx
-			bne @over
-			iny
-			beq @end
-@over:			bra _draw_bg
-@end:			ldx #$0
-			ldy #$0
-			
-			lda #.LOBYTE(ASZ_LOGO_BMP)
-			sta VIDEO_ADDR_LO
-			lda #.HIBYTE(ASZ_LOGO_BMP)
-			sta VIDEO_ADDR_HI
-			lda #$2
-			sta VIDEO_REG_MODE
-			lda #$C0
-			sta VIDEO_REG_STATUS
 
+entry:			lda #$00				;
+			sta VIDEO_REG_FG			;
+			sta VIDEO_REG_BG			;
+			sta CURRENT_PROGRAM_BASE
+			sta CURRENT_PROGRAM_BASE + 1
+			sta CURRENT_PROGRAM_IRQ
+			sta CURRENT_PROGRAM_IRQ + 1
+			sta CURRENT_PROGRAM_NMI
+			sta CURRENT_PROGRAM_NMI + 1
+			ldx #$0					;
+			ldy #$0					;
+			lda #$1					;
+@draw_bg:		jsr put_pixel				;
+			lda $0					;
+			txa					;
+			adc $0					;
+			tya					;
+			sbc $0					;
+			asl a					;
+			adc $0					;
+			sta $0					;
+			inx					;
+			bne @bg_over				;
+			iny					;
+			beq @end				;
+@bg_over:		bra @draw_bg				;
+@end:			ldx #$0					;
+			ldy #$0					;
+			lda #.LOBYTE(ASZ_LOGO_BMP)		;
+			sta VIDEO_ADDR_LO			;
+			lda #.HIBYTE(ASZ_LOGO_BMP)		;
+			sta VIDEO_ADDR_HI			;
+			lda #$2					;
+			sta VIDEO_REG_MODE			;
+			lda #$C0				;
+			sta VIDEO_REG_STATUS			;
 			ldx #LOGO_START_X			; Load the starting x-coordinate
 			ldy #LOGO_START_Y			; Load the starting y-coordinate
 			lda #$0					; Load the starting sprite index
 			sta $0					; Zero temporary kernal value 0 (current sprite index)
-_draw_logo:		stx VIDEO_ADDR_LO			; Set address low
+@draw_logo:		stx VIDEO_ADDR_LO			; Set address low
 			sty VIDEO_ADDR_HI			; Set address high
 			lda #$1					; Draw sprite (8x5) video mode
 			sta VIDEO_REG_MODE			; Set video mode
@@ -79,15 +90,14 @@ _draw_logo:		stx VIDEO_ADDR_LO			; Set address low
 			sta VIDEO_REG_STATUS			; Set status
 			inx					; Increment current x-coordinate
 			cpx #(LOGO_WIDTH + LOGO_START_X)	; Is this x-coordinate at the right most edge of the image?
-			bne @over				; If not, jump over
+			bne @logo_over				; If not, jump over
 			ldx #LOGO_START_X			; If so, reset x-coordinate to starting coordinate
 			iny					; Increment y-coordinate
 			cmp #(LOGO_HEIGHT + LOGO_START_Y)	; Is this y-coordinate at the bottom most edge of the image?
 			beq @done				; The image is fully drawn
-@over:			bra _draw_logo				; Loop back
+@logo_over:		bra @draw_logo				; Loop back
 @done:			ldx #$0					; Zero X register
 			ldy #$0					; Zero Y register
-
 			lda #$05				; Get current second mode
 			sta VIDEO_REG_MODE			; Store the mode
 			lda #$80				; D1
@@ -106,33 +116,10 @@ _draw_logo:		stx VIDEO_ADDR_LO			; Set address low
 @check_rtc_end:		ldx #$0					; Zero X
 			stx VIDEO_REG_FG			; Store it in the foreground
 			jsr clrscr				; Clear the screen
-
-			cli
-
-			lda #$55
-			sta $0200
-			sta $0201
-			sta $0202
-			sta $0203
-			sta $0204
-
-			lda #$0
-			sta DISK_BUFF_ADDR_LO
-			sta $5
-			lda #$2
-			sta DISK_BUFF_ADDR_HI
-			sta $6
-			sta DISK_SECTOR_LO
-			lda #$1
-			sta DISK_SECTOR_COUNT_LO
-			jsr write_disk
-
-			lda #$1
-			sta DISK_SECTOR_COUNT_LO
-			sta DISK_SECTOR_LO
-			jsr run_program
-
-_quit:			bra _quit
+			ldx #$FF				; Set X to white color
+			stx VIDEO_REG_FG			; Set foreground to white
+			cli					; Enable interrupts
+@quit:			bra @quit				; Loop for infinity
 
 ; A - Char
 ; X - Lower byte of address
@@ -145,7 +132,7 @@ putchar: 		sta VIDEO_REG_DATA 			; Store data
 			lda VIDEO_REG_STATUS 			; Load status
 			ora #%11000000 				; | D1 | R/W
 			sta VIDEO_REG_STATUS 			; Store status
-			rts
+			rts					; Return
 
 ; A - Color
 ; X - Lower byte of address
@@ -159,7 +146,7 @@ put_pixel:		stx VIDEO_ADDR_LO
 			lda #%11000000				; D1 | R/W
 			sta VIDEO_REG_STATUS
 			pla
-			rts
+			rts					; Return
 
 ; ($5) - Address of string
 ; A    - Foreground / Background mask (0: Draw both, 8: Draw only background, 16: Draw only foreground, 24: Draw none)
@@ -185,7 +172,7 @@ putstr:			pha 					; Save A
 			sta $06 				; Store higher of character address
 @inc_lwr_addr_ovr:	bra @putstr 				; Loop
 @end:		 	pla 					; Restore A
-			rts
+			rts					; Return
 
 ; Foreground field in video register is the color to clear with
 clrscr:			phx					; Save X
@@ -284,7 +271,7 @@ write_disk:		pha					; Save A
 			; 	 the code field in hex onto
 			;	 the screen.
 
-			rts
+			rts					; Return
 
 ; A   - Disk to read (values must be: 1,2, or 3), contents
 ;       are not preserved.
@@ -304,12 +291,12 @@ run_program:		pha					; Save A
 			lda ($5), y				; Load in the first byte of program
 			sta CURRENT_PROGRAM_BASE		; Set the low byte of the current program address
 			cmp #$EC				; Ensure it meets the magic number
-			bne _dont_run				; If it doesn't, error and return to caller
+			bne @dont_run				; If it doesn't, error and return to caller
 			iny					; Increment to the next byte of program
 			lda ($5), y				; Load it
 			sta CURRENT_PROGRAM_BASE + 1		; Set the high byte of the current progrma address
 			cmp #$EC				; Ensure it meets the magic number
-			bne _dont_run				; If it doesn't, error and return to caller
+			bne @dont_run				; If it doesn't, error and return to caller
 			iny					; IRQ Handler address low byte
 			lda ($5), y				; Load it
 			sta CURRENT_PROGRAM_IRQ			; Store it
@@ -335,7 +322,7 @@ run_program:		pha					; Save A
 @over:			plp					; Restore status flags
 			jmp ($5)				; Jump into program, the program can return to
 								; caller by calling an RTS
-_dont_run:		ply
+@dont_run:		ply
 			lda #.LOBYTE(COULDNT_RUN_PROGRAM)	; Load lower half of the address of the error string
 			sta $5					; Store it
 			lda #.HIBYTE(COULDNT_RUN_PROGRAM)	; Load higher half of the address of the error string
@@ -349,10 +336,85 @@ _dont_run:		ply
 			lda #$FF				; Error code $FF
 			rts					; Return to caller (code $FF, error occurred)
 
-; TODO - Add standard kernal IRQ / NMI save and restore functions
+terminal_handler:	lda #$FF
+			sta VIDEO_REG_FG
+			lda #$0
+			sta VIDEO_REG_STATUS
+			lda $3					; Get current ASCII char in keyboard buffer
+			cmp #CHAR_BACKSPACE			; Backspace?
+			bne @backspace_over			; We are not dealing with a backspace
+			ldx TERMINAL_CHAR_X			; Load the current X coordinate
+			dex					; Decrement the X coordinate
+			cpx #$FF				; Has the X coordinate went back to a lower Y coordinate
+			bne @backspace_x_over			; The X coordinate went back to a lower Y coordinate
+			ldy TERMINAL_CHAR_Y			; Load the current Y coordinate
+			dey					; Decrement the Y coordinate
+@backspace_x_over:	stx TERMINAL_CHAR_X			; Store the current X coordinate
+			sty TERMINAL_CHAR_Y			; Store the current Y coordinate
+			lda TERMINAL_INDEX			; Get the current terminal character index 
+			dec					; Move the character index back one
+			sta TERMINAL_INDEX			; Store the index
+			lda #$0					; Zero A
+			jmp putchar				; Print character
+@backspace_over:	cmp #CHAR_ENTER				; Enter?
+			beq @enter_routine			; If so, jump to the enter routine
+@reg_char:		ldx TERMINAL_CHAR_X			; Load current X coordinate
+			tay					; Write current scancode as offset
+			lda ALPHABET, y				; Load ASCII character from table based on offset
+			ldy TERMINAL_INDEX			; Get current index
+			sta TERMINAL_BUFFER, y			; Store the current character in the terminal buffer
+			iny					; Increment index
+			sty TERMINAL_INDEX			; Store the incremented index
+			ldy TERMINAL_CHAR_Y			; Get the current Y coordinate
+			jsr putchar				; Draw the character
+			inx					; Increment the X coordinate
+			bne @inx_over				; Didn't roll over, jump
+			iny					; Rolled over, increment Y coordinate
+@inx_over:		stx TERMINAL_CHAR_X			; Store X coordinate
+			sty TERMINAL_CHAR_Y			; Store Y coordinate
+			rts					; Return
+@enter_routine:		pha					; Save A
+			phy					; Save Y
+			ldy #$0					; Zero Y
+@compare_loop:		lda TERMINAL_BUFFER, y			; Load A with the current character from the terminal buffer
+			cmp TEST_CMD, y				; Compare it to the current character from the comparison buffer
+			bne @compare_end			; Not equal: jump to the end
+			cmp #$0					; Are we at the end of the string?
+			beq @compare_success			; We made it this far: success
+			iny					; Increment the offset
+			bra @compare_loop			; Loop
+@compare_success:	lda #$0
+			sta $5
+			lda #$2
+			sta $6
+			lda #$1
+			sta DISK_SECTOR_LO
+			sta DISK_SECTOR_COUNT_LO
+			jsr run_program
 
-_irq_handler:		; Kernal IRQ handler code here
-			lda CURRENT_PROGRAM_IRQ			; Check if user defined IRQ (non-zero)
+@compare_end:		ply					; Restore Y
+			pla					; Restore A
+			rts					; Return
+
+irq_handler:		pha					; Save A
+			phx					; Save X
+			phy					; Save Y
+			lda $0					; Load temporary value 0
+			pha					; Save it
+			lda $1					; Load temporary value 1
+			pha					; Save it
+			lda CURRENT_PROGRAM_BASE
+			php
+			pla
+			sta $0
+			lda CURRENT_PROGRAM_BASE + 1
+			php
+			pla
+			ora $0
+			sta $0
+			; bbs1 $0, @terminal_over
+			jsr terminal_handler			; Handle the terminal
+@terminal_over:		lda CURRENT_PROGRAM_IRQ			; Check if user defined IRQ (non-zero)
 			php					; Load the current status into stack
 			pla					; Load status into A
 			sta $0					; Store in tmp value
@@ -362,10 +424,27 @@ _irq_handler:		; Kernal IRQ handler code here
 			ora $0					; OR the two statuses together
 			sta $0					; Store A back to 0 for BBS
 			bbs1 $0, @over				; Jump over if the zero flag is set
+			lda #.HIBYTE(@over)			; High byte of return address
+			pha					; Push high byte
+			lda #.LOBYTE(@over)			; Low byte of return address
+			pha					; Push it
 			jmp (CURRENT_PROGRAM_IRQ)		; Jump to user handler
-@over:			rti
+@over:			pla					; Restore temporary value 1
+			sta $1					; Store it
+			pla					; Restore temporary value 0
+			sta $0					; Store it
+			ply					; Restore Y
+			plx					; Restore X
+			pla					; Restore A
+			rti					; Return from interrupt
 
-_nmi_handler:		; Kernal NMI handler code here
+nmi_handler:		pha					; Save A
+			phx					; Save X
+			phy					; Save Y
+			lda $0					; Load temporary value 0
+			pha					; Save it
+			lda $1					; Load temporary value 1
+			pha					; Save it
 			lda CURRENT_PROGRAM_NMI			; Check if user defined NMI (non-zero)
 			php					; Load the current status into stack
 			pla					; Load status into A
@@ -376,15 +455,27 @@ _nmi_handler:		; Kernal NMI handler code here
 			ora $0					; OR the two statuses together
 			sta $0					; Store A back to 0 for BBS
 			bbs1 $0, @over				; Jump over if the zero flag is set
+			lda #.HIBYTE(@over)			; High byte of return address
+			pha					; Push high byte
+			lda #.LOBYTE(@over)			; Low byte of return address
+			pha					; Push it
 			jmp (CURRENT_PROGRAM_NMI)		; Jump to user handler
-@over:			rti
+@over:			pla					; Restore temporary value 1
+			sta $1					; Store it
+			pla					; Restore temporary value 0
+			sta $0					; Store it
+			ply					; Restore Y
+			plx					; Restore X
+			pla					; Restore A
+			rti					; Return from interrupt
 			
 .segment "RODATA"
 ASZ_LOGO_BMP: 		.byte 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 192, 128, 255, 255, 255, 0, 0, 255, 255, 255, 15, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 0, 0, 0, 0, 0, 0, 48, 120, 252, 252, 3, 1, 1, 0, 0, 255, 255, 255, 255, 127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 240, 224, 192, 128, 128, 1, 3, 7, 15, 15, 254, 255, 255, 255, 255, 0, 0, 128, 192, 192, 63, 31, 15, 7, 3, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 240, 0, 0, 0, 0, 1, 31, 63, 127, 255, 255, 255, 255, 255, 255, 255, 224, 240, 248, 252, 254, 3, 1, 0, 0, 0, 255, 255, 255, 127, 63, 255, 255, 255, 255, 255, 255, 255, 224, 224, 255, 255, 255, 0, 0, 254, 224, 192, 0, 0, 0, 1, 1, 0, 0, 31, 255, 255, 0, 3, 255, 255, 255, 255, 255, 255, 255, 255, 128, 0, 255, 255, 255, 0, 0, 255, 255, 255, 7, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 240, 224, 0, 0, 0, 0, 1, 63, 63, 127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 240, 248, 248, 252, 254, 1, 0, 0, 0, 0, 255, 255, 127, 63, 31, 255, 255, 255, 255, 255, 192, 192, 255, 255, 255, 3, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 128, 255, 255, 255, 15, 15, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
-
 COULDNT_RUN_PROGRAM:	.asciiz "Could not run the program, does not start with the signature $ECEC"
+ALPHABET:		.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+TEST_CMD:		.asciiz "TEST"
 
 .segment "VECTORS"
-			.addr _nmi_handler
-			.addr _entry
-			.addr _irq_handler
+			.addr nmi_handler
+			.addr entry
+			.addr irq_handler

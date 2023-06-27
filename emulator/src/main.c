@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <video.h>
 #include <control_reg.h>
 #include <disk.h>
@@ -21,26 +22,26 @@ void *emulate(void *arg) {
         time_t last_second = time(NULL);
         uint64_t instructions = 0;
         uint64_t last_tick_base = SDL_GetTicks64();
+        const double wait_between_insts = (double)1/(double)SYS_IPS;
+        double current_debt = 0;
 
         while (running) {
                 tick_65C02();
+                current_debt += wait_between_insts;
                 tick_control_register();
                 instructions++;
-
-                // for (int i = 0; i < 4; i++) 
-                //         printf("%02X ", *(general_memory + 48529 + i));
-                // printf("\n");
-        
+                
+                if (current_debt >= 0.0001) {
+                        usleep(1);
+                        current_debt = 0;
+                }
+                
                 if (time(NULL) - last_second == 1) {
                         DBG(1, printf("%d IPS %d Cycles", instructions, cycle_count);)
                         instructions = 0;
                         cycle_count = 0;
                         last_tick_base = SDL_GetTicks64();
                         last_second = time(NULL);
-                }
-                
-                if (instructions >= SYS_IPS - 1) {
-                        for (; (last_tick_base + 1000) - SDL_GetTicks64(); );
                 }
         }
 
