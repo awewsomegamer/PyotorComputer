@@ -21,13 +21,12 @@
 			.define CURRENT_PROGRAM_IRQ	48529
 			.define CURRENT_PROGRAM_NMI	48531
 
-			.define TERMINAL_BUFFER 	48532
+			.define TERMINAL_BUFFER 	48533
 			.define TERMINAL_BUFFER_LEN	40
-			.define TERMINAL_INDEX		48572
-			.define TERMINAL_CHAR_X		48573
-			.define TERMINAL_CHAR_Y		48574
-			.define CHAR_BACKSPACE		$2A
-			.define CHAR_ENTER		$28
+			.define TERMINAL_INDEX		48573
+			.define TERMINAL_CHAR_X		48574
+			.define TERMINAL_CHAR_Y		48575
+			.define TERMINAL_STATUS		48576
 
 			.define LOGO_WIDTH 		10
 			.define LOGO_HEIGHT		10
@@ -35,6 +34,8 @@
 			.define LOGO_START_Y		15
 			.define LOGO_SPRITE_COUNT	LOGO_WIDTH * LOGO_HEIGHT
 			
+			.define CHAR_BACKSPACE		$2A
+			.define CHAR_ENTER		$28
 
 entry:			lda #$00				;
 			sta VIDEO_REG_FG			;
@@ -98,6 +99,7 @@ entry:			lda #$00				;
 @logo_over:		bra @draw_logo				; Loop back
 @done:			ldx #$0					; Zero X register
 			ldy #$0					; Zero Y register
+			sty $1					; Zero temporary value 1 (counter)
 			lda #$05				; Get current second mode
 			sta VIDEO_REG_MODE			; Store the mode
 			lda #$80				; D1
@@ -109,9 +111,13 @@ entry:			lda #$00				;
 			lda #$80				; D1
 			sta VIDEO_REG_STATUS			; Store the status
 			lda VIDEO_REG_DATA			; Load A with the current second	
-			sbc $0					; Get the difference between when we started and are current time
-			cmp #$3					; Has three seconds elapsed?
-			beq @check_rtc_end			; If so, end loop
+			cmp $0					; Is the current time different from last time?
+			beq @check_rtc				; If not, jump back to the loop
+			sta $0					; Store the new second
+			inc $1					; Increment counter
+			lda $1					; Load in the amount of unique seconds passed
+			cmp #$3					; Is the counter 3?
+			beq @check_rtc_end			; If so, we're done (3 full seconds have passed)
 			bra @check_rtc				; Otherwise, loop
 @check_rtc_end:		ldx #$0					; Zero X
 			stx VIDEO_REG_FG			; Store it in the foreground
@@ -119,7 +125,84 @@ entry:			lda #$00				;
 			ldx #$FF				; Set X to white color
 			stx VIDEO_REG_FG			; Set foreground to white
 			cli					; Enable interrupts
-@quit:			bra @quit				; Loop for infinity
+@terminal:		lda #$FF				; Set A to white
+			sta VIDEO_REG_FG			; Set foreground to white
+			lda #$0					; Zero A
+			sta VIDEO_REG_STATUS			; Draw both foreground and background
+			sta CURRENT_PROGRAM_BASE		; No user program is running, zero
+			sta CURRENT_PROGRAM_BASE + 1		; No user program is running, zero
+			sta CURRENT_PROGRAM_IRQ			; No user program is running, zero
+			sta CURRENT_PROGRAM_IRQ + 1		; No user program is running, zero
+			sta CURRENT_PROGRAM_NMI			; No user program is running, zero
+			sta CURRENT_PROGRAM_NMI + 1		; No user program is running, zero
+			lda TERMINAL_STATUS			; Get the current status
+			beq @terminal				; It is zero, nothing new
+			cmp #$1					; Something new? An enter I see
+			beq @enter_routine			; Let's goto the enter routine
+			cmp #$2					; Something new? A regular character I see
+			beq @reg_char_routine			; Let's goto the regular character routine
+			; Something new, not matched, thus a backspace
+@backspace_routine:	ldx TERMINAL_CHAR_X			; Load the current X coordinate
+			dex					; Decrement the X coordinate
+			cpx #$FF				; Has the X coordinate went back to a lower Y coordinate
+			bne @backspace_x_over			; The X coordinate went back to a lower Y coordinate
+			ldy TERMINAL_CHAR_Y			; Load the current Y coordinate
+			dey					; Decrement the Y coordinate
+@backspace_x_over:	stx TERMINAL_CHAR_X			; Store the current X coordinate
+			sty TERMINAL_CHAR_Y			; Store the current Y coordinate
+			ldx TERMINAL_INDEX			; Get the current terminal character index 
+			stz TERMINAL_BUFFER, x			; Zero the character we are at
+			dex					; Move the character index back one
+			stx TERMINAL_INDEX			; Store the index
+			lda #$0					; Zero A
+			jsr putchar				; Print character
+			lda #$0					; Zero A
+			sta TERMINAL_STATUS			; Zero status, we have handled it
+			bra @terminal				; Go back to the start
+@enter_routine:		pha					; Save A
+			phy					; Save Y
+			ldy #$0					; Zero Y
+			sty TERMINAL_INDEX			; Zero Index
+			sty TERMINAL_CHAR_X			; Zero X coordinate
+			sty TERMINAL_CHAR_Y			; Zero Y coordinate
+@compare_loop:		lda TERMINAL_BUFFER, y			; Load A with the current character from the terminal buffer
+			cmp TEST_CMD, y				; Compare it to the current character from the comparison buffer
+			bne @compare_end			; Not equal: jump to the end
+			cmp #$0					; Are we at the end of the string?
+			beq @compare_success			; We made it this far: success
+			iny					; Increment the offset
+			bra @compare_loop			; Loop
+@compare_success:	lda #$0
+			sta $5
+			lda #$2
+			sta $6
+			lda #$1
+			sta DISK_SECTOR_LO
+			sta DISK_SECTOR_COUNT_LO
+			jsr run_program
+@compare_end:		ply					; Restore Y
+			pla					; Restore A
+			lda #$0					; Zero A
+			sta TERMINAL_STATUS			; Zero status, we have handled it
+			jmp @terminal				; Start again
+@reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
+			ldx TERMINAL_CHAR_X			; Load current X coordinate
+			tay					; Write current scancode as offset
+			lda ALPHABET, y				; Load ASCII character from table based on offset
+			ldy TERMINAL_INDEX			; Get current index
+			sta TERMINAL_BUFFER, y			; Store the current character in the terminal buffer
+			iny					; Increment index
+			sty TERMINAL_INDEX			; Store the incremented index
+			ldy TERMINAL_CHAR_Y			; Get the current Y coordinate
+			jsr putchar				; Draw the character
+			inx					; Increment the X coordinate
+			bne @inx_over				; Didn't roll over, jump
+			iny					; Rolled over, increment Y coordinate
+@inx_over:		stx TERMINAL_CHAR_X			; Store X coordinate
+			sty TERMINAL_CHAR_Y			; Store Y coordinate
+			lda #$0					; Zero A
+			sta TERMINAL_STATUS			; Zero status, we have handled it
+			jmp @terminal				; Start again
 
 ; A - Char
 ; X - Lower byte of address
@@ -336,64 +419,19 @@ run_program:		pha					; Save A
 			lda #$FF				; Error code $FF
 			rts					; Return to caller (code $FF, error occurred)
 
-terminal_handler:	lda #$FF
-			sta VIDEO_REG_FG
-			lda #$0
-			sta VIDEO_REG_STATUS
-			lda $3					; Get current ASCII char in keyboard buffer
-			cmp #CHAR_BACKSPACE			; Backspace?
-			bne @backspace_over			; We are not dealing with a backspace
-			ldx TERMINAL_CHAR_X			; Load the current X coordinate
-			dex					; Decrement the X coordinate
-			cpx #$FF				; Has the X coordinate went back to a lower Y coordinate
-			bne @backspace_x_over			; The X coordinate went back to a lower Y coordinate
-			ldy TERMINAL_CHAR_Y			; Load the current Y coordinate
-			dey					; Decrement the Y coordinate
-@backspace_x_over:	stx TERMINAL_CHAR_X			; Store the current X coordinate
-			sty TERMINAL_CHAR_Y			; Store the current Y coordinate
-			lda TERMINAL_INDEX			; Get the current terminal character index 
-			dec					; Move the character index back one
-			sta TERMINAL_INDEX			; Store the index
-			lda #$0					; Zero A
-			jmp putchar				; Print character
-@backspace_over:	cmp #CHAR_ENTER				; Enter?
-			beq @enter_routine			; If so, jump to the enter routine
-@reg_char:		ldx TERMINAL_CHAR_X			; Load current X coordinate
-			tay					; Write current scancode as offset
-			lda ALPHABET, y				; Load ASCII character from table based on offset
-			ldy TERMINAL_INDEX			; Get current index
-			sta TERMINAL_BUFFER, y			; Store the current character in the terminal buffer
-			iny					; Increment index
-			sty TERMINAL_INDEX			; Store the incremented index
-			ldy TERMINAL_CHAR_Y			; Get the current Y coordinate
-			jsr putchar				; Draw the character
-			inx					; Increment the X coordinate
-			bne @inx_over				; Didn't roll over, jump
-			iny					; Rolled over, increment Y coordinate
-@inx_over:		stx TERMINAL_CHAR_X			; Store X coordinate
-			sty TERMINAL_CHAR_Y			; Store Y coordinate
+terminal_handler:	lda $3					; Load the current scancode
+			cmp #CHAR_BACKSPACE			; Is it a backspace?
+			bne @backspace_over			; Well it isn't
+			lda #$3					; A backspace I see
+			sta TERMINAL_STATUS			; Store the status
 			rts					; Return
-@enter_routine:		pha					; Save A
-			phy					; Save Y
-			ldy #$0					; Zero Y
-@compare_loop:		lda TERMINAL_BUFFER, y			; Load A with the current character from the terminal buffer
-			cmp TEST_CMD, y				; Compare it to the current character from the comparison buffer
-			bne @compare_end			; Not equal: jump to the end
-			cmp #$0					; Are we at the end of the string?
-			beq @compare_success			; We made it this far: success
-			iny					; Increment the offset
-			bra @compare_loop			; Loop
-@compare_success:	lda #$0
-			sta $5
-			lda #$2
-			sta $6
-			lda #$1
-			sta DISK_SECTOR_LO
-			sta DISK_SECTOR_COUNT_LO
-			jsr run_program
-
-@compare_end:		ply					; Restore Y
-			pla					; Restore A
+@backspace_over:	cmp #CHAR_ENTER				; Is it an enter?
+			bne @enter_over				; Well it isn't
+			lda #$1					; An enter I see
+			sta TERMINAL_STATUS			; Store the status
+			rts					; Return
+@enter_over:		lda #$2					; Just a regular character
+			sta TERMINAL_STATUS			; Store the status
 			rts					; Return
 
 irq_handler:		pha					; Save A
@@ -412,7 +450,7 @@ irq_handler:		pha					; Save A
 			pla
 			ora $0
 			sta $0
-			; bbs1 $0, @terminal_over
+			bbr1 $0, @terminal_over
 			jsr terminal_handler			; Handle the terminal
 @terminal_over:		lda CURRENT_PROGRAM_IRQ			; Check if user defined IRQ (non-zero)
 			php					; Load the current status into stack
@@ -428,7 +466,7 @@ irq_handler:		pha					; Save A
 			pha					; Push high byte
 			lda #.LOBYTE(@over)			; Low byte of return address
 			pha					; Push it
-			jmp (CURRENT_PROGRAM_IRQ)		; Jump to user handler
+			jmp (CURRENT_PROGRAM_IRQ)		; Jump to user handler (basically a JSR due to prior push statements)
 @over:			pla					; Restore temporary value 1
 			sta $1					; Store it
 			pla					; Restore temporary value 0
@@ -459,7 +497,7 @@ nmi_handler:		pha					; Save A
 			pha					; Push high byte
 			lda #.LOBYTE(@over)			; Low byte of return address
 			pha					; Push it
-			jmp (CURRENT_PROGRAM_NMI)		; Jump to user handler
+			jmp (CURRENT_PROGRAM_NMI)		; Jump to user handler (basically a JSR due to prior push statements)
 @over:			pla					; Restore temporary value 1
 			sta $1					; Store it
 			pla					; Restore temporary value 0

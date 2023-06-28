@@ -6,7 +6,7 @@
 			ldx #$0
 			ldy #$0
 			lda #$1
-_draw_bg:		jsr $DD91
+_draw_bg:		jsr $DE4E
 			lda $0
 			txa
 			adc $0
@@ -30,7 +30,7 @@ _start:			lda #.LOBYTE(COOL_TEXT)
 			lda #.HIBYTE(COOL_TEXT)
 			sta $6
 			lda #8
-			jsr $DDA7
+			jsr $DE64
 			cpy #$50
 			beq _quit
 			bra _start

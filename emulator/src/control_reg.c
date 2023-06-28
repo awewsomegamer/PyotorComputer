@@ -166,7 +166,6 @@ void tick_control_register() {
 			break;
 
 		case 0x05: // RTC Second of day
-		
 			reg->data = tm_struct->tm_sec;
 
 			break;
