@@ -37,15 +37,8 @@
 			.define CHAR_BACKSPACE		$2A
 			.define CHAR_ENTER		$28
 
-entry:			lda #$00				;
-			sta VIDEO_REG_FG			;
-			sta VIDEO_REG_BG			;
-			sta CURRENT_PROGRAM_BASE
-			sta CURRENT_PROGRAM_BASE + 1
-			sta CURRENT_PROGRAM_IRQ
-			sta CURRENT_PROGRAM_IRQ + 1
-			sta CURRENT_PROGRAM_NMI
-			sta CURRENT_PROGRAM_NMI + 1
+entry:			stz VIDEO_REG_FG			; Set foreground to black
+			stz VIDEO_REG_BG			; Set background to black
 			ldx #$0					;
 			ldy #$0					;
 			lda #$1					;
@@ -140,13 +133,20 @@ entry:			lda #$00				;
 			cmp #$1					; Something new? An enter I see
 			beq @enter_routine			; Let's goto the enter routine
 			cmp #$2					; Something new? A regular character I see
-			beq @reg_char_routine			; Let's goto the regular character routine
+			bne @backspace_routine			; It is not a regular character, continue to backspace
+			jmp @reg_char_routine			; Regular character, let's goto the regular character routine
 			; Something new, not matched, thus a backspace
 @backspace_routine:	ldx TERMINAL_CHAR_X			; Load the current X coordinate
-			dex					; Decrement the X coordinate
-			cpx #$FF				; Has the X coordinate went back to a lower Y coordinate
-			bne @backspace_x_over			; The X coordinate went back to a lower Y coordinate
 			ldy TERMINAL_CHAR_Y			; Load the current Y coordinate
+			cpy #$0
+			bne @backspace_over
+			cpx #$0
+			bne @backspace_over
+			stx TERMINAL_STATUS
+			bra @terminal
+@backspace_over:	dex					; Decrement the X coordinate
+			cpx #$FF				; Has X wrapped around to 0xFF?
+			bne @backspace_x_over			; If not, do not decrement Y register
 			dey					; Decrement the Y coordinate
 @backspace_x_over:	stx TERMINAL_CHAR_X			; Store the current X coordinate
 			sty TERMINAL_CHAR_Y			; Store the current Y coordinate
@@ -172,7 +172,15 @@ entry:			lda #$00				;
 			beq @compare_success			; We made it this far: success
 			iny					; Increment the offset
 			bra @compare_loop			; Loop
-@compare_success:	lda #$0
+@compare_success:	iny
+			lda TERMINAL_BUFFER, y			; Get next character
+			cmp #'0'
+			beq @compare_case_one
+			cmp #'1'
+			beq @compare_case_two
+			bra @compare_end
+
+@compare_case_one:	lda #$0
 			sta $5
 			lda #$2
 			sta $6
@@ -180,6 +188,13 @@ entry:			lda #$00				;
 			sta DISK_SECTOR_LO
 			sta DISK_SECTOR_COUNT_LO
 			jsr run_program
+			bra @compare_end
+
+@compare_case_two:	lda #'A'
+			ldx #$0
+			ldy #$0
+			jsr putchar
+
 @compare_end:		ply					; Restore Y
 			pla					; Restore A
 			lda #$0					; Zero A
@@ -190,6 +205,8 @@ entry:			lda #$00				;
 			tay					; Write current scancode as offset
 			lda ALPHABET, y				; Load ASCII character from table based on offset
 			ldy TERMINAL_INDEX			; Get current index
+			cpy #40					; Have we used up all of our buffer?
+			bcs @reg_char_over			; If so, jump back to the terminal **** Breaks backspacing? ****
 			sta TERMINAL_BUFFER, y			; Store the current character in the terminal buffer
 			iny					; Increment index
 			sty TERMINAL_INDEX			; Store the incremented index
@@ -200,7 +217,7 @@ entry:			lda #$00				;
 			iny					; Rolled over, increment Y coordinate
 @inx_over:		stx TERMINAL_CHAR_X			; Store X coordinate
 			sty TERMINAL_CHAR_Y			; Store Y coordinate
-			lda #$0					; Zero A
+@reg_char_over:		lda #$0					; Zero A
 			sta TERMINAL_STATUS			; Zero status, we have handled it
 			jmp @terminal				; Start again
 
@@ -510,7 +527,8 @@ nmi_handler:		pha					; Save A
 .segment "RODATA"
 ASZ_LOGO_BMP: 		.byte 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 192, 128, 255, 255, 255, 0, 0, 255, 255, 255, 15, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 0, 0, 0, 0, 0, 0, 48, 120, 252, 252, 3, 1, 1, 0, 0, 255, 255, 255, 255, 127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 240, 224, 192, 128, 128, 1, 3, 7, 15, 15, 254, 255, 255, 255, 255, 0, 0, 128, 192, 192, 63, 31, 15, 7, 3, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 240, 0, 0, 0, 0, 1, 31, 63, 127, 255, 255, 255, 255, 255, 255, 255, 224, 240, 248, 252, 254, 3, 1, 0, 0, 0, 255, 255, 255, 127, 63, 255, 255, 255, 255, 255, 255, 255, 224, 224, 255, 255, 255, 0, 0, 254, 224, 192, 0, 0, 0, 1, 1, 0, 0, 31, 255, 255, 0, 3, 255, 255, 255, 255, 255, 255, 255, 255, 128, 0, 255, 255, 255, 0, 0, 255, 255, 255, 7, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 240, 224, 0, 0, 0, 0, 1, 63, 63, 127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 240, 248, 248, 252, 254, 1, 0, 0, 0, 0, 255, 255, 127, 63, 31, 255, 255, 255, 255, 255, 192, 192, 255, 255, 255, 3, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 128, 255, 255, 255, 15, 15, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
 COULDNT_RUN_PROGRAM:	.asciiz "Could not run the program, does not start with the signature $ECEC"
-ALPHABET:		.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+ALPHABET:		.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+			.byte $00, $00, $00, $00, $00, $00, $00
 TEST_CMD:		.asciiz "TEST"
 
 .segment "VECTORS"
