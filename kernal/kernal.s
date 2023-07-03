@@ -214,7 +214,7 @@ entry:			stz VIDEO_REG_FG			; Set foreground to black
 			ldy TERMINAL_CHAR_Y			; Get the current Y coordinate
 			pha					; Save the character to be printed
 			lda #4					; Enable scroll
-			sta TERMINAL_STATUS			; Update status
+			sta VIDEO_REG_STATUS			; Update status
 			pla					; Restore printed character
 			jsr putchar				; Draw the character
 			cpy #12					; Are we at the 12th line?

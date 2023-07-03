@@ -101,9 +101,9 @@ void update() {
         memcpy(draw_buffer, video_memory, VRAM_SIZE);
 
         for (int x = 0; x < TERMINAL_WIDTH * TERMINAL_HEIGHT; x++) {
-                uint8_t draw_fg_bg = *(character_memory + x * 2 + 1);
+                uint8_t properties = *(character_memory + x * 2 + 1);
 
-                if (draw_fg_bg == 4)
+                if (properties == 4)
                         continue;
 
                 uint8_t data = *(character_memory + x * 2);
@@ -118,9 +118,9 @@ void update() {
                                 if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
                                         break;
 
-                                if (((chr_data[i] >> j) & 1) && !((draw_fg_bg >> 1) & 1)) {
+                                if (((chr_data[i] >> j) & 1) && !((properties >> 1) & 1)) {
                                         *(draw_buffer + (i + cy) * VRAM_WIDTH + (rx + cx)) = *(general_memory + 48517);
-                                } else if (!((chr_data[i] >> j) & 1) && !(draw_fg_bg & 1)) {
+                                } else if (!((chr_data[i] >> j) & 1) && !(properties & 1)) {
                                         *(draw_buffer + (i + cy) * VRAM_WIDTH + (rx + cx)) = *(general_memory + 48518);
                                 }
                                 
