@@ -1,5 +1,7 @@
 #include "global.h"
+#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <video.h>
 #include <ram.h>
 #include <cpu/cpu.h>
@@ -13,6 +15,8 @@ SDL_Renderer* renderer = NULL;
 SDL_Texture* texture = NULL;
 SDL_Event event;
 uint8_t *video_memory = NULL;
+uint8_t *character_memory = NULL;
+uint8_t *draw_buffer = NULL;
 uint8_t *font = NULL;
 
 uint16_t sprite_table_address = 0;
@@ -25,34 +29,26 @@ void video_mem_write(uint16_t address, uint8_t byte) {
         *(video_memory + address) = byte;
 }
 
-void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_fg_bg) {
-        uint8_t* chr_data = font + data * FONT_HEIGHT;
-
-        int cx = (address % 40) * FONT_WIDTH;
-        int cy = (address / 40) * FONT_HEIGHT;
+void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t properties) {
+        int cx = (address & 0xFF);
+        int cy = ((address >> 8) & 0xFF);
         
-        if ((address / 40) > 11)
-                return;
-
-        for (int i = 0; i < FONT_HEIGHT; i++) {
-                int rx = 0;
-                for (int j = FONT_WIDTH - 1; j >= 0; j--) {
-                        // We are outside of the screen, do not write.
-                        if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
-                                break;
-
-                        if (((chr_data[i] >> j) & 1) && !((draw_fg_bg >> 1) & 1)) {
-                                *(video_memory + (i + cy) * 320 + (rx + cx)) = foreground;
-                        } else if (!((chr_data[i] >> j) & 1) && !(draw_fg_bg & 1)) {
-                                *(video_memory + (i + cy) * 320 + (rx + cx)) = background;
-                        }
-                        
-                        rx++;
+        if (cy > TERMINAL_REAL_HEIGHT && ((properties >> 2) & 1) == 1) {
+                int difference = cy - TERMINAL_REAL_HEIGHT;
+                
+                for (; difference > 0; difference--) {
+                        memcpy(character_memory, character_memory + (TERMINAL_WIDTH * 2), (TERMINAL_WIDTH - 1) * TERMINAL_HEIGHT * 2);
+                        memset(character_memory + ((TERMINAL_WIDTH - 1) * TERMINAL_HEIGHT * 2), 4, TERMINAL_WIDTH * 2);
                 }
+
+                cy = 11;
         }
+        
+        *(character_memory + (cx + (cy * TERMINAL_WIDTH)) * 2) = data;
+        *(character_memory + (cx + (cy * TERMINAL_WIDTH)) * 2 + 1) = properties & 3;
 }
 
-void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t draw_fg_bg) {
+void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t properties) {
         uint8_t *spr_data = (uint8_t *)(general_memory + (data * SPRITE_HEIGHT + sprite_table_address));
 
         int cx = (address & 0xFF) * SPRITE_WIDTH;
@@ -64,9 +60,9 @@ void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8
                         if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
                                 break;
 
-                        if (((spr_data[i] >> j) & 1) && !((draw_fg_bg >> 1) & 1)) {
+                        if (((spr_data[i] >> j) & 1) && !((properties >> 1) & 1)) {
                                 *(video_memory + (i + cy) * 320 + (rx + cx)) = foreground;
-                        } else if (!((spr_data[i] >> j) & 1) && !(draw_fg_bg & 1)) {
+                        } else if (!((spr_data[i] >> j) & 1) && !(properties & 1)) {
                                 *(video_memory + (i + cy) * 320 + (rx + cx)) = background;
                         }
 
@@ -78,8 +74,13 @@ void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8
 void video_set_sprite_table_address(uint16_t address) {
         sprite_table_address = address;
 }
+
 uint16_t video_get_sprite_table_address() {
         return sprite_table_address;
+}
+
+void video_clear_character_buffer() {
+        memset(character_memory, 4, TERMINAL_WIDTH * TERMINAL_HEIGHT * 2);
 }
 
 void update() {
@@ -97,7 +98,38 @@ void update() {
         }
 
         // Render
-        SDL_UpdateTexture(texture, NULL, (void *)video_memory, 320);
+        memcpy(draw_buffer, video_memory, VRAM_SIZE);
+
+        for (int x = 0; x < TERMINAL_WIDTH * TERMINAL_HEIGHT; x++) {
+                uint8_t draw_fg_bg = *(character_memory + x * 2 + 1);
+
+                if (draw_fg_bg == 4)
+                        continue;
+
+                uint8_t data = *(character_memory + x * 2);
+                uint8_t *chr_data = font + data * FONT_HEIGHT;
+                int cx = (x % TERMINAL_WIDTH) * FONT_WIDTH;
+                int cy = (x / TERMINAL_WIDTH) * FONT_HEIGHT;
+
+                for (int i = 0; i < FONT_HEIGHT; i++) {
+                        int rx = 0;
+                        for (int j = FONT_WIDTH - 1; j >= 0; j--) {
+                                // We are outside of the screen, do not write.
+                                if ((i + cy) * 320 + (rx + cx) >= VRAM_SIZE)
+                                        break;
+
+                                if (((chr_data[i] >> j) & 1) && !((draw_fg_bg >> 1) & 1)) {
+                                        *(draw_buffer + (i + cy) * VRAM_WIDTH + (rx + cx)) = *(general_memory + 48517);
+                                } else if (!((chr_data[i] >> j) & 1) && !(draw_fg_bg & 1)) {
+                                        *(draw_buffer + (i + cy) * VRAM_WIDTH + (rx + cx)) = *(general_memory + 48518);
+                                }
+                                
+                                rx++;
+                        }
+                }
+        }
+
+        SDL_UpdateTexture(texture, NULL, (void *)draw_buffer, 320);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
@@ -107,6 +139,13 @@ void init_video() {
         DBG(1, printf("Initializing Video");)
 
         video_memory = (uint8_t *)malloc(VRAM_SIZE);
+        character_memory = (uint8_t *)malloc(TERMINAL_WIDTH * TERMINAL_HEIGHT * 2);
+        memset(character_memory, 4, TERMINAL_WIDTH * TERMINAL_HEIGHT * 2);
+        draw_buffer = (uint8_t *)malloc(VRAM_SIZE);
+
+        ASSERT(video_memory != NULL)
+        ASSERT(character_memory != NULL)
+        ASSERT(draw_buffer != NULL)
 
         FILE *font_file = fopen("FONT.bin", "r");
 
@@ -149,8 +188,12 @@ void destroy_video() {
         SDL_DestroyRenderer(renderer);
         SDL_DestroyTexture(texture);
         SDL_DestroyWindow(window);
+        // Getting abort here
+        // corrupted size vs. prev_size
         free(video_memory);
         free(font);
+        free(character_memory);
+        free(draw_buffer);
 
         destroy_speaker();
 

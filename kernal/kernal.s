@@ -159,12 +159,12 @@ entry:			stz VIDEO_REG_FG			; Set foreground to black
 			lda #$0					; Zero A
 			sta TERMINAL_STATUS			; Zero status, we have handled it
 			bra @terminal				; Go back to the start
-@enter_routine:		pha					; Save A
+@enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
+@enter_no_new:		pha					; Save A
 			phy					; Save Y
 			ldy #$0					; Zero Y
 			sty TERMINAL_INDEX			; Zero Index
 			sty TERMINAL_CHAR_X			; Zero X coordinate
-			sty TERMINAL_CHAR_Y			; Zero Y coordinate
 @compare_loop:		lda TERMINAL_BUFFER, y			; Load A with the current character from the terminal buffer
 			cmp TEST_CMD, y				; Compare it to the current character from the comparison buffer
 			bne @compare_end			; Not equal: jump to the end
@@ -181,6 +181,7 @@ entry:			stz VIDEO_REG_FG			; Set foreground to black
 			bra @compare_end
 
 @compare_case_one:	lda #$0
+			sta TERMINAL_CHAR_Y
 			sta $5
 			lda #$2
 			sta $6
@@ -211,8 +212,16 @@ entry:			stz VIDEO_REG_FG			; Set foreground to black
 			iny					; Increment index
 			sty TERMINAL_INDEX			; Store the incremented index
 			ldy TERMINAL_CHAR_Y			; Get the current Y coordinate
+			pha					; Save the character to be printed
+			lda #4					; Enable scroll
+			sta TERMINAL_STATUS			; Update status
+			pla					; Restore printed character
 			jsr putchar				; Draw the character
-			inx					; Increment the X coordinate
+			cpy #12					; Are we at the 12th line?
+			bcc @reg_char_nl_ovr			; If not, jump over the following code
+			ldy #11					; If so, set the current Y coordinate to the 11th line
+			sty TERMINAL_CHAR_Y			; Update the Y coordinate
+@reg_char_nl_ovr:	inx					; Increment the X coordinate
 			bne @inx_over				; Didn't roll over, jump
 			iny					; Rolled over, increment Y coordinate
 @inx_over:		stx TERMINAL_CHAR_X			; Store X coordinate
@@ -222,8 +231,8 @@ entry:			stz VIDEO_REG_FG			; Set foreground to black
 			jmp @terminal				; Start again
 
 ; A - Char
-; X - Lower byte of address
-; Y - Higher byte of address
+; X - X coordinate
+; Y - Y coordinate
 putchar: 		sta VIDEO_REG_DATA 			; Store data
 			stx VIDEO_ADDR_LO 			; Store lower half of address
 			sty VIDEO_ADDR_HI 			; Store higher half of address
@@ -249,9 +258,9 @@ put_pixel:		stx VIDEO_ADDR_LO
 			rts					; Return
 
 ; ($5) - Address of string
-; A    - Foreground / Background mask (0: Draw both, 8: Draw only background, 16: Draw only foreground, 24: Draw none)
-; X    - Lower byte of address
-; Y    - Higher byte of address
+; A    - Extra configuration (B(ackground disable) | F(oreground disable) | S(croll))
+; X    - X coordinate
+; Y    - Y coordinate
 putstr:			pha 					; Save A
 @putstr:		pla					; Restore A
 			sta VIDEO_REG_STATUS			; Write A to the status (will set B or F flags depending on user selection)
@@ -259,10 +268,12 @@ putstr:			pha 					; Save A
 			lda ($5) 				; Load character
 			beq @end 				; If the character is a '\0' terminate
 			jsr putchar 				; Put the character
-			inx 					; Increment the lower index address
-			bne @inc_y_over 			; If it doesn't roll over, jump over higher index address
-			iny 					; Increment the higher index address
-@inc_y_over:		lda $05 				; Load lower half of character address
+			inx					; Increment X coordinate
+			cpx #40					; Is it at the end of the row?
+			bne @no_roll_over			; If not, jump over the following
+			ldx #$0					; Reset X coordinate to the start of the row
+			iny					; Go to the next column
+@no_roll_over:		lda $05 				; Load lower half of character address
 			inc 					; Increment
 			sta $05 				; Store lower half of character address
 			bne @inc_lwr_addr_ovr 			; If the lower half didn't roll over to 0, jump over
@@ -287,6 +298,10 @@ clrscr:			phx					; Save X
 			pha					; Save low byte of sprite table address
 			lda VIDEO_ADDR_HI			; Get high byte of sprite table address
 			pha					; Save high byte of sprite table address
+			lda #$0B				; Load character buffer clear mode into A
+			sta VIDEO_REG_MODE			; Set the mode to clear the character buffer
+			lda #$80				; D1
+			sta VIDEO_REG_STATUS			; Set status
 			ldx #$0					; Zero x-coordinate
 			ldy #$0					; Zero y-coordinate
 @loop:			stx VIDEO_ADDR_LO			; Set x-coordinate
@@ -422,7 +437,7 @@ run_program:		pha					; Save A
 @over:			plp					; Restore status flags
 			jmp ($5)				; Jump into program, the program can return to
 								; caller by calling an RTS
-@dont_run:		ply
+@dont_run:		ply					; Restore Y
 			lda #.LOBYTE(COULDNT_RUN_PROGRAM)	; Load lower half of the address of the error string
 			sta $5					; Store it
 			lda #.HIBYTE(COULDNT_RUN_PROGRAM)	; Load higher half of the address of the error string
@@ -530,6 +545,7 @@ COULDNT_RUN_PROGRAM:	.asciiz "Could not run the program, does not start with the
 ALPHABET:		.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 			.byte $00, $00, $00, $00, $00, $00, $00
 TEST_CMD:		.asciiz "TEST"
+CMD_NO_MATCH:		.asciiz "Command parameters insufficient"
 
 .segment "VECTORS"
 			.addr nmi_handler

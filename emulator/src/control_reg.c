@@ -62,7 +62,9 @@ struct disk_register {
 				      Don't draw background.
 			Bit 3:        This bit is like bit 4 but instead applies to the
 				      foreground.
-			Bit 2:        Unused
+			Bit 2:        This is the scroll enable bit, if set hardware scrolling
+				      will be enabled for this character, if clear hardware
+				      scrolling will be disabled.
 			Bit 1:        Unused
 			Bit 0:        Unused
 
@@ -94,6 +96,29 @@ struct disk_register {
 		uint8_t data	   -> The duration of the sound *
 		* Note: When bit 7 is 0: The duration is (1 / value) seconds.
 			When bit 7 is 1: The duration is (1 * value) seconds.
+
+	Mode 0x05:
+		uint8_t data	   -> The current RTC second of day.
+
+	Mode 0x06:
+		uint8_t data	   -> The current RTC minute of day.
+
+	Mode 0x07:
+		uint8_t data	   -> The current RTC hour of day.
+
+	Mode 0x08:
+		uint8_t data	   -> The current RTC day of month.
+
+	Mode 0x09:
+		uint8_t data	   -> The current RTC month of year.
+
+	Mode 0x0A:
+		uint8_t data	   -> The current RTC year.
+
+	Mode 0x0B:
+		This will simply zero the character buffer, no memory
+		mapped input or outputs are available to the CPU.
+
 
 	Disk Control Register
 
@@ -138,7 +163,8 @@ void tick_control_register() {
 		
 		case 0x01: { // Sprite Mode (40x40)
 			// 8 bytes wide, 5 bytes tall
-			video_draw_sprite(reg->address, reg->data, reg->foreground, reg->background, ((reg->status >> 4) & 1) | (((reg->status >> 3) & 1) << 1));
+			video_draw_sprite(reg->address, reg->data, reg->foreground, reg->background, 
+					  ((reg->status >> 4) & 1) | (((reg->status >> 3) & 1) << 1) | (((reg->status >> 2) & 1 ) << 2));
 
 			break;
 		}
@@ -156,7 +182,8 @@ void tick_control_register() {
 		
 		case 0x03: // 40x12 Terminal Mode
 			// Address behaves like index into screen: y * 40 + x
-			video_draw_character(reg->address, reg->data, reg->foreground, reg->background, ((reg->status >> 4) & 1) | (((reg->status >> 3) & 1) << 1));
+			video_draw_character(reg->address, reg->data, reg->foreground, reg->background, 
+					     ((reg->status >> 4) & 1) | (((reg->status >> 3) & 1) << 1) | (((reg->status >> 2) & 1 ) << 2));
 
 			break;
 		
@@ -192,6 +219,11 @@ void tick_control_register() {
 
 		case 0x0A: // RTC Year
 			reg->address = tm_struct->tm_year;
+
+			break;
+
+		case 0x0B: // Zero character buffer
+			video_clear_character_buffer();
 
 			break;
 
