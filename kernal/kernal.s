@@ -16,17 +16,19 @@
 			.define DISK_SECTOR_COUNT_HI 	48524
 			.define DISK_REG_STATUS 	48525
 			.define DISK_REG_CODE 		48526
+			
+			.define IRQ_ACK_BYTE		48527
 
-			.define CURRENT_PROGRAM_BASE	48527
-			.define CURRENT_PROGRAM_IRQ	48529
-			.define CURRENT_PROGRAM_NMI	48531
+			.define CURRENT_PROGRAM_BASE	48528
+			.define CURRENT_PROGRAM_IRQ	48530
+			.define CURRENT_PROGRAM_NMI	48532
 
-			.define TERMINAL_BUFFER 	48533
+			.define TERMINAL_BUFFER 	48534
 			.define TERMINAL_BUFFER_LEN	40
-			.define TERMINAL_INDEX		48573
-			.define TERMINAL_CHAR_X		48574
-			.define TERMINAL_CHAR_Y		48575
-			.define TERMINAL_STATUS		48576
+			.define TERMINAL_INDEX		48574
+			.define TERMINAL_CHAR_X		48575
+			.define TERMINAL_CHAR_Y		48576
+			.define TERMINAL_STATUS		48577
 
 			.define LOGO_WIDTH 		10
 			.define LOGO_HEIGHT		10
@@ -37,7 +39,8 @@
 			.define CHAR_BACKSPACE		$2A
 			.define CHAR_ENTER		$28
 
-entry:			stz VIDEO_REG_FG			; Set foreground to black
+.proc entry
+			stz VIDEO_REG_FG			; Set foreground to black
 			stz VIDEO_REG_BG			; Set background to black
 			ldx #$0					;
 			ldy #$0					;
@@ -118,8 +121,9 @@ entry:			stz VIDEO_REG_FG			; Set foreground to black
 			ldx #$FF				; Set X to white color
 			stx VIDEO_REG_FG			; Set foreground to white
 			cli					; Enable interrupts
-@terminal:		lda #$FF				; Set A to white
-			sta VIDEO_REG_FG			; Set foreground to white
+.endproc
+
+.proc terminal
 			lda #$0					; Zero A
 			sta VIDEO_REG_STATUS			; Draw both foreground and background
 			sta CURRENT_PROGRAM_BASE		; No user program is running, zero
@@ -129,21 +133,21 @@ entry:			stz VIDEO_REG_FG			; Set foreground to black
 			sta CURRENT_PROGRAM_NMI			; No user program is running, zero
 			sta CURRENT_PROGRAM_NMI + 1		; No user program is running, zero
 			lda TERMINAL_STATUS			; Get the current status
-			beq @terminal				; It is zero, nothing new
+			beq terminal				; It is zero, nothing new
 			cmp #$1					; Something new? An enter I see
-			beq @enter_routine			; Let's goto the enter routine
+			beq enter_routine			; Let's goto the enter routine
 			cmp #$2					; Something new? A regular character I see
-			bne @backspace_routine			; It is not a regular character, continue to backspace
-			jmp @reg_char_routine			; Regular character, let's goto the regular character routine
+			bne backspace_routine			; It is not a regular character, continue to backspace
+			jmp reg_char_routine			; Regular character, let's goto the regular character routine
 			; Something new, not matched, thus a backspace
-@backspace_routine:	ldx TERMINAL_CHAR_X			; Load the current X coordinate
+backspace_routine:	ldx TERMINAL_CHAR_X			; Load the current X coordinate
 			ldy TERMINAL_CHAR_Y			; Load the current Y coordinate
 			cpy #$0
 			bne @backspace_over
 			cpx #$0
 			bne @backspace_over
 			stx TERMINAL_STATUS
-			bra @terminal
+			bra terminal
 @backspace_over:	dex					; Decrement the X coordinate
 			cpx #$FF				; Has X wrapped around to 0xFF?
 			bne @backspace_x_over			; If not, do not decrement Y register
@@ -158,50 +162,56 @@ entry:			stz VIDEO_REG_FG			; Set foreground to black
 			jsr putchar				; Print character
 			lda #$0					; Zero A
 			sta TERMINAL_STATUS			; Zero status, we have handled it
-			bra @terminal				; Go back to the start
-@enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
+			bra terminal				; Go back to the start
+
+enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 @enter_no_new:		pha					; Save A
 			phy					; Save Y
 			ldy #$0					; Zero Y
 			sty TERMINAL_INDEX			; Zero Index
 			sty TERMINAL_CHAR_X			; Zero X coordinate
-@compare_loop:		lda TERMINAL_BUFFER, y			; Load A with the current character from the terminal buffer
-			cmp TEST_CMD, y				; Compare it to the current character from the comparison buffer
-			bne @compare_end			; Not equal: jump to the end
-			cmp #$0					; Are we at the end of the string?
-			beq @compare_success			; We made it this far: success
-			iny					; Increment the offset
-			bra @compare_loop			; Loop
-@compare_success:	iny
-			lda TERMINAL_BUFFER, y			; Get next character
-			cmp #'0'
-			beq @compare_case_one
-			cmp #'1'
-			beq @compare_case_two
-			bra @compare_end
 
-@compare_case_one:	lda #$0
-			sta TERMINAL_CHAR_Y
+			lda #.LOBYTE(TERMINAL_BUFFER)
 			sta $5
-			lda #$2
+			lda #.HIBYTE(TERMINAL_BUFFER)
 			sta $6
-			lda #$1
-			sta DISK_SECTOR_LO
-			sta DISK_SECTOR_COUNT_LO
-			jsr run_program
-			bra @compare_end
+			lda #.LOBYTE(FG_CMD)
+			sta $7
+			lda #.HIBYTE(FG_CMD)
+			sta $8
+			jsr cmp_str
+			bcc @bg_cmp
+			
+			ldy TERMINAL_BUFFER + 3
+			ldx TERMINAL_BUFFER + 4
+			jsr ascii_to_byte
+			sta VIDEO_REG_FG
+			jmp @compare_end
 
-@compare_case_two:	lda #'A'
-			ldx #$0
-			ldy #$0
-			jsr putchar
+@bg_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
+			sta $5
+			lda #.HIBYTE(TERMINAL_BUFFER)
+			sta $6
+			lda #.LOBYTE(BG_CMD)
+			sta $7
+			lda #.HIBYTE(BG_CMD)
+			sta $8
+			jsr cmp_str
+			bcc @compare_end
+			
+			ldy TERMINAL_BUFFER + 3
+			ldx TERMINAL_BUFFER + 4
+			jsr ascii_to_byte
+			sta VIDEO_REG_BG
+
 
 @compare_end:		ply					; Restore Y
 			pla					; Restore A
 			lda #$0					; Zero A
 			sta TERMINAL_STATUS			; Zero status, we have handled it
-			jmp @terminal				; Start again
-@reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
+			jmp terminal				; Start again
+
+reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			ldx TERMINAL_CHAR_X			; Load current X coordinate
 			tay					; Write current scancode as offset
 			lda ALPHABET, y				; Load ASCII character from table based on offset
@@ -228,12 +238,14 @@ entry:			stz VIDEO_REG_FG			; Set foreground to black
 			sty TERMINAL_CHAR_Y			; Store Y coordinate
 @reg_char_over:		lda #$0					; Zero A
 			sta TERMINAL_STATUS			; Zero status, we have handled it
-			jmp @terminal				; Start again
+			jmp terminal				; Start again
+.endproc
 
 ; A - Char
 ; X - X coordinate
 ; Y - Y coordinate
-putchar: 		sta VIDEO_REG_DATA 			; Store data
+.proc putchar
+	 		sta VIDEO_REG_DATA 			; Store data
 			stx VIDEO_ADDR_LO 			; Store lower half of address
 			sty VIDEO_ADDR_HI 			; Store higher half of address
 			lda #$03  				; 40x12 Terminal mode
@@ -242,11 +254,13 @@ putchar: 		sta VIDEO_REG_DATA 			; Store data
 			ora #%11000000 				; | D1 | R/W
 			sta VIDEO_REG_STATUS 			; Store status
 			rts					; Return
+.endproc
 
 ; A - Color
 ; X - Lower byte of address
 ; Y - Higher byte of address
-put_pixel:		stx VIDEO_ADDR_LO
+.proc put_pixel
+			stx VIDEO_ADDR_LO
 			sty VIDEO_ADDR_HI
 			sta VIDEO_REG_DATA
 			pha
@@ -256,12 +270,14 @@ put_pixel:		stx VIDEO_ADDR_LO
 			sta VIDEO_REG_STATUS
 			pla
 			rts					; Return
+.endproc
 
 ; ($5) - Address of string
 ; A    - Extra configuration (B(ackground disable) | F(oreground disable) | S(croll))
 ; X    - X coordinate
 ; Y    - Y coordinate
-putstr:			pha 					; Save A
+.proc putstr
+			pha 					; Save A
 @putstr:		pla					; Restore A
 			sta VIDEO_REG_STATUS			; Write A to the status (will set B or F flags depending on user selection)
 			pha					; Save A
@@ -284,9 +300,73 @@ putstr:			pha 					; Save A
 @inc_lwr_addr_ovr:	bra @putstr 				; Loop
 @end:		 	pla 					; Restore A
 			rts					; Return
+.endproc
+
+; ($5) - String A (Compared against B)
+; ($7) - String B
+; Carry flag set = strings match
+.proc cmp_str
+@loop:			lda ($7)
+			cmp ($5)
+			bne @fail
+			cmp #$0
+			beq @success
+			inc $5
+			bne @inc_5_over
+			inc $6
+@inc_5_over:		inc $7
+			bne @inc_7_over
+			inc $8
+@inc_7_over:		bra @loop
+@success:		sec
+			bra @end
+@fail:			clc
+@end:			rts
+.endproc
+
+; X - Low nibble (ASCII)
+; Y - High nibble (ASCII)
+; A - Returned byte
+; X - Returned as $00 if error occurred
+; Carry flag is cleared
+.proc ascii_to_byte
+			phy					; Save high nibble
+			stz $1					; Zero temporary value 1
+			stx $0					; Put low nibble in temporary value 0
+			ldy #$0					; Zero indexing register
+@low_byte:		lda HEX_CHARS, y			; Load in the next sequential hex character
+			cmp $0					; Compare to low nibble
+			beq @low_shift				; We found the character, jump to low_shift
+			iny					; We have not found the character, goto next hex character
+			cpy #16					; We could not find the character
+			beq @error				; We have searched all hex characters, no match, error
+			bra @low_byte				; Loop
+@low_shift:		sty $1					; Save where we found it into temporary 1	
+			ply					; Restore high nubble
+			sty $0					; Put high nibble in temporary 0
+			ldy #$0					; Zero indexing register
+@high_byte:		lda HEX_CHARS, y			; Load in the next sequential hex character
+			cmp $0					; Compare to high nibble
+			beq @high_shift				; We found the character, jump to high_shift
+			iny					; We have not found the character, goto next hex character
+			cpy #16					; Have we searched all characters?
+			beq @error				; We have searched all hex characters, no match, error
+			bra @high_byte				; Loop
+@high_shift:		tya					; Transfer index into A
+			clc					; Ensure carry flag is not shifted into A register
+			rol a					; Shift to bit 1
+			rol a					; Shift to bit 2
+			rol a					; Shift to bit 3
+			rol a					; Shift to bit 4 (Into high nibble)
+			ora $1					; Or together the lower nibble
+			bra @end				; Goto end
+@error:			ldx #$00				; Indicate we have encountered an error
+@end:			rts					; Return
+.endproc
 
 ; Foreground field in video register is the color to clear with
-clrscr:			phx					; Save X
+.proc clrscr
+			phx					; Save X
 			phy					; Save Y
 			pha					; Save A
 			; Save the previous sprite table address
@@ -335,13 +415,15 @@ clrscr:			phx					; Save X
 			ply					; Restore Y
 			plx					; Restore X
 			rts
+.endproc
 
 ; A   - Disk to read (values must be: 1,2, or 3), contents
 ;       are not preserved.
 ; MEM - Set bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI, DISK_SECTOR_LO, 
 ;       DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
 ;       apropriate values.
-read_disk:		pha					; Save A
+.proc read_disk
+			pha					; Save A
 			lda #$1					; Load A with 1
 			sta DISK_REG_STATUS			; Put it in the disk status #%00000001
 			pla 					; Restore A
@@ -361,13 +443,15 @@ read_disk:		pha					; Save A
 			;	 the screen.
 
 			rts
+.endproc
 
 ; A   - Disk to read (values must be: 1,2, or 3), contents
 ;       are not preserved.
 ; MEM - Set bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI, DISK_SECTOR_LO, 
 ;       DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
 ;       apropriate values.
-write_disk:		pha					; Save A
+.proc write_disk
+			pha					; Save A
 			lda #$1					; Load A with 1
 			sta DISK_REG_STATUS			; Put it in the disk status #%00000001
 			pla 					; Restore A
@@ -387,6 +471,7 @@ write_disk:		pha					; Save A
 			;	 the screen.
 
 			rts					; Return
+.endproc
 
 ; A   - Disk to read (values must be: 1,2, or 3), contents
 ;       are not preserved.
@@ -394,7 +479,8 @@ write_disk:		pha					; Save A
 ;       ($5).
 ;       Set bytes DISK_SECTOR_LO, DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
 ;       apropriate values.
-run_program:		pha					; Save A
+.proc run_program
+			pha					; Save A
 			lda $5					; Load DISK_BUFF_ADDR_LO
 			sta DISK_BUFF_ADDR_LO			; Store it in its proper place
 			lda $6					; Load DISK_BUFF_ADDR_HI
@@ -450,8 +536,10 @@ run_program:		pha					; Save A
 			jsr putstr				; Put it on the screen
 			lda #$FF				; Error code $FF
 			rts					; Return to caller (code $FF, error occurred)
+.endproc
 
-terminal_handler:	lda $3					; Load the current scancode
+.proc terminal_handler
+			lda $3					; Load the current scancode
 			cmp #CHAR_BACKSPACE			; Is it a backspace?
 			bne @backspace_over			; Well it isn't
 			lda #$3					; A backspace I see
@@ -465,8 +553,10 @@ terminal_handler:	lda $3					; Load the current scancode
 @enter_over:		lda #$2					; Just a regular character
 			sta TERMINAL_STATUS			; Store the status
 			rts					; Return
+.endproc
 
-irq_handler:		pha					; Save A
+.proc irq_handler
+			pha					; Save A
 			phx					; Save X
 			phy					; Save Y
 			lda $0					; Load temporary value 0
@@ -499,7 +589,9 @@ irq_handler:		pha					; Save A
 			lda #.LOBYTE(@over)			; Low byte of return address
 			pha					; Push it
 			jmp (CURRENT_PROGRAM_IRQ)		; Jump to user handler (basically a JSR due to prior push statements)
-@over:			pla					; Restore temporary value 1
+@over:			lda #$FF				; All interrupts have been taken care off
+			sta IRQ_ACK_BYTE			; Let the IO controller know
+			pla					; Restore temporary value 1
 			sta $1					; Store it
 			pla					; Restore temporary value 0
 			sta $0					; Store it
@@ -507,8 +599,10 @@ irq_handler:		pha					; Save A
 			plx					; Restore X
 			pla					; Restore A
 			rti					; Return from interrupt
+.endproc
 
-nmi_handler:		pha					; Save A
+.proc nmi_handler
+			pha					; Save A
 			phx					; Save X
 			phy					; Save Y
 			lda $0					; Load temporary value 0
@@ -538,13 +632,16 @@ nmi_handler:		pha					; Save A
 			plx					; Restore X
 			pla					; Restore A
 			rti					; Return from interrupt
-			
+.endproc
+		
 .segment "RODATA"
 ASZ_LOGO_BMP: 		.byte 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 192, 128, 255, 255, 255, 0, 0, 255, 255, 255, 15, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 0, 0, 0, 0, 0, 0, 48, 120, 252, 252, 3, 1, 1, 0, 0, 255, 255, 255, 255, 127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 240, 224, 192, 128, 128, 1, 3, 7, 15, 15, 254, 255, 255, 255, 255, 0, 0, 128, 192, 192, 63, 31, 15, 7, 3, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 240, 0, 0, 0, 0, 1, 31, 63, 127, 255, 255, 255, 255, 255, 255, 255, 224, 240, 248, 252, 254, 3, 1, 0, 0, 0, 255, 255, 255, 127, 63, 255, 255, 255, 255, 255, 255, 255, 224, 224, 255, 255, 255, 0, 0, 254, 224, 192, 0, 0, 0, 1, 1, 0, 0, 31, 255, 255, 0, 3, 255, 255, 255, 255, 255, 255, 255, 255, 128, 0, 255, 255, 255, 0, 0, 255, 255, 255, 7, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 240, 224, 0, 0, 0, 0, 1, 63, 63, 127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 240, 248, 248, 252, 254, 1, 0, 0, 0, 0, 255, 255, 127, 63, 31, 255, 255, 255, 255, 255, 192, 192, 255, 255, 255, 3, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 128, 255, 255, 255, 15, 15, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
 COULDNT_RUN_PROGRAM:	.asciiz "Could not run the program, does not start with the signature $ECEC"
 ALPHABET:		.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 			.byte $00, $00, $00, $00, $00, $00, $00
-TEST_CMD:		.asciiz "TEST"
+HEX_CHARS:		.asciiz "0123456789ABCDEF"
+FG_CMD:			.asciiz "FG"
+BG_CMD:			.asciiz "BG"
 CMD_NO_MATCH:		.asciiz "Command parameters insufficient"
 
 .segment "VECTORS"

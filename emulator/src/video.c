@@ -18,6 +18,7 @@ uint8_t *video_memory = NULL;
 uint8_t *character_memory = NULL;
 uint8_t *draw_buffer = NULL;
 uint8_t *font = NULL;
+const int TERMINAL_EXCL_LROW = (TERMINAL_WIDTH * TERMINAL_HEIGHT * 2) - (TERMINAL_WIDTH * 2); // Offset in bytes to the start of the last row in terminal mode
 
 uint16_t sprite_table_address = 0;
 
@@ -37,8 +38,8 @@ void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, ui
                 int difference = cy - TERMINAL_REAL_HEIGHT;
                 
                 for (; difference > 0; difference--) {
-                        memcpy(character_memory, character_memory + (TERMINAL_WIDTH * 2), (TERMINAL_WIDTH - 1) * TERMINAL_HEIGHT * 2);
-                        memset(character_memory + ((TERMINAL_WIDTH - 1) * TERMINAL_HEIGHT * 2), 4, TERMINAL_WIDTH * 2);
+                        memcpy(character_memory, character_memory + (TERMINAL_WIDTH * 2), TERMINAL_EXCL_LROW);
+                        memset(character_memory + TERMINAL_EXCL_LROW, 4, TERMINAL_WIDTH * 2);
                 }
 
                 cy = 11;

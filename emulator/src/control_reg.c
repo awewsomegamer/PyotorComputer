@@ -39,6 +39,13 @@ struct disk_register {
 				 // ((disk) 0, (disk) 1, or (disk) 2 are success codes)
 }__attribute__((packed));
 
+// 	uint8_t int_ack_byte;	 // KB D3 D2 D1 0 0 0 0							 @ 48527
+				 // KB: 1: Keyboard interrupt acknowledged
+				 // D3: 1: Disk 3 Interrupt acknowledged
+				 // D2: 1: Disk 2 Interrupt acknowledged
+				 // D1: 1: Disk 1 Interrupt acknowledged
+
+
 /*
 	Control Register Context in different Modes
 
@@ -132,6 +139,9 @@ struct disk_register {
 	The error is in the form of an IRQ with the code
 	field of the disk control register being a non-
 	zero value.
+
+	Interrupt Acknowledgement Byte
+	
 */
 
 void tick_control_register() {
@@ -241,5 +251,16 @@ void tick_control_register() {
 			disk_reg->status |= disk_reg->code << 3;
 
 		pin_IRQ = 0; // Call interrupt to notify CPU disk operation is done (code and status fields are set)
+	}
+
+	// Interrupt Acknowledgement Byte contains new data
+	if (*(general_memory + 48527) != 0) {
+		// Currently, specific fields are not tested for
+		// as there is no code to emulate each device
+		// telling the IO controller to interrupt the CPU.
+		// Thus, there is no code to tell any one specific
+		// device that its interrupt has been handled, so:
+		pin_IRQ = 1;
+		*(general_memory + 48527) = 0;
 	}
 }

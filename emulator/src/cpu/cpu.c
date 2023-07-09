@@ -102,9 +102,6 @@ void INST_BIT(uint8_t opcode) {
         }
 }
 
-// ** TODO: The interrupt logic is not good, the pins are being set before
-//          the processor preforms or fufills the request. The pins should be
-//          set (I believe) on the RTI.
 void call_interrupt() {
         mem_byte_write(((pc) >> 8) & 0xFF, 0x100 + (register_s--)); // High
         mem_byte_write((pc) & 0xFF, 0x100 + (register_s--)); // Low
@@ -112,17 +109,14 @@ void call_interrupt() {
         if (!pin_NMI) {
                 // NMI
                 pc = PTR(0xFFFA) | (PTR(0xFFFB) << 8);
-                pin_NMI = 1;
+                pin_NMI = 1; // Not the correct way to do it, but desired effect is achieved
         } else if (!pin_IRQ && !register_p.I) {
                 // IRQ
-// ** TODO: Sometimes it takes a while for this entire thing to actuate
-//          and register an IRQ.
                 pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
-                pin_IRQ = 1;
         } else if (!pin_RES) {
                 // Reset
                 pc = PTR(0xFFFC) | (PTR(0xFFFD) << 8);
-                pin_RES = 1;
+                pin_RES = 1; // Not the correct way to do it, but desired effect is achieved
         }
 
         INST_PHP(); // Push flags
