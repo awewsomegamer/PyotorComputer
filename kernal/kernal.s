@@ -121,6 +121,22 @@
 			ldx #$FF				; Set X to white color
 			stx VIDEO_REG_FG			; Set foreground to white
 			cli					; Enable interrupts
+; A   - Disk to read (values must be: 1,2, or 3), contents
+;       are not preserved.
+; MEM - Set bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI, DISK_SECTOR_LO, 
+;       DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
+;       apropriate values.
+
+			lda #$2
+			sta DISK_BUFF_ADDR_HI
+			stz DISK_BUFF_ADDR_LO
+			stz DISK_SECTOR_HI
+			stz DISK_SECTOR_COUNT_HI
+			lda #$1
+			sta DISK_SECTOR_LO
+			sta DISK_SECTOR_COUNT_LO
+			jsr read_disk
+			
 .endproc
 
 .proc terminal
@@ -181,7 +197,6 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			sta $8
 			jsr cmp_str
 			bcc @bg_cmp
-			
 			ldy TERMINAL_BUFFER + 3
 			ldx TERMINAL_BUFFER + 4
 			jsr ascii_to_byte
@@ -197,13 +212,42 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			lda #.HIBYTE(BG_CMD)
 			sta $8
 			jsr cmp_str
-			bcc @compare_end
-			
+			bcc @jump_cmp
 			ldy TERMINAL_BUFFER + 3
 			ldx TERMINAL_BUFFER + 4
 			jsr ascii_to_byte
 			sta VIDEO_REG_BG
+			jmp @compare_end
 
+@jump_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
+			sta $5
+			lda #.HIBYTE(TERMINAL_BUFFER)
+			sta $6
+			lda #.LOBYTE(JUMP_CMD)
+			sta $7
+			lda #.HIBYTE(JUMP_CMD)
+			sta $8
+			jsr cmp_str
+			bcc @compare_end
+
+			ldy TERMINAL_BUFFER + 5
+			ldx TERMINAL_BUFFER + 6
+			jsr ascii_to_byte
+			sta $6
+
+			ldy TERMINAL_BUFFER + 7
+			ldx TERMINAL_BUFFER + 8
+			jsr ascii_to_byte
+			sta $5
+
+			stz TERMINAL_CHAR_X
+			stz TERMINAL_CHAR_Y
+			
+			lda #.HIBYTE(@compare_end)
+			pha
+			lda #.LOBYTE(@compare_end)
+			pha
+			jmp ($5)
 
 @compare_end:		ply					; Restore Y
 			pla					; Restore A
@@ -642,6 +686,7 @@ ALPHABET:		.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 HEX_CHARS:		.asciiz "0123456789ABCDEF"
 FG_CMD:			.asciiz "FG"
 BG_CMD:			.asciiz "BG"
+JUMP_CMD:		.asciiz "JUMP"
 CMD_NO_MATCH:		.asciiz "Command parameters insufficient"
 
 .segment "VECTORS"
