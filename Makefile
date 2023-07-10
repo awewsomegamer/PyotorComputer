@@ -1,4 +1,4 @@
-all: asm emu kern
+all: asm emu kern fs
 
 DBG =
 SPEED ?=
@@ -11,6 +11,9 @@ emu:
 
 kern:
 	make -C kernal
+
+fs:
+	make -C tools/filing_system
 
 clean:
 	rm -rf ./bin/*
