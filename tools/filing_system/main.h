@@ -5,9 +5,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
+
+#define SECTOR_SIZE 512
+#define FILE_NOT_FOUND 132
+#define COMMON_STRUCT_SIZE 1024
 
 struct directory_listing_entry {
-	uint8_t name[13]; // The name by which the file can be found
+	char name[13]; // The name by which the file can be found
 	uint16_t sector; // The sector at which the initial file descriptor is located
 	uint8_t attributes; // D 0 0 0 0 0 0 0
 			    // (D)eleted - 1 deleted, 0 not deleted
