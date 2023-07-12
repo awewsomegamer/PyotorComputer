@@ -14,8 +14,9 @@
 struct directory_listing_entry {
 	char name[13]; // The name by which the file can be found
 	uint16_t sector; // The sector at which the initial file descriptor is located
-	uint8_t attributes; // D 0 0 0 0 0 0 0
+	uint8_t attributes; // D E 0 0 0 0 0 0
 			    // (D)eleted - 1 deleted, 0 not deleted
+			    // (E)xists - 1 entry exists, 0 entry does not exist
 }__attribute__((packed, aligned(16))); // 16 byte fields
 
 struct initial_directory_listing {

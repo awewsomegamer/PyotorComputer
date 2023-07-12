@@ -61,27 +61,46 @@ void add_file() {
 			uint8_t file_index = init->next_free_entry;
 
 			strcpy(init->entries[init->next_free_entry].name, file_name);
-			init->entries[init->next_free_entry].attributes = 0;
+			init->entries[init->next_free_entry].attributes = 0b01000000; // | E
 			init->entries[init->next_free_entry].sector = init->next_free_sector;
 			init->next_free_sector += 2;
 			init->next_free_entry++;
-			write_to_fs(init, 0);
 
 			fseek(file, 0, SEEK_END);
 			size_t file_size = ftell(file);
 			fseek(file, 0, SEEK_SET);
 
 			struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
+			memset(file_init, 0, COMMON_STRUCT_SIZE);
 			file_init->size_in_sectors = (((file_size / 1000) / SECTOR_SIZE) * 2) < 2 ? 2 : (((file_size / 1000) / SECTOR_SIZE) * 2);
 			fread(file_init->data, 1, (file_size < 1000 ? file_size : 1000), file);
+
+			if (file_size > 1000) {
+				uint16_t sector = init->next_free_sector;
+				file_init->next_descriptor = sector;
+				init->next_free_sector += 2;
+
+				struct file_descriptor *file_desc = (struct file_descriptor *) malloc(COMMON_STRUCT_SIZE);
+
+				for (size_t current_byte = 1000; current_byte < file_size; current_byte += 1000) {
+					memset(file_desc, 0, COMMON_STRUCT_SIZE);
+
+					fseek(file, current_byte, SEEK_SET);
+					fread(file_desc->data, 1, 1000, file);
+					write_to_fs(file_desc, sector * SECTOR_SIZE);
+
+					sector = init->next_free_sector;
+					file_desc->next_descriptor = sector;
+					init->next_free_sector += 2;
+				}
+
+				free(file_desc);
+			}
+
 			write_to_fs(file_init, init->entries[file_index].sector * SECTOR_SIZE);
-			
+			write_to_fs(init, 0);
+
 			free(file_init);
-			// if (file_size > 1000) {
-			// 	for (size_t current_byte = 1000; current_byte < file_size; current_byte += 1000) {
-					
-			// 	}
-			// }
 		} else if (current_dir_list->next_free_entry != 66) {
 			// Space found for file in current directory listing
 		} else {
@@ -158,7 +177,8 @@ void options() {
 			printf("Listing of file system:\n");
 			
 			for (int i = 0; i < 62; i++)
-				printf("%s | %d\n", init->entries[i].name, init->entries[i].sector);
+				if (((init->entries[i].attributes >> 6) & 1) == 1) // Exists?
+					printf("%s | %d\n", init->entries[i].name, init->entries[i].sector);
 
 			if (init->next_directory_listing == 0)
 				goto cycle_complete;
@@ -170,7 +190,8 @@ void options() {
 				fread(current_dir_list, 1, COMMON_STRUCT_SIZE, fs_file);
 
 				for (int i = 0; i < 62; i++)
-					printf("%s | %d\n", init->entries[i].name, current_dir_list->entries[i].sector);
+					if (((current_dir_list->entries[i].attributes >> 6) & 1) == 1)
+						printf("%s | %d\n", current_dir_list->entries[i].name, current_dir_list->entries[i].sector);
 
 				dir_listing_sector = current_dir_list->next_directory_listing;
 			}
