@@ -8,12 +8,18 @@ char fs_name[512];
 
 struct initial_directory_listing *init;
 struct directory_listing *current_dir_list;
+uint16_t current_dir_list_sector;
 
-void write_to_fs(void *data, uint16_t where) {
+void write_to_fs(void *data, long where) {
 	fseek(fs_file, where, SEEK_SET);
 	fwrite(data, 1, COMMON_STRUCT_SIZE, fs_file);
 	fclose(fs_file);
 	fs_file = fopen(fs_name, "r+");
+}
+
+void read_from_fs(void *data, long where) {
+	fseek(fs_file, where, SEEK_SET);
+	fread(data, 1, COMMON_STRUCT_SIZE, fs_file);
 }
 
 // 0 - 65 : File index in initial directory list
@@ -27,17 +33,17 @@ uint8_t find_file(char *name) {
 	if (init->next_directory_listing == 0)
 		return 132;
 
-	uint16_t dir_listing_sector = init->next_directory_listing;
+	current_dir_list_sector = init->next_directory_listing;
 
-	while (dir_listing_sector != 0) {
-		fseek(fs_file, dir_listing_sector * SECTOR_SIZE, SEEK_SET);
+	while (current_dir_list_sector != 0) {
+		fseek(fs_file, current_dir_list_sector * SECTOR_SIZE, SEEK_SET);
 		fread(current_dir_list, 1, COMMON_STRUCT_SIZE, fs_file);
 
 		for (int i = 0; i < 62; i++)
 			if (strcmp(name, current_dir_list->entries[i].name) == 0)
 				return i + 66;
 
-		dir_listing_sector = current_dir_list->next_directory_listing;
+		current_dir_list_sector = current_dir_list->next_directory_listing;
 	}
 
 	return 132;
@@ -56,63 +62,143 @@ void add_file() {
 
 	if (find_file(file_name) == FILE_NOT_FOUND) {
 		// Could not find file, allocate space
+		uint8_t file_index = 0;
+
 		if (init->next_free_entry != 66) {
 			// Space found for file in initial directory
-			uint8_t file_index = init->next_free_entry;
+			file_index = init->next_free_entry;
 
 			strcpy(init->entries[init->next_free_entry].name, file_name);
 			init->entries[init->next_free_entry].attributes = 0b01000000; // | E
 			init->entries[init->next_free_entry].sector = init->next_free_sector;
 			init->next_free_sector += 2;
 			init->next_free_entry++;
-
-			fseek(file, 0, SEEK_END);
-			size_t file_size = ftell(file);
-			fseek(file, 0, SEEK_SET);
-
-			struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
-			memset(file_init, 0, COMMON_STRUCT_SIZE);
-			file_init->size_in_sectors = (((file_size / 1000) / SECTOR_SIZE) * 2) < 2 ? 2 : (((file_size / 1000) / SECTOR_SIZE) * 2);
-			fread(file_init->data, 1, (file_size < 1000 ? file_size : 1000), file);
-
-			if (file_size > 1000) {
-				uint16_t sector = init->next_free_sector;
-				file_init->next_descriptor = sector;
-				init->next_free_sector += 2;
-
-				struct file_descriptor *file_desc = (struct file_descriptor *) malloc(COMMON_STRUCT_SIZE);
-
-				for (size_t current_byte = 1000; current_byte < file_size; current_byte += 1000) {
-					memset(file_desc, 0, COMMON_STRUCT_SIZE);
-
-					fseek(file, current_byte, SEEK_SET);
-					fread(file_desc->data, 1, 1000, file);
-					write_to_fs(file_desc, sector * SECTOR_SIZE);
-
-					sector = init->next_free_sector;
-					file_desc->next_descriptor = sector;
-					init->next_free_sector += 2;
-				}
-
-				free(file_desc);
-			}
-
-			write_to_fs(file_init, init->entries[file_index].sector * SECTOR_SIZE);
-			write_to_fs(init, 0);
-
-			free(file_init);
 		} else if (current_dir_list->next_free_entry != 66) {
 			// Space found for file in current directory listing
+			file_index = init->next_free_entry;
+
+			strcpy(current_dir_list->entries[init->next_free_entry].name, file_name);
+			current_dir_list->entries[init->next_free_entry].attributes = 0b01000000; // | E
+			current_dir_list->entries[init->next_free_entry].sector = init->next_free_sector;
+			init->next_free_sector += 2;
+			init->next_free_entry++;
+
+			write_to_fs(current_dir_list, current_dir_list_sector * SECTOR_SIZE);
 		} else {
 			// Create new directory listing for file
+			if (init->next_directory_listing == 0) {
+				// Next directory listing follows initial listing
+			} else {
+				// Next directory listing doesn't follow initial listing
+			}
 		}
+
+		fseek(file, 0, SEEK_END);
+		size_t file_size = ftell(file);
+		fseek(file, 0, SEEK_SET);
+
+		struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
+		memset(file_init, 0, COMMON_STRUCT_SIZE);
+		file_init->size_in_sectors = (((file_size / 1000) / SECTOR_SIZE) * 2) < 2 ? 2 : (((file_size / 1000) / SECTOR_SIZE) * 2);
+		fread(file_init->data, 1, (file_size < 1000 ? file_size : 1000), file);
+
+		if (file_size > 1000) {
+			uint16_t sector = init->next_free_sector;
+			file_init->next_descriptor = sector;
+			init->next_free_sector += 2;
+
+			struct file_descriptor *file_desc = (struct file_descriptor *) malloc(COMMON_STRUCT_SIZE);
+
+			for (size_t current_byte = 1000; current_byte < file_size; current_byte += 1000) {
+				memset(file_desc, 0, COMMON_STRUCT_SIZE);
+
+				fseek(file, current_byte, SEEK_SET);
+				fread(file_desc->data, 1, 1000, file);
+
+				if (file_size - current_byte > 1000)
+					file_desc->next_descriptor = sector + 2;
+
+				write_to_fs(file_desc, sector * SECTOR_SIZE);
+
+				sector = init->next_free_sector;
+				
+				if (file_size - current_byte > 1000)
+					init->next_free_sector += 2;
+			}
+
+			free(file_desc);
+		}
+
+		write_to_fs(file_init, init->entries[file_index].sector * SECTOR_SIZE);
+		write_to_fs(init, 0);
+		
+		free(file_init);
+
+		printf("File %s was written to file system, initial descriptor is located in sector %d\n", file_name, init->entries[file_index].sector);
+
+		return;
 	}
 
-	// Write contents
+	printf("File already exists, use option \"Update file\"\n");
+}
+
+void delete_file() {
+	printf("Enter name of file to delete: ");
+	char file_name[512];
+	scanf("%s", file_name);
+	
+	uint8_t file_index = 132;
+
+	if ((file_index = find_file(file_name)) == FILE_NOT_FOUND) {
+		printf("File not found\n");
+		return;
+	}
+
+	uint16_t sector = 0;
+	if (file_index < 66) {
+		// In initial directory
+		init->entries[file_index].attributes |= 0b10000000; // | D
+		sector = init->entries[file_index].sector;
+		write_to_fs(init, 0);
+	} else {
+		// In external directory
+		file_index -= 66;
+		current_dir_list->entries[file_index].attributes |= 0b10000000; // | D
+		sector = current_dir_list->entries[file_index].sector;
+		write_to_fs(current_dir_list, 0);
+	}
+
+	struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
+	read_from_fs(file_init, sector * SECTOR_SIZE);
+	file_init->attributes |= 0b10000000; // | D
+	write_to_fs(file_init, sector * SECTOR_SIZE);
+
+	uint16_t next_descriptor = file_init->next_descriptor;
+	
+	free(file_init);
+
+	if (file_init->next_descriptor == 0) {
+		printf("Successfully marked file %s as deleted\n", file_name);
+		return;
+	}
+
+	struct file_descriptor *file_desc = (struct file_descriptor *) malloc(COMMON_STRUCT_SIZE);
+
+	while (next_descriptor != 0) {
+		read_from_fs(file_desc, next_descriptor * SECTOR_SIZE);
+		file_desc->attributes |= 0b10000000; // | D
+		write_to_fs(file_desc, next_descriptor * SECTOR_SIZE);
+
+		next_descriptor = file_desc->next_descriptor;
+	}
+
+	free(file_desc);
+
+	printf("Successfully marked file %s as deleted\n", file_name);
 }
 
 void file_system_editing() {
-	printf("File system editting options:\n1) Add file\n2) Remove file\n3) Add directory of files\n");
+	printf("File system editting options:\n1) Add file\n2) Update file\n3) Delete file\n4) Add directory of files\n");
 	
 	char choice;
 	do {
@@ -122,11 +208,15 @@ void file_system_editing() {
 		case '1':
 			add_file();
 			goto fs_edit_cycle_complete;
-
+		
 		case '2':
 			goto fs_edit_cycle_complete;
 
 		case '3':
+			delete_file();
+			goto fs_edit_cycle_complete;
+
+		case '4':
 			goto fs_edit_cycle_complete;
 
 		}
@@ -169,6 +259,8 @@ void options() {
 			init->next_directory_listing = 0x0000;
 		
 			write_to_fs(init, 0);
+
+			printf("New file system created\n");
 
 			goto cycle_complete;
 		}
@@ -226,7 +318,7 @@ int main() {
 	}
 
 	init = (struct initial_directory_listing *) malloc(COMMON_STRUCT_SIZE);
-	fread(init, 1, COMMON_STRUCT_SIZE, fs_file);
+	read_from_fs(init, 0);
 
 	current_dir_list = (struct directory_listing *) malloc(COMMON_STRUCT_SIZE);
 	
