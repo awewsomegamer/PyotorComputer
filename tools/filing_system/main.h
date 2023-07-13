@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <dirent.h>
 
 #define SECTOR_SIZE 512
 #define FILE_NOT_FOUND 132

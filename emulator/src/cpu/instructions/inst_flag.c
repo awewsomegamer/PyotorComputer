@@ -1,4 +1,4 @@
-#include <cpu/instructions/instruction_macros.h>
+#include <cpu/instructions/inst_macros.h>
 
 void INST_SED() { register_p.D = 1; }
 void INST_CLD() { register_p.D = 0; }

@@ -1,7 +1,9 @@
 #include "main.h"
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 FILE *fs_file = NULL;
 char fs_name[512];
@@ -20,6 +22,21 @@ void write_to_fs(void *data, long where) {
 void read_from_fs(void *data, long where) {
 	fseek(fs_file, where, SEEK_SET);
 	fread(data, 1, COMMON_STRUCT_SIZE, fs_file);
+}
+
+char get_char() {
+	char choice;
+	for (;;)
+		if ((choice = getchar()) && (choice >= 0x20 && choice <= 0x7E))
+			break;
+	
+	return choice;
+}
+
+void memcset(void *buffer, uint8_t value, uint8_t condition, size_t length) {
+	for (size_t i = 0; i < length; i++)
+		if (*((uint8_t *)buffer + i) == condition)
+			*((uint8_t *)buffer + i) = value;
 }
 
 // 0 - 65 : File index in initial directory list
@@ -49,14 +66,27 @@ uint8_t find_file(char *name) {
 	return 132;
 }
 
-void add_file() {
-	printf("Enter name of file to add: ");
-	char file_name[512];
-	scanf("%s", file_name);
+void add_file(char *file_name) {
+	if (file_name == NULL) {
+		printf("Enter name of file to add: ");
+		file_name = malloc(512);
+		scanf("%s", file_name);
+	}
+
 	FILE *file = fopen(file_name, "r");
+
+	printf("Error B1 %s\n", file_name);
+	char *name = malloc(13);
+	memset(name, 0, 13);
+	int name_offset = strlen(file_name) - 1;
+	for (; (file_name[name_offset] != '/'); name_offset--);
+	strncpy(name, file_name + name_offset + 1, 13);
+	printf("Error B2\n");
 
 	if (file == NULL) {
 		printf("Unable to open file %s\n", file_name);
+		free(name);
+		fclose(file);
 		return;
 	}
 
@@ -68,7 +98,7 @@ void add_file() {
 			// Space found for file in initial directory
 			file_index = init->next_free_entry;
 
-			strcpy(init->entries[init->next_free_entry].name, file_name);
+			strcpy(init->entries[init->next_free_entry].name, name);
 			init->entries[init->next_free_entry].attributes = 0b01000000; // | E
 			init->entries[init->next_free_entry].sector = init->next_free_sector;
 			init->next_free_sector += 2;
@@ -77,7 +107,7 @@ void add_file() {
 			// Space found for file in current directory listing
 			file_index = init->next_free_entry;
 
-			strcpy(current_dir_list->entries[init->next_free_entry].name, file_name);
+			strcpy(current_dir_list->entries[init->next_free_entry].name, name);
 			current_dir_list->entries[init->next_free_entry].attributes = 0b01000000; // | E
 			current_dir_list->entries[init->next_free_entry].sector = init->next_free_sector;
 			init->next_free_sector += 2;
@@ -132,14 +162,22 @@ void add_file() {
 		write_to_fs(file_init, init->entries[file_index].sector * SECTOR_SIZE);
 		write_to_fs(init, 0);
 		
+		free(name);
 		free(file_init);
+		fclose(file);
 
 		printf("File %s was written to file system, initial descriptor is located in sector %d\n", file_name, init->entries[file_index].sector);
 
 		return;
 	}
 
+	free(name);
+	fclose(file);
 	printf("File already exists, use option \"Update file\"\n");
+}
+
+void update_file() {
+
 }
 
 void delete_file() {
@@ -197,16 +235,86 @@ void delete_file() {
 	printf("Successfully marked file %s as deleted\n", file_name);
 }
 
+void add_dir(char *path) {
+	DIR *d = opendir(path);
+	struct dirent *dir_ent;
+
+	while ((dir_ent = readdir(d)) != NULL) {
+		if (dir_ent->d_type == DT_REG) {
+			if (find_file(dir_ent->d_name) != FILE_NOT_FOUND) {
+				// Update file
+			}
+
+			printf("Error A1\n");
+			char *n_path = malloc(strlen(path) + strlen(dir_ent->d_name) + 1);
+			strcpy(n_path, path);
+			n_path[strlen(path)] = '/';
+			strcpy(n_path + strlen(path) + 1, dir_ent->d_name);
+			printf("Error A2\n");
+
+			add_file(n_path);
+
+			free(n_path);
+		}
+	}
+
+	closedir(d);
+}
+
+void recursive_add_dir(char *path) {
+	DIR *d = opendir(path);
+	struct dirent *dir_ent;
+
+	add_dir(path);
+
+	while ((dir_ent = readdir(d)) != NULL) {
+		if (dir_ent->d_type == DT_DIR && strcmp(dir_ent->d_name, "..") != 0 && strcmp(dir_ent->d_name, ".") != 0) {
+			printf("Error C1 %d %d\n", dir_ent->d_type, DT_DIR);
+			char *n_path = malloc(strlen(path) + strlen(dir_ent->d_name) + 1);
+			strcpy(n_path, path);
+			n_path[strlen(path)] = '/';
+			strcpy(n_path + strlen(path) + 1, dir_ent->d_name);
+			printf("Error C2 %s\n", n_path);
+
+			recursive_add_dir(n_path);
+
+			free(n_path);
+		}
+	}
+
+	closedir(d);
+}
+
+void add_files_in_dir() {
+	printf("Recursively add files in sub-folders (y/n)?: ");
+
+	int recurse = -1;
+	for (; recurse == -1;)
+		recurse = ((recurse = get_char()) == 'y' || (recurse == 'Y')) ? 1 : 0;
+
+	printf("Enter directory path of files to add: ");
+	char path[512];
+	scanf("%s", path);
+
+	// Scan lower, sub, folders, add all files in a linear fashion
+	if (recurse) {
+		recursive_add_dir(path);
+		return;
+	}
+
+	// Just add files in given directory
+	add_dir(path);
+}
+
 void file_system_editing() {
 	printf("File system editting options:\n1) Add file\n2) Update file\n3) Delete file\n4) Add directory of files\n");
 	
-	char choice;
-	do {
-		choice = getchar();
+	for (;;) {
+		char choice = get_char();
 		
 		switch(choice) {
 		case '1':
-			add_file();
+			add_file(NULL);
 			goto fs_edit_cycle_complete;
 		
 		case '2':
@@ -217,10 +325,11 @@ void file_system_editing() {
 			goto fs_edit_cycle_complete;
 
 		case '4':
+			add_files_in_dir();
 			goto fs_edit_cycle_complete;
 
 		}
-	} while (choice != '\n' || choice != EOF);
+	}
 
 	fs_edit_cycle_complete:;
 }
@@ -234,10 +343,9 @@ void options() {
 	// Create brand new, never before seen file system
 	// Directory listing
 	printf("Options menu:\n1) Modify exsisting file system\n2) Create new file system\n3) Directory listing\n4 / q) Quit\n");
-	char choice;
 	
-	do {
-		choice = getchar();
+	for (;;) {
+		char choice = get_char();
 
 		switch(choice) {
 		case '1':
@@ -266,14 +374,24 @@ void options() {
 		}
 
 		case '3': {
-			printf("Listing of file system:\n");
+			printf("Listing of file system:\n--------------+-------------------\nName          | Init Sector Number\n--------------+-------------------\n");
 			
-			for (int i = 0; i < 62; i++)
-				if (((init->entries[i].attributes >> 6) & 1) == 1) // Exists?
-					printf("%s | %d\n", init->entries[i].name, init->entries[i].sector);
+			for (int i = 0; i < 62; i++) {
+				if (((init->entries[i].attributes >> 6) & 1) == 1) { // Exists?
+					char *buffer = malloc(14);
+					memset(buffer, 0, 14);
+					strncpy(buffer, init->entries[i].name, 13);
+					memcset(buffer, ' ', 0, 13);
+					
+					printf("%s | %d\n", buffer, init->entries[i].sector);
+					free(buffer);
+				}
+			}
 
-			if (init->next_directory_listing == 0)
+			if (init->next_directory_listing == 0) {
+				printf("--------------+-------------------\n");
 				goto cycle_complete;
+			}
 
 			uint16_t dir_listing_sector = init->next_directory_listing;
 
@@ -281,12 +399,22 @@ void options() {
 				fseek(fs_file, dir_listing_sector * SECTOR_SIZE, SEEK_SET);
 				fread(current_dir_list, 1, COMMON_STRUCT_SIZE, fs_file);
 
-				for (int i = 0; i < 62; i++)
-					if (((current_dir_list->entries[i].attributes >> 6) & 1) == 1)
-						printf("%s | %d\n", current_dir_list->entries[i].name, current_dir_list->entries[i].sector);
+				for (int i = 0; i < 62; i++) {
+					if (((current_dir_list->entries[i].attributes >> 6) & 1) == 1) { // Exists?
+						char *buffer = malloc(14);
+						memset(buffer, 0, 14);
+						strncpy(buffer, init->entries[i].name, 13);
+						memcset(buffer, ' ', 0, 13);
+						
+						printf("%s | %d\n", buffer, init->entries[i].sector);
+						free(buffer);
+					}
+				}
 
 				dir_listing_sector = current_dir_list->next_directory_listing;
 			}
+			
+			printf("--------------+-------------------\n");
 
 			goto cycle_complete;
 		}
@@ -298,9 +426,8 @@ void options() {
 			fclose(fs_file);
 
 			exit(0);
-
 		}
-	} while (choice != '\n' || choice != EOF);
+	}
 
 	cycle_complete:;
 }

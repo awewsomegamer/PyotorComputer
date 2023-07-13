@@ -1,4 +1,4 @@
-#include <cpu/instructions/instruction_macros.h>
+#include <cpu/instructions/inst_macros.h>
 
 void INST_INA() { register_a++; SET_NZ(register_a) }
 void INST_DEA() { register_a--; SET_NZ(register_a) }

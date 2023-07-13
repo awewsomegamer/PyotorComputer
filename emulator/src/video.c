@@ -5,7 +5,7 @@
 #include <video.h>
 #include <ram.h>
 #include <cpu/cpu.h>
-#include <keyboard.h>
+#include <kbd.h>
 #include <audio.h>
 
 #include <SDL2/SDL.h>

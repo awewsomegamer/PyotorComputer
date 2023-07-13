@@ -1,4 +1,4 @@
-#include <control_reg.h>
+#include <ctrl_reg.h>
 #include <ram.h>
 #include <stdio.h>
 #include <time.h>

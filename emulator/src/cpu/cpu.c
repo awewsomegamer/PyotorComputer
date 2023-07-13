@@ -1,6 +1,6 @@
-#include "global.h"
+#include <global.h>
 #include <cpu/cpu.h>
-#include <cpu/instructions/instruction_macros.h>
+#include <cpu/instructions/inst_macros.h>
 #include <ram.h>
 #include <stdint.h>
 #include <stdio.h>

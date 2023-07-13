@@ -1,5 +1,5 @@
 #include <SDL2/SDL_timer.h>
-#include <keyboard.h>
+#include <kbd.h>
 #include <cpu/cpu.h>
 #include <ram.h>
 #include <stdio.h>

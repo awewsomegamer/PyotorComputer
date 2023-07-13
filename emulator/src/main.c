@@ -9,7 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <video.h>
-#include <control_reg.h>
+#include <ctrl_reg.h>
 #include <disk.h>
 
 #ifndef SYS_IPS
