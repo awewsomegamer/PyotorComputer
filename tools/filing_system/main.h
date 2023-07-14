@@ -48,4 +48,23 @@ struct file_descriptor {
 			    // D(eleted) - 1 deleted, 0 not deleted
 }__attribute__((packed, aligned(1024)));
 
+extern FILE *fs_file;
+extern char fs_name[512];
+extern struct initial_directory_listing *init;
+extern struct directory_listing *current_dir_list;
+extern uint16_t current_dir_list_sector;
+
+void write_to_fs(void *data, long where);
+void read_from_fs(void *data, long where);
+char get_char();
+void memcset(void *buffer, uint8_t value, uint8_t condition, size_t length);
+uint8_t find_file(char *name);
+
+void add_file(char *file_name);
+void add_dir(char *path);
+void recursive_add_dir(char *path);
+void add_files_in_dir();
+
+void delete_file(char *file_name);
+
 #endif

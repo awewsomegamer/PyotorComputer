@@ -1,2 +1,2 @@
 all:
-	gcc main.c -o ../filer.out
+	gcc *.c -o ../filer.out

@@ -1,5 +1,6 @@
 #include "main.h"
 #include <dirent.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,298 +13,63 @@ struct initial_directory_listing *init;
 struct directory_listing *current_dir_list;
 uint16_t current_dir_list_sector;
 
-void write_to_fs(void *data, long where) {
-	fseek(fs_file, where, SEEK_SET);
-	fwrite(data, 1, COMMON_STRUCT_SIZE, fs_file);
-	fclose(fs_file);
-	fs_file = fopen(fs_name, "r+");
-}
+void update_file(char *file_name) {
+	uint8_t alloc_name = 0;
 
-void read_from_fs(void *data, long where) {
-	fseek(fs_file, where, SEEK_SET);
-	fread(data, 1, COMMON_STRUCT_SIZE, fs_file);
-}
-
-char get_char() {
-	char choice;
-	for (;;)
-		if ((choice = getchar()) && (choice >= 0x20 && choice <= 0x7E))
-			break;
-	
-	return choice;
-}
-
-void memcset(void *buffer, uint8_t value, uint8_t condition, size_t length) {
-	for (size_t i = 0; i < length; i++)
-		if (*((uint8_t *)buffer + i) == condition)
-			*((uint8_t *)buffer + i) = value;
-}
-
-// 0 - 65 : File index in initial directory list
-// 66 - 131 : File index in current directory list
-// 132 : File not found
-uint8_t find_file(char *name) {
-	for (int i = 0; i < 62; i++)
-		if (strcmp(name, init->entries[i].name) == 0)
-			return i;
-
-	if (init->next_directory_listing == 0)
-		return 132;
-
-	current_dir_list_sector = init->next_directory_listing;
-
-	while (current_dir_list_sector != 0) {
-		fseek(fs_file, current_dir_list_sector * SECTOR_SIZE, SEEK_SET);
-		fread(current_dir_list, 1, COMMON_STRUCT_SIZE, fs_file);
-
-		for (int i = 0; i < 62; i++)
-			if (strcmp(name, current_dir_list->entries[i].name) == 0)
-				return i + 66;
-
-		current_dir_list_sector = current_dir_list->next_directory_listing;
-	}
-
-	return 132;
-}
-
-void add_file(char *file_name) {
 	if (file_name == NULL) {
-		printf("Enter name of file to add: ");
+		printf("Enter name of file to update: ");
 		file_name = malloc(512);
+		alloc_name = 1;
 		scanf("%s", file_name);
 	}
 
-	FILE *file = fopen(file_name, "r");
-
-	printf("Error B1 %s\n", file_name);
-	char *name = malloc(13);
-	memset(name, 0, 13);
-	int name_offset = strlen(file_name) - 1;
-	for (; (file_name[name_offset] != '/'); name_offset--);
-	strncpy(name, file_name + name_offset + 1, 13);
-	printf("Error B2\n");
-
-	if (file == NULL) {
-		printf("Unable to open file %s\n", file_name);
-		free(name);
-		fclose(file);
-		return;
-	}
-
-	if (find_file(file_name) == FILE_NOT_FOUND) {
-		// Could not find file, allocate space
-		uint8_t file_index = 0;
-
-		if (init->next_free_entry != 66) {
-			// Space found for file in initial directory
-			file_index = init->next_free_entry;
-
-			strcpy(init->entries[init->next_free_entry].name, name);
-			init->entries[init->next_free_entry].attributes = 0b01000000; // | E
-			init->entries[init->next_free_entry].sector = init->next_free_sector;
-			init->next_free_sector += 2;
-			init->next_free_entry++;
-		} else if (current_dir_list->next_free_entry != 66) {
-			// Space found for file in current directory listing
-			file_index = init->next_free_entry;
-
-			strcpy(current_dir_list->entries[init->next_free_entry].name, name);
-			current_dir_list->entries[init->next_free_entry].attributes = 0b01000000; // | E
-			current_dir_list->entries[init->next_free_entry].sector = init->next_free_sector;
-			init->next_free_sector += 2;
-			init->next_free_entry++;
-
-			write_to_fs(current_dir_list, current_dir_list_sector * SECTOR_SIZE);
-		} else {
-			// Create new directory listing for file
-			if (init->next_directory_listing == 0) {
-				// Next directory listing follows initial listing
-			} else {
-				// Next directory listing doesn't follow initial listing
-			}
-		}
-
-		fseek(file, 0, SEEK_END);
-		size_t file_size = ftell(file);
-		fseek(file, 0, SEEK_SET);
-
-		struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
-		memset(file_init, 0, COMMON_STRUCT_SIZE);
-		file_init->size_in_sectors = (((file_size / 1000) / SECTOR_SIZE) * 2) < 2 ? 2 : (((file_size / 1000) / SECTOR_SIZE) * 2);
-		fread(file_init->data, 1, (file_size < 1000 ? file_size : 1000), file);
-
-		if (file_size > 1000) {
-			uint16_t sector = init->next_free_sector;
-			file_init->next_descriptor = sector;
-			init->next_free_sector += 2;
-
-			struct file_descriptor *file_desc = (struct file_descriptor *) malloc(COMMON_STRUCT_SIZE);
-
-			for (size_t current_byte = 1000; current_byte < file_size; current_byte += 1000) {
-				memset(file_desc, 0, COMMON_STRUCT_SIZE);
-
-				fseek(file, current_byte, SEEK_SET);
-				fread(file_desc->data, 1, 1000, file);
-
-				if (file_size - current_byte > 1000)
-					file_desc->next_descriptor = sector + 2;
-
-				write_to_fs(file_desc, sector * SECTOR_SIZE);
-
-				sector = init->next_free_sector;
-				
-				if (file_size - current_byte > 1000)
-					init->next_free_sector += 2;
-			}
-
-			free(file_desc);
-		}
-
-		write_to_fs(file_init, init->entries[file_index].sector * SECTOR_SIZE);
-		write_to_fs(init, 0);
-		
-		free(name);
-		free(file_init);
-		fclose(file);
-
-		printf("File %s was written to file system, initial descriptor is located in sector %d\n", file_name, init->entries[file_index].sector);
-
-		return;
-	}
-
-	free(name);
-	fclose(file);
-	printf("File already exists, use option \"Update file\"\n");
+	// Do stuff
 }
 
-void update_file() {
-
-}
-
-void delete_file() {
-	printf("Enter name of file to delete: ");
-	char file_name[512];
-	scanf("%s", file_name);
-	
-	uint8_t file_index = 132;
-
-	if ((file_index = find_file(file_name)) == FILE_NOT_FOUND) {
+uint8_t *get_file_data(uint8_t file_index, size_t *size) {
+	if (file_index == FILE_NOT_FOUND) {
 		printf("File not found\n");
-		return;
+		return NULL;
 	}
 
-	uint16_t sector = 0;
+	uint8_t *buffer;
+
 	if (file_index < 66) {
-		// In initial directory
-		init->entries[file_index].attributes |= 0b10000000; // | D
-		sector = init->entries[file_index].sector;
-		write_to_fs(init, 0);
-	} else {
-		// In external directory
-		file_index -= 66;
-		current_dir_list->entries[file_index].attributes |= 0b10000000; // | D
-		sector = current_dir_list->entries[file_index].sector;
-		write_to_fs(current_dir_list, 0);
-	}
+		struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
+		read_from_fs(file_init, init->entries[file_index].sector * SECTOR_SIZE);
 
-	struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
-	read_from_fs(file_init, sector * SECTOR_SIZE);
-	file_init->attributes |= 0b10000000; // | D
-	write_to_fs(file_init, sector * SECTOR_SIZE);
+		printf("D: %d\n", (file_init->size_in_sectors / 2) * 1000);
 
-	uint16_t next_descriptor = file_init->next_descriptor;
-	
-	free(file_init);
+		// *size = (file_init->size_in_sectors / 2) * 1000;
+		if ((file_init->size_in_sectors / 2) * 1000 == 0)
+			return NULL;
 
-	if (file_init->next_descriptor == 0) {
-		printf("Successfully marked file %s as deleted\n", file_name);
-		return;
-	}
+		buffer = malloc((file_init->size_in_sectors / 2) * 1000);
+		memccpy(buffer, file_init->data, 1, 1000);
 
-	struct file_descriptor *file_desc = (struct file_descriptor *) malloc(COMMON_STRUCT_SIZE);
+		uint16_t next_sector = file_init->next_descriptor;
 
-	while (next_descriptor != 0) {
-		read_from_fs(file_desc, next_descriptor * SECTOR_SIZE);
-		file_desc->attributes |= 0b10000000; // | D
-		write_to_fs(file_desc, next_descriptor * SECTOR_SIZE);
+		free(file_init);
 
-		next_descriptor = file_desc->next_descriptor;
-	}
-
-	free(file_desc);
-
-	printf("Successfully marked file %s as deleted\n", file_name);
-}
-
-void add_dir(char *path) {
-	DIR *d = opendir(path);
-	struct dirent *dir_ent;
-
-	while ((dir_ent = readdir(d)) != NULL) {
-		if (dir_ent->d_type == DT_REG) {
-			if (find_file(dir_ent->d_name) != FILE_NOT_FOUND) {
-				// Update file
-			}
-
-			printf("Error A1\n");
-			char *n_path = malloc(strlen(path) + strlen(dir_ent->d_name) + 1);
-			strcpy(n_path, path);
-			n_path[strlen(path)] = '/';
-			strcpy(n_path + strlen(path) + 1, dir_ent->d_name);
-			printf("Error A2\n");
-
-			add_file(n_path);
-
-			free(n_path);
+		if (next_sector == 0)
+			return buffer;
+		
+		struct file_descriptor *desc = (struct file_descriptor *) malloc(COMMON_STRUCT_SIZE);
+		size_t offset = 1000;
+		while (next_sector != 0) {
+			read_from_fs(desc, next_sector * SECTOR_SIZE);
+			memccpy(buffer + offset, desc->data, 1, 1000);
+			
+			offset += 1000;
+			next_sector = desc->next_descriptor;
 		}
+
+		free(desc);
+
+		return buffer;
 	}
 
-	closedir(d);
-}
-
-void recursive_add_dir(char *path) {
-	DIR *d = opendir(path);
-	struct dirent *dir_ent;
-
-	add_dir(path);
-
-	while ((dir_ent = readdir(d)) != NULL) {
-		if (dir_ent->d_type == DT_DIR && strcmp(dir_ent->d_name, "..") != 0 && strcmp(dir_ent->d_name, ".") != 0) {
-			printf("Error C1 %d %d\n", dir_ent->d_type, DT_DIR);
-			char *n_path = malloc(strlen(path) + strlen(dir_ent->d_name) + 1);
-			strcpy(n_path, path);
-			n_path[strlen(path)] = '/';
-			strcpy(n_path + strlen(path) + 1, dir_ent->d_name);
-			printf("Error C2 %s\n", n_path);
-
-			recursive_add_dir(n_path);
-
-			free(n_path);
-		}
-	}
-
-	closedir(d);
-}
-
-void add_files_in_dir() {
-	printf("Recursively add files in sub-folders (y/n)?: ");
-
-	int recurse = -1;
-	for (; recurse == -1;)
-		recurse = ((recurse = get_char()) == 'y' || (recurse == 'Y')) ? 1 : 0;
-
-	printf("Enter directory path of files to add: ");
-	char path[512];
-	scanf("%s", path);
-
-	// Scan lower, sub, folders, add all files in a linear fashion
-	if (recurse) {
-		recursive_add_dir(path);
-		return;
-	}
-
-	// Just add files in given directory
-	add_dir(path);
+	return NULL;
 }
 
 void file_system_editing() {
@@ -321,7 +87,7 @@ void file_system_editing() {
 			goto fs_edit_cycle_complete;
 
 		case '3':
-			delete_file();
+			delete_file(NULL);
 			goto fs_edit_cycle_complete;
 
 		case '4':
@@ -342,7 +108,7 @@ void options() {
 	//	Add directory of files
 	// Create brand new, never before seen file system
 	// Directory listing
-	printf("Options menu:\n1) Modify exsisting file system\n2) Create new file system\n3) Directory listing\n4 / q) Quit\n");
+	printf("Options menu:\n1) Modify exsisting file system\n2) Create new file system\n3) Directory listing\n4) Clone file system\n5 / q) Quit\n");
 	
 	for (;;) {
 		char choice = get_char();
@@ -354,7 +120,7 @@ void options() {
 			goto cycle_complete;
 
 		case '2': {
-			// printf("Destroying file system located in file %s in 15 seconds\n", fs_name);
+			// printf("Creating new file system located in file %s in 15 seconds\n", fs_name);
 			// sleep(15);
 
 			if (init == NULL)
@@ -419,8 +185,41 @@ void options() {
 			goto cycle_complete;
 		}
 
+		case '4': {
+			printf("Enter the directory to clone the file system to: ");
+			char path[512];
+			char file_path[525]; // Cannot do malloc, for some reason I get error at comment "A"
+					     // saying malloc(): corrupted top size
+					     // Aborted (core dumped)
+			scanf("%s", path);
+			
+			FILE *file;
+			for (int i = 0; i < 66; i++) {
+				if (((init->entries[i].attributes >> 6) & 1) == 1) {
+					size_t size = 0;
+					uint8_t *buffer = get_file_data(i, &size);
+
+					if (buffer == NULL)
+						continue;
+					
+					// A
+					strcpy(file_path, path);
+					file_path[strlen(path)] = '/';
+					strncpy(file_path + strlen(path) + 1, init->entries[i].name, 13);
+					// file = fopen(_file_path, "w"); // Breaks it
+					memset(file_path, 0, 525);
+
+					// fwrite(buffer, 1, size, file);
+					// fclose(file);
+					free(buffer);
+				}
+			}
+
+			goto cycle_complete;
+		}
+
 		case 'q':
-		case '4':
+		case '5':
 			free(current_dir_list);
 			free(init);
 			fclose(fs_file);
