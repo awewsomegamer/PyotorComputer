@@ -32,20 +32,19 @@ uint8_t *get_file_data(uint8_t file_index, size_t *size) {
 		return NULL;
 	}
 
-	uint8_t *buffer;
+	uint8_t *buffer = NULL;
 
 	if (file_index < 66) {
 		struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
 		read_from_fs(file_init, init->entries[file_index].sector * SECTOR_SIZE);
 
-		printf("D: %d\n", (file_init->size_in_sectors / 2) * 1000);
-
-		// *size = (file_init->size_in_sectors / 2) * 1000;
-		if ((file_init->size_in_sectors / 2) * 1000 == 0)
+		*size = (file_init->size_in_sectors / 2) * 1000 - file_init->bytes_unused_last_kb;
+		
+		if (*size == 0)
 			return NULL;
 
 		buffer = malloc((file_init->size_in_sectors / 2) * 1000);
-		memccpy(buffer, file_init->data, 1, 1000);
+		memcpy(buffer, file_init->data, 1000);
 
 		uint16_t next_sector = file_init->next_descriptor;
 
@@ -56,16 +55,17 @@ uint8_t *get_file_data(uint8_t file_index, size_t *size) {
 		
 		struct file_descriptor *desc = (struct file_descriptor *) malloc(COMMON_STRUCT_SIZE);
 		size_t offset = 1000;
+		size_t d_size = *size - 1000;
 		while (next_sector != 0) {
 			read_from_fs(desc, next_sector * SECTOR_SIZE);
-			memccpy(buffer + offset, desc->data, 1, 1000);
-			
+			memcpy(buffer + offset, desc->data, 1000);
+
 			offset += 1000;
 			next_sector = desc->next_descriptor;
 		}
 
 		free(desc);
-
+		
 		return buffer;
 	}
 
@@ -188,29 +188,39 @@ void options() {
 		case '4': {
 			printf("Enter the directory to clone the file system to: ");
 			char path[512];
-			char file_path[525]; // Cannot do malloc, for some reason I get error at comment "A"
-					     // saying malloc(): corrupted top size
-					     // Aborted (core dumped)
 			scanf("%s", path);
 			
 			FILE *file;
 			for (int i = 0; i < 66; i++) {
+				printf("%d %d\n", i, ((init->entries[i].attributes >> 6) & 1));
 				if (((init->entries[i].attributes >> 6) & 1) == 1) {
 					size_t size = 0;
 					uint8_t *buffer = get_file_data(i, &size);
 
-					if (buffer == NULL)
+					if (buffer == NULL) {
+						printf("%d NULL\n", i);
 						continue;
-					
-					// A
-					strcpy(file_path, path);
-					file_path[strlen(path)] = '/';
-					strncpy(file_path + strlen(path) + 1, init->entries[i].name, 13);
-					// file = fopen(_file_path, "w"); // Breaks it
-					memset(file_path, 0, 525);
+					}
 
-					// fwrite(buffer, 1, size, file);
-					// fclose(file);
+					char *file_path = malloc(512 + strlen(init->entries[i].name));
+					memset(file_path, 0, 512 + strlen(init->entries[i].name));
+					strcpy(file_path, path);
+
+					file_path[strlen(path)] = '/';
+					
+					strncpy(file_path + strlen(path) + 1, init->entries[i].name, 13);
+					
+					file = fopen(file_path, "w");
+
+					if (file == NULL) {
+						printf("Cannot open file at %s, please create this directory\n", file_path);
+						goto cycle_complete;
+					}
+
+					fwrite(buffer, 1, size, file);
+					fclose(file);
+					
+					free(file_path);
 					free(buffer);
 				}
 			}

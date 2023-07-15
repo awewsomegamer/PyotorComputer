@@ -37,6 +37,7 @@ struct initial_file_descriptor {
 	uint8_t data[1000]; // 1000 bytes of file data
 	uint16_t next_descriptor; // Pointer to the next file descriptor
 	uint16_t size_in_sectors; // The total size of the file in sectors
+	uint16_t bytes_unused_last_kb; // The amount of bytes unsused in the last KB of data
 	uint8_t attributes; // D 0 0 0 0 0 0 0
 			    // D(eleted) - 1 deleted, 0 not deleted
 }__attribute__((packed, aligned(1024))); // 1024 byte field

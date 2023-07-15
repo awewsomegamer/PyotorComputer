@@ -70,7 +70,8 @@ void add_file(char *file_name) {
 
 		struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
 		memset(file_init, 0, COMMON_STRUCT_SIZE);
-		file_init->size_in_sectors = (((file_size / 1000) / SECTOR_SIZE) * 2) < 2 ? 2 : (((file_size / 1000) / SECTOR_SIZE) * 2);
+		file_init->size_in_sectors = ((file_size + 1000) / 1000) == 1 ? 2 : (((file_size + 1000) / 1000) * 2);
+		file_init->bytes_unused_last_kb = ((file_init->size_in_sectors / 2) * 1000) - file_size;
 		fread(file_init->data, 1, (file_size < 1000 ? file_size : 1000), file);
 
 		if (file_size > 1000) {
