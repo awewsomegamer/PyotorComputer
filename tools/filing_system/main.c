@@ -23,53 +23,49 @@ void update_file(char *file_name) {
 		scanf("%s", file_name);
 	}
 
-	// Do stuff
-}
+	FILE *file = fopen(file_name, "r");
 
-uint8_t *get_file_data(uint8_t file_index, size_t *size) {
-	if (file_index == FILE_NOT_FOUND) {
-		printf("File not found\n");
-		return NULL;
+	int name_offset = strlen(file_name) - 1;
+	for (; (file_name[name_offset] != '/') && name_offset >= 0; name_offset--);
+	char *name = malloc(13);
+	strncpy(name, file_name, 13);
+	
+	if (name_offset <= 0) {
+		memset(name, 0, 13);
+		strncpy(name, file_name + name_offset + 1, 13);
 	}
 
-	uint8_t *buffer = NULL;
+	if (file == NULL) {
+		printf("Unable to open file %s\n", file_name);
+		free(name);
+		
+		if (alloc_name)
+			free(file_name);
+
+		return;
+	}
+
+	uint8_t file_index = find_file(name);
 
 	if (file_index < 66) {
-		struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
-		read_from_fs(file_init, init->entries[file_index].sector * SECTOR_SIZE);
+		// File is in the intial directory
+		fseek(file, 0, SEEK_END);
+		size_t file_size = ftell(file);
+		fseek(file, 0, SEEK_SET);
 
-		*size = (file_init->size_in_sectors / 2) * 1000 - file_init->bytes_unused_last_kb;
-		
-		if (*size == 0)
-			return NULL;
+		write_file_data(file, file_size, file_index, 1);
 
-		buffer = malloc((file_init->size_in_sectors / 2) * 1000);
-		memcpy(buffer, file_init->data, 1000);
+		free(name);
 
-		uint16_t next_sector = file_init->next_descriptor;
+		if (alloc_name)
+			free(file_name);
 
-		free(file_init);
-
-		if (next_sector == 0)
-			return buffer;
-		
-		struct file_descriptor *desc = (struct file_descriptor *) malloc(COMMON_STRUCT_SIZE);
-		size_t offset = 1000;
-		size_t d_size = *size - 1000;
-		while (next_sector != 0) {
-			read_from_fs(desc, next_sector * SECTOR_SIZE);
-			memcpy(buffer + offset, desc->data, 1000);
-
-			offset += 1000;
-			next_sector = desc->next_descriptor;
-		}
-
-		free(desc);
-		
-		return buffer;
+		fclose(file);
+	} else if (file_index < FILE_NOT_FOUND) {
+		// File is in the current direcotry
+	} else {
+		printf("File not found\n");
 	}
-
-	return NULL;
 }
 
 void file_system_editing() {
@@ -84,6 +80,7 @@ void file_system_editing() {
 			goto fs_edit_cycle_complete;
 		
 		case '2':
+			update_file(NULL);
 			goto fs_edit_cycle_complete;
 
 		case '3':
@@ -193,10 +190,11 @@ void options() {
 			FILE *file;
 			for (int i = 0; i < 66; i++) {
 				printf("%d %d\n", i, ((init->entries[i].attributes >> 6) & 1));
+
 				if (((init->entries[i].attributes >> 6) & 1) == 1) {
 					size_t size = 0;
 					uint8_t *buffer = get_file_data(i, &size);
-
+					
 					if (buffer == NULL) {
 						printf("%d NULL\n", i);
 						continue;
@@ -216,7 +214,7 @@ void options() {
 						printf("Cannot open file at %s, please create this directory\n", file_path);
 						goto cycle_complete;
 					}
-
+					
 					fwrite(buffer, 1, size, file);
 					fclose(file);
 					

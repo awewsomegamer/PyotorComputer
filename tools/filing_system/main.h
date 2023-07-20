@@ -60,6 +60,8 @@ void read_from_fs(void *data, long where);
 char get_char();
 void memcset(void *buffer, uint8_t value, uint8_t condition, size_t length);
 uint8_t find_file(char *name);
+uint8_t *get_file_data(uint8_t file_index, size_t *size);
+void write_file_data(FILE *file, size_t file_size, uint8_t file_index, uint8_t overwrite_existing);
 
 void add_file(char *file_name);
 void add_dir(char *path);
