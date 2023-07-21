@@ -31,7 +31,7 @@ void memcset(void *buffer, uint8_t value, uint8_t condition, size_t length) {
 }
 
 // 0 - 65 : File index in initial directory list
-// 66 - 131 : File index in current directory list
+// MAX_FILES_PRE_DIR - 131 : File index in current directory list
 // 132 : File not found
 uint8_t find_file(char *name) {
 	for (int i = 0; i < 62; i++)
@@ -49,7 +49,7 @@ uint8_t find_file(char *name) {
 
 		for (int i = 0; i < 62; i++)
 			if (strcmp(name, current_dir_list->entries[i].name) == 0)
-				return i + 66;
+				return i + MAX_FILES_PRE_DIR;
 
 		current_dir_list_sector = current_dir_list->next_directory_listing;
 	}
@@ -65,7 +65,7 @@ uint8_t *get_file_data(uint8_t file_index, size_t *size) {
 
 	uint8_t *buffer = NULL;
 
-	if (file_index < 66) {
+	if (file_index < MAX_FILES_PRE_DIR) {
 		struct initial_file_descriptor *file_init = (struct initial_file_descriptor *) malloc(COMMON_STRUCT_SIZE);
 		read_from_fs(file_init, init->entries[file_index].sector * SECTOR_SIZE);
 
@@ -109,7 +109,7 @@ void write_file_data(FILE *file, size_t file_size, uint8_t file_index, uint8_t o
 	
 	uint16_t size_in_sectors = ((file_size + 1000) / 1000) == 1 ? 2 : (((file_size + 1000) / 1000) * 2);
 	uint16_t bytes_unused_last_kb = ((size_in_sectors / 2) * 1000) - file_size;
-	uint16_t cur_sector = (file_index < 66) ? init->entries[file_index].sector : current_dir_list->entries[file_index - 66].sector;
+	uint16_t cur_sector = (file_index < MAX_FILES_PRE_DIR) ? init->entries[file_index].sector : current_dir_list->entries[file_index - MAX_FILES_PRE_DIR].sector;
 
 	if (overwrite_existing)
 		read_from_fs(file_init, cur_sector * SECTOR_SIZE);
@@ -147,15 +147,20 @@ void write_file_data(FILE *file, size_t file_size, uint8_t file_index, uint8_t o
 			}
 		} else {
 			while (next_descriptor != 0) {
-				memset(file_desc, 0, COMMON_STRUCT_SIZE);
 				read_from_fs(file_desc, next_descriptor * SECTOR_SIZE);
+				memset(file_desc->data, 0, 1000);
 
 				fseek(file, current_byte, SEEK_SET);
-				fread(file_desc->data, 1, 1000, file);
+				if (fread(file_desc->data, 1, 1000, file) == 0) {
+					file_desc->attributes |= 0b01000000;
+
+					if (file_index > MAX_FILES_PRE_DIR)
+						current_dir_list->entries[file_index - MAX_FILES_PRE_DIR].attributes |= 0b00100000;
+					else
+						init->entries[file_index].attributes |= 0b00100000;
+				}
 
 				write_to_fs(file_desc, next_descriptor * SECTOR_SIZE);
-				printf("Changed sectors at %d\n", next_descriptor);
-
 				current_byte += 1000;
 
 				if (file_desc->next_descriptor == 0)
@@ -182,7 +187,7 @@ void write_file_data(FILE *file, size_t file_size, uint8_t file_index, uint8_t o
 	write_to_fs(file_init, cur_sector * SECTOR_SIZE);
 	write_to_fs(init, 0);
 
-	if (file_index > 66)
+	if (file_index > MAX_FILES_PRE_DIR)
 		write_to_fs(current_dir_list, current_dir_list_sector * SECTOR_SIZE);
 
 	free(file_init);

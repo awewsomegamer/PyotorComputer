@@ -22,14 +22,14 @@ void delete_file(char *file_name) {
 	}
 
 	uint16_t sector = 0;
-	if (file_index < 66) {
+	if (file_index < MAX_FILES_PRE_DIR) {
 		// In initial directory
 		init->entries[file_index].attributes |= 0b10000000; // | D
 		sector = init->entries[file_index].sector;
 		write_to_fs(init, 0);
 	} else {
 		// In external directory
-		file_index -= 66;
+		file_index -= MAX_FILES_PRE_DIR;
 		current_dir_list->entries[file_index].attributes |= 0b10000000; // | D
 		sector = current_dir_list->entries[file_index].sector;
 		write_to_fs(current_dir_list, 0);

@@ -37,7 +37,7 @@ void add_file(char *file_name) {
 		// Could not find file, allocate space
 		uint8_t file_index = 0;
 
-		if (init->next_free_entry != 66) {
+		if (init->next_free_entry != MAX_FILES_PRE_DIR) {
 			// Space found for file in initial directory
 			file_index = init->next_free_entry;
 
@@ -46,7 +46,7 @@ void add_file(char *file_name) {
 			init->entries[init->next_free_entry].sector = init->next_free_sector;
 			init->next_free_sector += 2;
 			init->next_free_entry++;
-		} else if (current_dir_list->next_free_entry != 66) {
+		} else if (current_dir_list->next_free_entry != MAX_FILES_PRE_DIR) {
 			// Space found for file in current directory listing
 			file_index = current_dir_list->next_free_entry;
 

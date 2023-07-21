@@ -13,60 +13,9 @@ struct initial_directory_listing *init;
 struct directory_listing *current_dir_list;
 uint16_t current_dir_list_sector;
 
-void update_file(char *file_name) {
-	uint8_t alloc_name = 0;
-
-	if (file_name == NULL) {
-		printf("Enter name of file to update: ");
-		file_name = malloc(512);
-		alloc_name = 1;
-		scanf("%s", file_name);
-	}
-
-	FILE *file = fopen(file_name, "r");
-
-	int name_offset = strlen(file_name) - 1;
-	for (; (file_name[name_offset] != '/') && name_offset >= 0; name_offset--);
-	char *name = malloc(13);
-	strncpy(name, file_name, 13);
-	
-	if (name_offset <= 0) {
-		memset(name, 0, 13);
-		strncpy(name, file_name + name_offset + 1, 13);
-	}
-
-	if (file == NULL) {
-		printf("Unable to open file %s\n", file_name);
-		free(name);
-		
-		if (alloc_name)
-			free(file_name);
-
-		return;
-	}
-
-	uint8_t file_index = find_file(name);
-
-	if (file_index < 66) {
-		// File is in the intial directory
-		fseek(file, 0, SEEK_END);
-		size_t file_size = ftell(file);
-		fseek(file, 0, SEEK_SET);
-
-		write_file_data(file, file_size, file_index, 1);
-
-		free(name);
-
-		if (alloc_name)
-			free(file_name);
-
-		fclose(file);
-	} else if (file_index < FILE_NOT_FOUND) {
-		// File is in the current direcotry
-	} else {
-		printf("File not found\n");
-	}
-}
+const uint8_t version_high = 1;
+const uint8_t version_low = 0;
+const char *identifier = "SFS ";
 
 void file_system_editing() {
 	printf("File system editting options:\n1) Add file\n2) Update file\n3) Delete file\n4) Add directory of files\n");
@@ -128,6 +77,9 @@ void options() {
 			init->next_free_sector = 0x02;
 			init->next_free_entry = 0x00;
 			init->next_directory_listing = 0x0000;
+			init->version_high = version_high;
+			init->version_low = version_low;
+			strcpy(init->identifier, identifier);
 		
 			write_to_fs(init, 0);
 
@@ -188,7 +140,7 @@ void options() {
 			scanf("%s", path);
 			
 			FILE *file;
-			for (int i = 0; i < 66; i++) {
+			for (int i = 0; i < MAX_FILES_PRE_DIR; i++) {
 				printf("%d %d\n", i, ((init->entries[i].attributes >> 6) & 1));
 
 				if (((init->entries[i].attributes >> 6) & 1) == 1) {
@@ -241,6 +193,7 @@ void options() {
 
 int main() {
 	printf("Now I am become file system, the organizer of disks\n"); // Oppenheimer reference
+	printf("%s Version %d.%d\n", identifier, version_high, version_low);
 	printf("Enter the filename used to store the file system: ");
 	scanf("%s", fs_name); // Chance buffer overflow
 	fs_file = fopen(fs_name, "r+");
