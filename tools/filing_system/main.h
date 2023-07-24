@@ -11,7 +11,7 @@
 #define SECTOR_SIZE 512
 #define FILE_NOT_FOUND 132
 #define COMMON_STRUCT_SIZE 1024
-#define MAX_FILES_PRE_DIR 62
+#define MAX_FILES_PER_DIR 62
 
 struct directory_listing_entry {
 	char name[13]; // The name by which the file can be found
@@ -23,7 +23,7 @@ struct directory_listing_entry {
 }__attribute__((packed, aligned(16))); // 16 byte fields
 
 struct initial_directory_listing {
-	struct directory_listing_entry entries[MAX_FILES_PRE_DIR]; // Uses the first ~1000 bytes of data
+	struct directory_listing_entry entries[MAX_FILES_PER_DIR]; // Uses the first ~1000 bytes of data
 	uint16_t next_free_sector; // The next free sector on disk
 	uint8_t next_free_entry; // Next free entry in this directory
 	uint16_t next_directory_listing; // Pointer to the next sector containing directory listing
@@ -33,7 +33,7 @@ struct initial_directory_listing {
 }__attribute__((packed, aligned(1024))); // 1024 byte field
 
 struct directory_listing {
-	struct directory_listing_entry entries[MAX_FILES_PRE_DIR]; // Uses the first ~1000 bytes of data
+	struct directory_listing_entry entries[MAX_FILES_PER_DIR]; // Uses the first ~1000 bytes of data
 	uint8_t next_free_entry; // Next free entry in this directory
 	uint16_t next_directory_listing; // Pointer to next sector containing next directory listing
 }__attribute__((packed, aligned(1024))); // 1024 byte field

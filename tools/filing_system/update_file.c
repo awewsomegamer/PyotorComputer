@@ -17,7 +17,7 @@ void update_file(char *file_name) {
 	char *name = malloc(13);
 	strncpy(name, file_name, 13);
 	
-	if (name_offset <= 0) {
+	if (name_offset > 0) {
 		memset(name, 0, 13);
 		strncpy(name, file_name + name_offset + 1, 13);
 	}
@@ -34,7 +34,7 @@ void update_file(char *file_name) {
 
 	uint8_t file_index = find_file(name);
 
-	if (file_index < MAX_FILES_PRE_DIR) {
+	if (file_index < MAX_FILES_PER_DIR) {
 		// File is in the intial directory
 		fseek(file, 0, SEEK_END);
 		size_t file_size = ftell(file);

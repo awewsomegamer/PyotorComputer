@@ -23,38 +23,93 @@ structures.
 The four other structures are all 1024 bytes in size. For file descriptor structures, the first 1000 bytes are used for file data with 24 bytes at the end for more metadata.
 In directory listing structures contain also 1000 bytes, of which 992 bytes are used. This accounts for 62 directory_listing_entry structures.
 
+." Directory Listing Entry
 .PP
 Format of
 .B directory_listing_entry
 structuers:
 .PP
-	File Name - 13 byte field containing the name and extension of the file in ASCII characters.
-.PP
-	Sector - 2 byte field containing the sector of the file's intial descriptor.
-.PP
-	Attributes - 1 byte field containing various bits to indicate different attributes.
+.B	file_name
+- 13 byte field containing the name and extension of the file in ASCII characters.
 
 .PP
-The bit field of the attributes field looks as such:
+.B	sector
+- 2 byte field containing the sector of the file's intial descriptor.
+
+.PP
+.B	attributes
+ - 1 byte field containing various bits to indicate different attributes.
+
+.PP
+The bit field of the 
+.I attributes
+field looks as such:
+
 .PP
 	D E U 0 0 0 0 0
-.PP
-	D(eleted) - 1: the file has been deleted
-.PP
-	E(xists) - 1: A file exists at this location (deleted or not)
-.PP
-	U(sable) - 1: File contains usable blocks, could be valuable to search
 
 .PP
+.B 	D(eleted)
+- 1: the file has been deleted.
+
+.PP
+.B 	E(xists)
+- 1: A file exists at this location (deleted or not).
+
+.PP
+.B 	U(sable) 
+- 1: File contains usable blocks, could be valuable to search.
+
+.PP
+." End Directory Listing Entry
+
+." Initial Directory Listing
 
 .PP
 Fromat of the
 .B initial_directory_listing
+structure:
+
+.PP
+.B 	entries 
+- 62 
+.I directory_listing_entry
+structures.
+
+.PP
+.B 	next_free_sector 
+- 2 byte number pointing to the next free sector.
+
+.PP
+.B 	next_free_entry 
+- 1 byte number pointing to the next free entry in
+.I entries
+.
+
+.PP
+.B 	next_directory_listing
+- The pointer to the start sector of the next directory listing.
+
+.PP
+.B 	version_high
+- The whole part of the file system version.
+
+.PP
+.B 	version_low
+- The decimal part of the file system version.
+
+.PP
+.B 	identifier
+- A four character string that is always "SFS ", in hexadecimal 0x53, 0x46, 0x53, 0x20.
+
+." End Initial Directory Listing
+
+." Directory Listing
+." End Directory Listing
 
 
 
 .SH BUGS
-Fragmentation in the file system - Bitmap would be able to fix this.
 
 .SH AUTHOR
 awewsomegamer (awewsomegamer@gmail.com)

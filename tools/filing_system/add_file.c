@@ -1,5 +1,6 @@
 #include "main.h"
 #include <stdio.h>
+#include <string.h>
 
 void add_file(char *file_name) {
 	uint8_t alloc_name = 0;
@@ -18,7 +19,7 @@ void add_file(char *file_name) {
 	char *name = malloc(13);
 	strncpy(name, file_name, 13);
 	
-	if (name_offset <= 0) {
+	if (name_offset > 0) {
 		memset(name, 0, 13);
 		strncpy(name, file_name + name_offset + 1, 13);
 	}
@@ -37,7 +38,7 @@ void add_file(char *file_name) {
 		// Could not find file, allocate space
 		uint8_t file_index = 0;
 
-		if (init->next_free_entry != MAX_FILES_PRE_DIR) {
+		if (init->next_free_entry != MAX_FILES_PER_DIR) {
 			// Space found for file in initial directory
 			file_index = init->next_free_entry;
 
@@ -46,7 +47,8 @@ void add_file(char *file_name) {
 			init->entries[init->next_free_entry].sector = init->next_free_sector;
 			init->next_free_sector += 2;
 			init->next_free_entry++;
-		} else if (current_dir_list->next_free_entry != MAX_FILES_PRE_DIR) {
+		} else if (current_dir_list->next_free_entry != MAX_FILES_PER_DIR) {
+			directory_listing_case:
 			// Space found for file in current directory listing
 			file_index = current_dir_list->next_free_entry;
 
@@ -58,12 +60,21 @@ void add_file(char *file_name) {
 
 			write_to_fs(current_dir_list, current_dir_list_sector * SECTOR_SIZE);
 		} else {
+			// Weird bug here, initial directory listing is absolutely destroyed
 			// Create new directory listing for file
+			current_dir_list_sector = init->next_free_sector;
+
 			if (init->next_directory_listing == 0) {
 				// Next directory listing follows initial listing
+				init->next_directory_listing = current_dir_list_sector;
 			} else {
 				// Next directory listing doesn't follow initial listing
+				current_dir_list->next_directory_listing = current_dir_list_sector;
 			}
+
+			init->next_free_sector += 2;
+			memset(current_dir_list, 0, COMMON_STRUCT_SIZE);
+			goto directory_listing_case;
 		}
 
 		fseek(file, 0, SEEK_END);

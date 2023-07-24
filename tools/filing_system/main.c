@@ -140,7 +140,7 @@ void options() {
 			scanf("%s", path);
 			
 			FILE *file;
-			for (int i = 0; i < MAX_FILES_PRE_DIR; i++) {
+			for (int i = 0; i < MAX_FILES_PER_DIR; i++) {
 				printf("%d %d\n", i, ((init->entries[i].attributes >> 6) & 1));
 
 				if (((init->entries[i].attributes >> 6) & 1) == 1) {
