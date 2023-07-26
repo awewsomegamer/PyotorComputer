@@ -4,9 +4,9 @@
 #include <cpu/cpu.h>
 #include <ram.h>
 
-#define OFF_X(value) (uint8_t)(value + register_x)
-#define OFF_X_ABS(value) (uint16_t)(value + register_x)
-#define OFF_Y(value) (value + register_y)
+#define OFF_X(value) (uint8_t)((value) + register_x)
+#define OFF_X_ABS(value) (uint16_t)((value) + register_x)
+#define OFF_Y(value) ((value) + register_y)
 #define PTR(value) (mem_byte_read(value))
 #define NEXT_BYTE mem_byte_read(pc++)
 #define CUR_BYTE mem_byte_read(pc)

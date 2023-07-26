@@ -30,6 +30,20 @@
 			.define TERMINAL_CHAR_Y		48576
 			.define TERMINAL_STATUS		48577
 
+			.define FS_INITIAL_DIR		48578
+			.define FS_INIT_N_FREE_SECT_LO	FS_INITIAL_DIR + 992
+			.define FS_INIT_N_FREE_SECT_HI	FS_INITIAL_DIR + 993
+			.define FS_INIT_N_FREE_ENT	FS_INITIAL_DIR + 994
+			.define FS_INIT_N_FREE_DIR_LO	FS_INITIAL_DIR + 995
+			.define FS_INIT_N_FREE_DIR_HI	FS_INITIAL_DIR + 996
+			.define FS_INIT_N_FREE_VER_HI	FS_INITIAL_DIR + 997
+			.define FS_INIT_N_FREE_VER_LO	FS_INITIAL_DIR + 998
+			.define FS_INIT_IDENTIFIER	FS_INITIAL_DIR + 999
+
+			.define FS_CUR_DIR		FS_INITIAL_DIR + 1024
+			.define FS_CUR_FILE		FS_CUR_DIR + 1024
+			
+
 			.define LOGO_WIDTH 		10
 			.define LOGO_HEIGHT		10
 			.define LOGO_START_X		15
@@ -121,22 +135,12 @@
 			ldx #$FF				; Set X to white color
 			stx VIDEO_REG_FG			; Set foreground to white
 			cli					; Enable interrupts
-; A   - Disk to read (values must be: 1,2, or 3), contents
-;       are not preserved.
-; MEM - Set bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI, DISK_SECTOR_LO, 
-;       DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
-;       apropriate values.
-
-			lda #$2
-			sta DISK_BUFF_ADDR_HI
-			stz DISK_BUFF_ADDR_LO
-			stz DISK_SECTOR_HI
-			stz DISK_SECTOR_COUNT_HI
-			lda #$1
-			sta DISK_SECTOR_LO
-			sta DISK_SECTOR_COUNT_LO
-			jsr read_disk
-			
+			stz TERMINAL_CHAR_X
+			stz TERMINAL_CHAR_Y
+			lda #$1					; Set disk number to 1
+			jsr initialize_vfs			; Initialize virtual file system from disk 1
+			jsr vfs_list_directory
+			stz TERMINAL_STATUS
 .endproc
 
 .proc terminal
@@ -581,6 +585,52 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			lda #$FF				; Error code $FF
 			rts					; Return to caller (code $FF, error occurred)
 .endproc
+
+; A - Disk the file system is on
+.proc initialize_vfs
+			pha
+			lda #.LOBYTE(FS_INITIAL_DIR)
+			sta DISK_BUFF_ADDR_LO
+			lda #.HIBYTE(FS_INITIAL_DIR)
+			sta DISK_BUFF_ADDR_HI
+			stz DISK_SECTOR_LO
+			stz DISK_SECTOR_HI
+			lda #$4
+			sta DISK_SECTOR_COUNT_HI
+			stz DISK_SECTOR_COUNT_LO
+			pla
+			jsr read_disk
+.endproc
+
+
+.proc vfs_list_directory
+			lda #.LOBYTE(FS_INITIAL_DIR)
+			sta $5
+			lda #.HIBYTE(FS_INITIAL_DIR)
+			sta $6
+			
+			ldy #$0
+@print_name_loop:	lda ($5), y
+			cpy #14
+			beq @print_name_end
+			iny
+			phy
+			ldx TERMINAL_CHAR_X
+			ldy TERMINAL_CHAR_Y
+			jsr putchar
+			inx
+			stx TERMINAL_CHAR_X
+			ply
+			bra @loop
+@print_name_end:	rts
+.endproc
+
+
+
+
+
+
+
 
 .proc terminal_handler
 			lda $3					; Load the current scancode
