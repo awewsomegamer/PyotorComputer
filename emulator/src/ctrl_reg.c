@@ -11,12 +11,13 @@ struct control_register {
         uint16_t address;        // Address 								 @ 48512 -> 48513
         uint8_t mode;            // Mode								 @ 48514
         uint8_t data;            // Data field								 @ 48515
-        uint8_t status;          // D(ata)1 R(ead)/W(rite) D(ata)2 B F 0 0 0				 @ 48516
+        uint8_t status;          // D(ata)1 R(ead)/W(rite) D(ata)2 B F S 0 0				 @ 48516
                                  // D1: Indicates new data from CPU -> Video card			 
                                  // R/W: 0: reading data, 1: writing data				 
                                  // D2: Indicates new data from Video card -> CPU			 
                                  // B: 0: Draw background, 1: Don't draw background (text mode, sprite mode)	
 				 // F: 0: Draw foreground, 1: Don't draw foreground (text mode, sprite mode)	 
+				 // S: 0: Hardware scroll disabled, 1: Hardware scroll enabled (text mode)
         uint8_t foreground;      // Foreground to use for text						 @ 48517
         uint8_t background;      // Background to use for text (carry set means background is not drawn) @ 48518
 }__attribute__((packed));

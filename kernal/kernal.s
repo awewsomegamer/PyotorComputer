@@ -42,7 +42,7 @@
 
 			.define FS_CUR_DIR		FS_INITIAL_DIR + 1024
 			.define FS_CUR_FILE		FS_CUR_DIR + 1024
-			
+			.define MAX_FILES_PER_DIR	62
 
 			.define LOGO_WIDTH 		10
 			.define LOGO_HEIGHT		10
@@ -139,19 +139,18 @@
 			stz TERMINAL_CHAR_Y
 			lda #$1					; Set disk number to 1
 			jsr initialize_vfs			; Initialize virtual file system from disk 1
-			jsr vfs_list_directory
 			stz TERMINAL_STATUS
 .endproc
 
 .proc terminal
-			lda #$0					; Zero A
-			sta VIDEO_REG_STATUS			; Draw both foreground and background
-			sta CURRENT_PROGRAM_BASE		; No user program is running, zero
-			sta CURRENT_PROGRAM_BASE + 1		; No user program is running, zero
-			sta CURRENT_PROGRAM_IRQ			; No user program is running, zero
-			sta CURRENT_PROGRAM_IRQ + 1		; No user program is running, zero
-			sta CURRENT_PROGRAM_NMI			; No user program is running, zero
-			sta CURRENT_PROGRAM_NMI + 1		; No user program is running, zero
+			lda #%00000100				; Draw background, foreground, and enable hardware scroll
+			sta VIDEO_REG_STATUS			; Set status to above
+			stz CURRENT_PROGRAM_BASE		; No user program is running, zero
+			stz CURRENT_PROGRAM_BASE + 1		; No user program is running, zero
+			stz CURRENT_PROGRAM_IRQ			; No user program is running, zero
+			stz CURRENT_PROGRAM_IRQ + 1		; No user program is running, zero
+			stz CURRENT_PROGRAM_NMI			; No user program is running, zero
+			stz CURRENT_PROGRAM_NMI + 1		; No user program is running, zero
 			lda TERMINAL_STATUS			; Get the current status
 			beq terminal				; It is zero, nothing new
 			cmp #$1					; Something new? An enter I see
@@ -232,7 +231,7 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			lda #.HIBYTE(JUMP_CMD)
 			sta $8
 			jsr cmp_str
-			bcc @compare_end
+			bcc @dir_cmp
 
 			ldy TERMINAL_BUFFER + 5
 			ldx TERMINAL_BUFFER + 6
@@ -252,6 +251,19 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			lda #.LOBYTE(@compare_end)
 			pha
 			jmp ($5)
+
+@dir_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
+			sta $5
+			lda #.HIBYTE(TERMINAL_BUFFER)
+			sta $6
+			lda #.LOBYTE(DIR_CMD)
+			sta $7
+			lda #.HIBYTE(DIR_CMD)
+			sta $8
+			jsr cmp_str
+			bcc @compare_end
+
+			jsr vfs_list_directory
 
 @compare_end:		ply					; Restore Y
 			pla					; Restore A
@@ -588,49 +600,68 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 
 ; A - Disk the file system is on
 .proc initialize_vfs
-			pha
-			lda #.LOBYTE(FS_INITIAL_DIR)
-			sta DISK_BUFF_ADDR_LO
-			lda #.HIBYTE(FS_INITIAL_DIR)
-			sta DISK_BUFF_ADDR_HI
-			stz DISK_SECTOR_LO
-			stz DISK_SECTOR_HI
-			lda #$4
-			sta DISK_SECTOR_COUNT_HI
-			stz DISK_SECTOR_COUNT_LO
-			pla
-			jsr read_disk
+			pha					; Save the disk number
+			lda #.LOBYTE(FS_INITIAL_DIR)		; Load the low byte of the initial directory's address in RAM
+			sta DISK_BUFF_ADDR_LO			; Store it to the right byte
+			lda #.HIBYTE(FS_INITIAL_DIR)		; Load the higher byte of the initial directory's address in RAM
+			sta DISK_BUFF_ADDR_HI			; Store it to the right byte
+			stz DISK_SECTOR_LO			; Zero the lower byte of the sector index
+			stz DISK_SECTOR_HI			; Zero the higher byte of the sector index
+			lda #$2					; Two sectors will be read
+			sta DISK_SECTOR_COUNT_LO		; Set the right byte
+			stz DISK_SECTOR_COUNT_HI		; Zero the higher byte
+			pla					; Restore the disk number
+			jmp read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
 .endproc
-
 
 .proc vfs_list_directory
-			lda #.LOBYTE(FS_INITIAL_DIR)
-			sta $5
-			lda #.HIBYTE(FS_INITIAL_DIR)
-			sta $6
-			
-			ldy #$0
-@print_name_loop:	lda ($5), y
-			cpy #14
-			beq @print_name_end
-			iny
-			phy
-			ldx TERMINAL_CHAR_X
-			ldy TERMINAL_CHAR_Y
-			jsr putchar
-			inx
-			stx TERMINAL_CHAR_X
-			ply
-			bra @loop
-@print_name_end:	rts
+			lda #.LOBYTE(FS_INITIAL_DIR)		; Lower byte of the first entry's address
+			sta $5					; Store it
+			lda #.HIBYTE(FS_INITIAL_DIR)		; High byte of the first entry's address
+			sta $6					; Store it
+			sei					; Disable interrupts
+			stz $0					; Zero temporary value 0, used as file index counter
+@print_dir_loop:	ldy #$0F				; Load offset with 15, to check attributes block
+			lda ($5), y				; Load in the attribute byte
+			and #%11000000				; Select the D and E flags
+			cmp #$40				; Check if the file is not deleted and exists
+			bne @next				; If not goto the next file
+			ldy #$00				; If so, zero the offset to print the name
+@print_name_loop:	lda ($5), y				; Load the current character of the name
+			cpy #13					; Check if the offset is 13
+			beq @print_name_end			; If so, we printed all characters
+			iny					; Increment the offset
+			phy					; Save the offset
+			ldx TERMINAL_CHAR_X			; Load the current X coordinate
+			ldy TERMINAL_CHAR_Y			; Load the current Y coordinate
+			jsr putchar				; Print the current character
+			inx					; Increment the X coordinate
+			stx TERMINAL_CHAR_X			; Store the X coordinate
+			ply					; Restore the offset
+			bra @print_name_loop			; Loop back to the name printing loop
+@print_name_end:	ldy TERMINAL_CHAR_Y			; Load the current Y coordinate
+			cpy #12					; Are we at the end of the screen?
+			bcc @no_nl				; If not, no new line is required
+			ldy #11					; Step Y back to be on screen
+@no_nl:			iny					; Increment the Y coordinate
+			sty TERMINAL_CHAR_Y			; Store the Y coordinate
+			stz TERMINAL_CHAR_X			; Zero the X coordinate to go to the beginning of the next line
+@next:			lda $5					; Load in the current address
+			sta $1					; Save the current address
+			clc					; Clear the carry flag for addition step
+			adc #$10				; Increment the address by 16, to go to the next entry
+			sta $5					; Store the incremented lower byte
+			cmp $1					; Compare the incremented lower byte to its previous value
+			bcs @high_inc_over			; If the new value is lower than the old one, we rolled over
+			inc $6					; Since we rolled over, increment the higher byte
+@high_inc_over:		inc $0					; Increment the file index counter
+			lda $0					; Load the file index counter into the A register
+			cmp #MAX_FILES_PER_DIR			; Compare the A register to the maximum number of files per directory
+			bcs @end				; If A > MAX_FILES_PER_DIR then finish
+@loop:			bra @print_dir_loop			; Otherwise, loop
+@end:			cli					; Enable interrupts
+			rts					; Return
 .endproc
-
-
-
-
-
-
-
 
 .proc terminal_handler
 			lda $3					; Load the current scancode
@@ -737,6 +768,7 @@ HEX_CHARS:		.asciiz "0123456789ABCDEF"
 FG_CMD:			.asciiz "FG"
 BG_CMD:			.asciiz "BG"
 JUMP_CMD:		.asciiz "JUMP"
+DIR_CMD:		.asciiz "DIR"
 CMD_NO_MATCH:		.asciiz "Command parameters insufficient"
 
 .segment "VECTORS"

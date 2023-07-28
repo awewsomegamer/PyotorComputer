@@ -42,7 +42,7 @@
 
 #define ARIT_AND_SET(what, value) \
         { \
-                uint8_t result = what | value; \
+                uint8_t result = what & value; \
                 SET_NZ(result) \
                 what = result; \
         }
