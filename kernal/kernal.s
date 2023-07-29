@@ -30,19 +30,19 @@
 			.define TERMINAL_CHAR_Y		48576
 			.define TERMINAL_STATUS		48577
 
-			.define FS_INITIAL_DIR		48578
-			.define FS_INIT_N_FREE_SECT_LO	FS_INITIAL_DIR + 992
-			.define FS_INIT_N_FREE_SECT_HI	FS_INITIAL_DIR + 993
-			.define FS_INIT_N_FREE_ENT	FS_INITIAL_DIR + 994
-			.define FS_INIT_N_FREE_DIR_LO	FS_INITIAL_DIR + 995
-			.define FS_INIT_N_FREE_DIR_HI	FS_INITIAL_DIR + 996
-			.define FS_INIT_N_FREE_VER_HI	FS_INITIAL_DIR + 997
-			.define FS_INIT_N_FREE_VER_LO	FS_INITIAL_DIR + 998
-			.define FS_INIT_IDENTIFIER	FS_INITIAL_DIR + 999
+			.define FS_CUR_DIR		48578 ; For initial directory and for current working directory
+			.define FS_DIR_N_FREE_SECT_LO	FS_CUR_DIR + 992
+			.define FS_DIR_N_FREE_SECT_HI	FS_CUR_DIR + 993
+			.define FS_DIR_N_FREE_ENT	FS_CUR_DIR + 994
+			.define FS_DIR_N_DIR_ENT_LO	FS_CUR_DIR + 995
+			.define FS_DIR_N_DIR_ENT_HI	FS_CUR_DIR + 996
+			.define FS_DIR_N_FREE_VER_HI	FS_CUR_DIR + 997
+			.define FS_DIR_N_FREE_VER_LO	FS_CUR_DIR + 998
+			.define FS_DIR_IDENTIFIER	FS_CUR_DIR + 999
 
-			.define FS_CUR_DIR		FS_INITIAL_DIR + 1024
-			.define FS_CUR_FILE		FS_CUR_DIR + 1024
+			.define FS_CUR_FILE		FS_CUR_DIR + 1024 ; For initial file descriptor and other file descriptors
 			.define MAX_FILES_PER_DIR	62
+			.define FILE_NOT_FOUND_IDX	132
 
 			.define LOGO_WIDTH 		10
 			.define LOGO_HEIGHT		10
@@ -141,7 +141,7 @@
 			jsr initialize_vfs			; Initialize virtual file system from disk 1
 			stz TERMINAL_STATUS
 .endproc
-
+			; Auto commands handling goes here
 .proc terminal
 			lda #%00000100				; Draw background, foreground, and enable hardware scroll
 			sta VIDEO_REG_STATUS			; Set status to above
@@ -601,9 +601,9 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; A - Disk the file system is on
 .proc initialize_vfs
 			pha					; Save the disk number
-			lda #.LOBYTE(FS_INITIAL_DIR)		; Load the low byte of the initial directory's address in RAM
+			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the initial directory's address in RAM
 			sta DISK_BUFF_ADDR_LO			; Store it to the right byte
-			lda #.HIBYTE(FS_INITIAL_DIR)		; Load the higher byte of the initial directory's address in RAM
+			lda #.HIBYTE(FS_CUR_DIR)		; Load the higher byte of the initial directory's address in RAM
 			sta DISK_BUFF_ADDR_HI			; Store it to the right byte
 			stz DISK_SECTOR_LO			; Zero the lower byte of the sector index
 			stz DISK_SECTOR_HI			; Zero the higher byte of the sector index
@@ -615,9 +615,9 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 .endproc
 
 .proc vfs_list_directory
-			lda #.LOBYTE(FS_INITIAL_DIR)		; Lower byte of the first entry's address
+			lda #.LOBYTE(FS_CUR_DIR)		; Lower byte of the first entry's address
 			sta $5					; Store it
-			lda #.HIBYTE(FS_INITIAL_DIR)		; High byte of the first entry's address
+			lda #.HIBYTE(FS_CUR_DIR)		; High byte of the first entry's address
 			sta $6					; Store it
 			sei					; Disable interrupts
 			stz $0					; Zero temporary value 0, used as file index counter
@@ -646,22 +646,80 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 @no_nl:			iny					; Increment the Y coordinate
 			sty TERMINAL_CHAR_Y			; Store the Y coordinate
 			stz TERMINAL_CHAR_X			; Zero the X coordinate to go to the beginning of the next line
-@next:			lda $5					; Load in the current address
+@next:			inc $0
+			lda $0					
+			jsr vfs_dir_next_entry
+			cmp #FILE_NOT_FOUND_IDX			; Compare the A register to the maximum number of files per directory
+			beq @end				; If A > MAX_FILES_PER_DIR then finish
+@loop:			bra @print_dir_loop			; Otherwise, loop
+@end:			cli					; Enable interrupts
+			rts					; Return
+.endproc
+
+.proc vfs_find_file
+
+.endproc
+
+; A - Current file index
+; ($5) - Base address of the current entry
+; A - Returned 132 if there are no more entries to read.
+;     Otherwise it is the current file index
+.proc vfs_dir_next_entry
+			cmp #MAX_FILES_PER_DIR			; Have we read all files in the directory?
+			bne @next_entry				; If not, go to the next entry
+			lda #$01				; If so, set the disk number (TODO: Make this dynamic)
+			jsr vfs_next_dir			; Read in the next directory
+			bne @new_dir				; If it is not 0, we have a new directory
+			lda #FILE_NOT_FOUND_IDX			; Otherwise, just say no file was found
+			rts					; Return
+@new_dir:		lda #.LOBYTE(FS_CUR_DIR)		; We have a new directory, reset the low byte of the base address
+			sta $5					; Store it
+			lda #.HIBYTE(FS_CUR_DIR)		; Reset the high byte of the base address
+			sta $6					; Store it
+			lda #$00				; Reset the file index
+			rts					; Return
+@next_entry:		lda $5					; Load in the current address
 			sta $1					; Save the current address
 			clc					; Clear the carry flag for addition step
 			adc #$10				; Increment the address by 16, to go to the next entry
 			sta $5					; Store the incremented lower byte
 			cmp $1					; Compare the incremented lower byte to its previous value
-			bcs @high_inc_over			; If the new value is lower than the old one, we rolled over
+			bcs @end				; If the new value is lower than the old one, we rolled over
 			inc $6					; Since we rolled over, increment the higher byte
-@high_inc_over:		inc $0					; Increment the file index counter
-			lda $0					; Load the file index counter into the A register
-			cmp #MAX_FILES_PER_DIR			; Compare the A register to the maximum number of files per directory
-			bcs @end				; If A > MAX_FILES_PER_DIR then finish
-@loop:			bra @print_dir_loop			; Otherwise, loop
-@end:			cli					; Enable interrupts
+@end:			rts					; Return
+.endproc
+
+; A - Disk the file system is on
+; A - Returned 0 means there are no more directories
+.proc vfs_next_dir
+			pha					; Save the disk number
+			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the initial directory's address in RAM
+			sta DISK_BUFF_ADDR_LO			; Store it to the right byte
+			lda #.HIBYTE(FS_CUR_DIR)		; Load the higher byte of the initial directory's address in RAM
+			sta DISK_BUFF_ADDR_HI			; Store it to the right byte
+			phx					; Save the X register
+			lda #$00				; Zero it, if it remain 0 by @next_cmp, we have a new directory
+			lda FS_DIR_N_DIR_ENT_LO			; Load in the next link's low byte
+			sta DISK_SECTOR_LO			; Store it
+			bne @next_cmp				; If byte is not 0, then go to the higher byte
+			inx					; Otherwise increment X
+@next_cmp:		lda FS_DIR_N_DIR_ENT_HI			; Load in the next link's high byte
+			sta DISK_SECTOR_HI			; Store it
+			bne @read				; If the byte is not 0, then go onto read the directory
+			txa					; If the byte is 0, transfer X to A
+			bne @no_next_dir			; If the byte is 1, then there is not another directory
+@read:			plx					; Restore X
+			lda #$2					; Two sectors will be read
+			sta DISK_SECTOR_COUNT_LO		; Set the right byte
+			stz DISK_SECTOR_COUNT_HI		; Zero the higher byte
+			pla					; Restore the disk number
+			jmp read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
+@no_next_dir:		plx					; Restore X
+			pla					; Restore A
+			lda #$00				; Load error value
 			rts					; Return
 .endproc
+
 
 .proc terminal_handler
 			lda $3					; Load the current scancode
