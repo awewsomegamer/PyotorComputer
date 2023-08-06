@@ -138,7 +138,7 @@
 			stz TERMINAL_CHAR_X
 			stz TERMINAL_CHAR_Y
 			lda #$1					; Set disk number to 1
-			jsr initialize_vfs			; Initialize virtual file system from disk 1
+			jsr vfs_initialize			; Initialize virtual file system from disk 1
 			stz TERMINAL_STATUS
 .endproc
 			; Auto commands handling goes here
@@ -261,9 +261,35 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			lda #.HIBYTE(DIR_CMD)
 			sta $8
 			jsr cmp_str
-			bcc @compare_end
+			bcc @find_cmp
 
 			jsr vfs_list_directory
+
+@find_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
+			sta $5
+			lda #.HIBYTE(TERMINAL_BUFFER)
+			sta $6
+			lda #.LOBYTE(FIND_CMD)
+			sta $7
+			lda #.HIBYTE(FIND_CMD)
+			sta $8
+			jsr cmp_str
+			bcc @compare_end
+
+			lda #.LOBYTE(TERMINAL_BUFFER + 5)
+			sta $7
+			lda #.HIBYTE(TERMINAL_BUFFER + 5)
+			sta $8
+			jsr vfs_find_file
+
+			; clc
+			; adc 'A'
+			; ldx TERMINAL_CHAR_X
+			; ldy TERMINAL_CHAR_Y
+			; jsr putchar
+
+			; inc TERMINAL_CHAR_Y
+			; stz TERMINAL_CHAR_X
 
 @compare_end:		ply					; Restore Y
 			pla					; Restore A
@@ -599,7 +625,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 .endproc
 
 ; A - Disk the file system is on
-.proc initialize_vfs
+.proc vfs_initialize
 			pha					; Save the disk number
 			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the initial directory's address in RAM
 			sta DISK_BUFF_ADDR_LO			; Store it to the right byte
@@ -656,11 +682,51 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts					; Return
 .endproc
 
+; ($7) - Address to file name (zero terminated)
+; A - Returned as the file index or 132 if the file was not found
 .proc vfs_find_file
-
+			; Load initial directory
+			; Find a better solution for SFS 1.0 (for efficiency, consider caching parent directory listings)
+			lda #$1					; Disk number (make this dynamic)
+			jsr vfs_initialize			; Load initialization directory
+			lda #$00				; Load A with 0
+			pha					; Save A to the stack (our file index)
+			phy					; Save the Y register
+@compare_loop_start:	ldy #$00				; Zero the Y register, to read the first character
+@compare_loop:		cpy #14					; Compare the Y register to 14
+			beq @no_match				; If it is equal, we have reached the end of the string, no match
+			lda ($7), y				; Load the current character of the target name
+			cmp ($5), y				; Compare it to the current entry's name
+			bne @no_match				; If they are not equal, no match
+			cpy #13					; If they are equal, are we at the 13th character?
+			bne @compare_loop			; If not, go back to the compare loop
+			pla					; If so, restore A to the file index
+			bra @return				; Branch to the return statement
+@no_match:		pla					; Restore A
+			inc					; Increment A
+			jsr vfs_dir_next_entry			; Get the next entry
+			cmp #FILE_NOT_FOUND_IDX			; Have we read all entries?
+			beq @return				; If so, return
+			pha					; Save A register, going in for another loop
+			bra @compare_loop_start			; Go back to the loop starter
+@return:		ply 					; Restore Y register
+			rts					; Return
 .endproc
 
-; A - Current file index
+; A - File index
+; ($5) - Load address
+; Current dir should be the directory of the file
+; A - Returned as 0 for success
+.proc vfs_load_file
+.endproc
+
+; A - File index
+; ($5) - Address of the start of the data
+; A - Returned as 0 for success
+.proc vfs_save_file
+.endproc
+
+; A - Current file index (increment before calling)
 ; ($5) - Base address of the current entry
 ; A - Returned 132 if there are no more entries to read.
 ;     Otherwise it is the current file index
@@ -686,6 +752,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			cmp $1					; Compare the incremented lower byte to its previous value
 			bcs @end				; If the new value is lower than the old one, we rolled over
 			inc $6					; Since we rolled over, increment the higher byte
+			inc					; Increment file index
 @end:			rts					; Return
 .endproc
 
@@ -821,12 +888,18 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ASZ_LOGO_BMP: 		.byte 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 192, 128, 255, 255, 255, 0, 0, 255, 255, 255, 15, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 0, 0, 0, 0, 0, 0, 48, 120, 252, 252, 3, 1, 1, 0, 0, 255, 255, 255, 255, 127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 240, 224, 192, 128, 128, 1, 3, 7, 15, 15, 254, 255, 255, 255, 255, 0, 0, 128, 192, 192, 63, 31, 15, 7, 3, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 240, 0, 0, 0, 0, 1, 31, 63, 127, 255, 255, 255, 255, 255, 255, 255, 224, 240, 248, 252, 254, 3, 1, 0, 0, 0, 255, 255, 255, 127, 63, 255, 255, 255, 255, 255, 255, 255, 224, 224, 255, 255, 255, 0, 0, 254, 224, 192, 0, 0, 0, 1, 1, 0, 0, 31, 255, 255, 0, 3, 255, 255, 255, 255, 255, 255, 255, 255, 128, 0, 255, 255, 255, 0, 0, 255, 255, 255, 7, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 252, 248, 240, 224, 0, 0, 0, 0, 1, 63, 63, 127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 240, 248, 248, 252, 254, 1, 0, 0, 0, 0, 255, 255, 127, 63, 31, 255, 255, 255, 255, 255, 192, 192, 255, 255, 255, 3, 7, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 128, 255, 255, 255, 15, 15, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
 COULDNT_RUN_PROGRAM:	.asciiz "Could not run the program, does not start with the signature $ECEC"
 ALPHABET:		.asciiz "    ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
-			.byte $00, $00, $00, $00, $00, $00, $00
+			.byte $00, $00, $00, $00
+			.asciiz "-=[]\"
+			.byte $00 ; SEMI-COLON
+			.asciiz "'`,./"
+			.byte $00 ; Caps lock
+
 HEX_CHARS:		.asciiz "0123456789ABCDEF"
 FG_CMD:			.asciiz "FG"
 BG_CMD:			.asciiz "BG"
 JUMP_CMD:		.asciiz "JUMP"
 DIR_CMD:		.asciiz "DIR"
+FIND_CMD:		.asciiz "FIND"
 CMD_NO_MATCH:		.asciiz "Command parameters insufficient"
 
 .segment "VECTORS"

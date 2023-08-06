@@ -141,8 +141,6 @@ void options() {
 			
 			FILE *file;
 			for (int i = 0; i < MAX_FILES_PER_DIR; i++) {
-				printf("%d %d\n", i, ((init->entries[i].attributes >> 6) & 1));
-
 				if (((init->entries[i].attributes >> 6) & 1) == 1) {
 					size_t size = 0;
 					uint8_t *buffer = get_file_data(i, &size);
