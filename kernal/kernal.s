@@ -282,14 +282,14 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			sta $8
 			jsr vfs_find_file
 
-			; clc
-			; adc 'A'
-			; ldx TERMINAL_CHAR_X
-			; ldy TERMINAL_CHAR_Y
-			; jsr putchar
+			clc
+			adc #'A'
+			ldx TERMINAL_CHAR_X
+			ldy TERMINAL_CHAR_Y
+			jsr putchar
 
-			; inc TERMINAL_CHAR_Y
-			; stz TERMINAL_CHAR_X
+			inc TERMINAL_CHAR_Y
+			stz TERMINAL_CHAR_X
 
 @compare_end:		ply					; Restore Y
 			pla					; Restore A
@@ -641,11 +641,11 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 .endproc
 
 .proc vfs_list_directory
+			sei					; Disable interrupts
 			lda #.LOBYTE(FS_CUR_DIR)		; Lower byte of the first entry's address
 			sta $5					; Store it
 			lda #.HIBYTE(FS_CUR_DIR)		; High byte of the first entry's address
 			sta $6					; Store it
-			sei					; Disable interrupts
 			stz $0					; Zero temporary value 0, used as file index counter
 @print_dir_loop:	ldy #$0F				; Load offset with 15, to check attributes block
 			lda ($5), y				; Load in the attribute byte
@@ -685,42 +685,43 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; ($7) - Address to file name (zero terminated)
 ; A - Returned as the file index or 132 if the file was not found
 .proc vfs_find_file
-			; Load initial directory
-			; Find a better solution for SFS 1.0 (for efficiency, consider caching parent directory listings)
 			lda #$1					; Disk number (make this dynamic)
 			jsr vfs_initialize			; Load initialization directory
-			lda #$00				; Load A with 0
-			pha					; Save A to the stack (our file index)
+			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the first entry's base
+			sta $5					; Store it
+			lda #.HIBYTE(FS_CUR_DIR)		; Load the high byte of the first entry's base
+			sta $6					; Store it
 			phy					; Save the Y register
+			stz $0					; Temporary one is is the file index
 @compare_loop_start:	ldy #$00				; Zero the Y register, to read the first character
-@compare_loop:		cpy #14					; Compare the Y register to 14
+@compare_loop:		cpy #13					; Compare the Y register to 14
 			beq @no_match				; If it is equal, we have reached the end of the string, no match
-			lda ($7), y				; Load the current character of the target name
-			cmp ($5), y				; Compare it to the current entry's name
+			lda ($5), y				; Load the current character of the target name
+			cmp ($7), y				; Compare it to the current entry's name
 			bne @no_match				; If they are not equal, no match
-			cpy #13					; If they are equal, are we at the 13th character?
+			iny					; Increment to the next character
+			cpy #12					; Have we read all characters in the name?
 			bne @compare_loop			; If not, go back to the compare loop
-			pla					; If so, restore A to the file index
+			lda $0					; If so, load A with the file index
 			bra @return				; Branch to the return statement
-@no_match:		pla					; Restore A
-			inc					; Increment A
+@no_match:		inc $0					; Increment the file index
+			lda $0					; Load the file index
 			jsr vfs_dir_next_entry			; Get the next entry
 			cmp #FILE_NOT_FOUND_IDX			; Have we read all entries?
 			beq @return				; If so, return
-			pha					; Save A register, going in for another loop
 			bra @compare_loop_start			; Go back to the loop starter
 @return:		ply 					; Restore Y register
 			rts					; Return
 .endproc
 
-; A - File index
+; ($7) - Address to file name (zero terminated)
 ; ($5) - Load address
 ; Current dir should be the directory of the file
 ; A - Returned as 0 for success
 .proc vfs_load_file
 .endproc
 
-; A - File index
+; ($7) - Address to file name (zero terminated)
 ; ($5) - Address of the start of the data
 ; A - Returned as 0 for success
 .proc vfs_save_file
