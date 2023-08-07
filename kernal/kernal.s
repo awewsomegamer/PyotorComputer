@@ -745,7 +745,8 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta $6					; Store it
 			lda #$00				; Reset the file index
 			rts					; Return
-@next_entry:		lda $5					; Load in the current address
+@next_entry:		pha					; Save file index
+			lda $5					; Load in the current address
 			sta $1					; Save the current address
 			clc					; Clear the carry flag for addition step
 			adc #$10				; Increment the address by 16, to go to the next entry
@@ -753,9 +754,12 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			cmp $1					; Compare the incremented lower byte to its previous value
 			bcs @end				; If the new value is lower than the old one, we rolled over
 			inc $6					; Since we rolled over, increment the higher byte
+			pla					; Restore file index
 			inc					; Increment file index
 @end:			rts					; Return
 .endproc
+
+.proc 
 
 ; A - Disk the file system is on
 ; A - Returned 0 means there are no more directories
