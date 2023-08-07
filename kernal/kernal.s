@@ -138,7 +138,7 @@
 			stz TERMINAL_CHAR_X
 			stz TERMINAL_CHAR_Y
 			lda #$1					; Set disk number to 1
-			jsr vfs_initialize			; Initialize virtual file system from disk 1
+			jsr fs_initialize			; Initialize virtual file system from disk 1
 			stz TERMINAL_STATUS
 .endproc
 			; Auto commands handling goes here
@@ -263,7 +263,7 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			jsr cmp_str
 			bcc @find_cmp
 
-			jsr vfs_list_directory
+			jsr fs_list_directory
 
 @find_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
 			sta $5
@@ -280,7 +280,7 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			sta $7
 			lda #.HIBYTE(TERMINAL_BUFFER + 5)
 			sta $8
-			jsr vfs_find_file
+			jsr fs_find_file
 
 			clc
 			adc #'A'
@@ -625,7 +625,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 .endproc
 
 ; A - Disk the file system is on
-.proc vfs_initialize
+.proc fs_initialize
 			pha					; Save the disk number
 			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the initial directory's address in RAM
 			sta DISK_BUFF_ADDR_LO			; Store it to the right byte
@@ -640,13 +640,13 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			jmp read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
 .endproc
 
-.proc vfs_list_directory
+.proc fs_list_directory
 			sei					; Disable interrupts
 			lda #.LOBYTE(FS_CUR_DIR)		; Lower byte of the first entry's address
 			sta $5					; Store it
 			lda #.HIBYTE(FS_CUR_DIR)		; High byte of the first entry's address
 			sta $6					; Store it
-			stz $0					; Zero temporary value 0, used as file index counter
+			stz $0					; Zero file index
 @print_dir_loop:	ldy #$0F				; Load offset with 15, to check attributes block
 			lda ($5), y				; Load in the attribute byte
 			and #%11000000				; Select the D and E flags
@@ -672,11 +672,11 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 @no_nl:			iny					; Increment the Y coordinate
 			sty TERMINAL_CHAR_Y			; Store the Y coordinate
 			stz TERMINAL_CHAR_X			; Zero the X coordinate to go to the beginning of the next line
-@next:			inc $0
-			lda $0					
-			jsr vfs_dir_next_entry
+@next:			lda $0					; Load file index
+			jsr fs_dir_next_entry			; Read in the next entry
 			cmp #FILE_NOT_FOUND_IDX			; Compare the A register to the maximum number of files per directory
 			beq @end				; If A > MAX_FILES_PER_DIR then finish
+			sta $0					; Save file index
 @loop:			bra @print_dir_loop			; Otherwise, loop
 @end:			cli					; Enable interrupts
 			rts					; Return
@@ -684,15 +684,15 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 
 ; ($7) - Address to file name (zero terminated)
 ; A - Returned as the file index or 132 if the file was not found
-.proc vfs_find_file
+.proc fs_find_file
 			lda #$1					; Disk number (make this dynamic)
-			jsr vfs_initialize			; Load initialization directory
+			jsr fs_initialize			; Load initialization directory
 			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the first entry's base
 			sta $5					; Store it
 			lda #.HIBYTE(FS_CUR_DIR)		; Load the high byte of the first entry's base
 			sta $6					; Store it
 			phy					; Save the Y register
-			stz $0					; Temporary one is is the file index
+			stz $0					; Zero file index
 @compare_loop_start:	ldy #$00				; Zero the Y register, to read the first character
 @compare_loop:		cpy #13					; Compare the Y register to 14
 			beq @no_match				; If it is equal, we have reached the end of the string, no match
@@ -702,40 +702,41 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			iny					; Increment to the next character
 			cpy #12					; Have we read all characters in the name?
 			bne @compare_loop			; If not, go back to the compare loop
-			lda $0					; If so, load A with the file index
+			lda $0					; Load file index
 			bra @return				; Branch to the return statement
-@no_match:		inc $0					; Increment the file index
-			lda $0					; Load the file index
-			jsr vfs_dir_next_entry			; Get the next entry
+@no_match:		lda $0					; Load file index
+			jsr fs_dir_next_entry			; Get the next entry
 			cmp #FILE_NOT_FOUND_IDX			; Have we read all entries?
 			beq @return				; If so, return
+			sta $0					; Save file index
 			bra @compare_loop_start			; Go back to the loop starter
 @return:		ply 					; Restore Y register
 			rts					; Return
 .endproc
 
+
 ; ($7) - Address to file name (zero terminated)
 ; ($5) - Load address
 ; Current dir should be the directory of the file
 ; A - Returned as 0 for success
-.proc vfs_load_file
+.proc fs_load_file
 .endproc
 
 ; ($7) - Address to file name (zero terminated)
 ; ($5) - Address of the start of the data
 ; A - Returned as 0 for success
-.proc vfs_save_file
+.proc fs_save_file
 .endproc
 
-; A - Current file index (increment before calling)
+; A - Current file index
 ; ($5) - Base address of the current entry
 ; A - Returned 132 if there are no more entries to read.
 ;     Otherwise it is the current file index
-.proc vfs_dir_next_entry
+.proc fs_dir_next_entry
 			cmp #MAX_FILES_PER_DIR			; Have we read all files in the directory?
 			bne @next_entry				; If not, go to the next entry
 			lda #$01				; If so, set the disk number (TODO: Make this dynamic)
-			jsr vfs_next_dir			; Read in the next directory
+			jsr fs_next_dir			; Read in the next directory
 			bne @new_dir				; If it is not 0, we have a new directory
 			lda #FILE_NOT_FOUND_IDX			; Otherwise, just say no file was found
 			rts					; Return
@@ -754,16 +755,14 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			cmp $1					; Compare the incremented lower byte to its previous value
 			bcs @end				; If the new value is lower than the old one, we rolled over
 			inc $6					; Since we rolled over, increment the higher byte
-			pla					; Restore file index
+@end:			pla					; Restore file index
 			inc					; Increment file index
-@end:			rts					; Return
+			rts					; Return
 .endproc
-
-.proc 
 
 ; A - Disk the file system is on
 ; A - Returned 0 means there are no more directories
-.proc vfs_next_dir
+.proc fs_next_dir
 			pha					; Save the disk number
 			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the initial directory's address in RAM
 			sta DISK_BUFF_ADDR_LO			; Store it to the right byte
