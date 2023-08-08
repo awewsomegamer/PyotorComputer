@@ -1,7 +1,7 @@
 #ifndef CGA_H
 #define CGA_H
 
-#include <global.h>
+#include "global.h"
 #include <stdint.h>
 
 #define VRAM_WIDTH 320

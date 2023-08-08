@@ -58,16 +58,16 @@
 			stz VIDEO_REG_BG			; Set background to black
 			ldx #$0					;
 			ldy #$0					;
-			lda #$1					;
+			lda #$FF					;
 @draw_bg:		jsr put_pixel				;
-			lda $0					;
-			txa					;
-			adc $0					;
-			tya					;
-			sbc $0					;
-			asl a					;
-			adc $0					;
-			sta $0					;
+			; lda $0					;
+			; txa					;
+			; adc $0					;
+			; tya					;
+			; sbc $0					;
+			; rol a					; ASL A also produces a pretty cool result
+			; adc $0					;
+			; sta $0					;
 			inx					;
 			bne @bg_over				;
 			iny					;
@@ -135,11 +135,11 @@
 			ldx #$FF				; Set X to white color
 			stx VIDEO_REG_FG			; Set foreground to white
 			cli					; Enable interrupts
-			stz TERMINAL_CHAR_X
-			stz TERMINAL_CHAR_Y
+			stz TERMINAL_CHAR_X			; Zero terminal X coordinate
+			stz TERMINAL_CHAR_Y			; Zero terminal Y coordinate
 			lda #$1					; Set disk number to 1
 			jsr fs_initialize			; Initialize virtual file system from disk 1
-			stz TERMINAL_STATUS
+			stz TERMINAL_STATUS			; Zero status
 .endproc
 			; Auto commands handling goes here
 .proc terminal
@@ -509,26 +509,33 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ;       DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
 ;       apropriate values.
 .proc read_disk
+			php					; Push flags
+			cli					; Enable interrupts
 			pha					; Save A
 			lda #$1					; Load A with 1
 			sta DISK_REG_STATUS			; Put it in the disk status #%00000001
 			pla 					; Restore A
 @left_shift:		dec 					; Decrement A register
 			beq @ls_over 				; A is zero, we are done
-			rol DISK_REG_STATUS 			; Bit shift disk bound bit left by 1
+			asl DISK_REG_STATUS 			; Bit shift disk bound bit left by 1
 			bra @left_shift 			; Loop
-@ls_over:		lda #$80 				; Set D1
+@ls_over:		lda DISK_REG_STATUS			; Save the value (we need it for later)
+			asl a					; Shift left
+			asl a					; Shift left
+			asl a					; Shift left
+			pha					; Push the value to stack
+			lda #$80 				; Set D1
 			ora DISK_REG_STATUS			; Or D1 together with bound bit
 			sta DISK_REG_STATUS			; Store final status
-			; TODO - Add code to wait for the
-			;	 disk operation to finish.
-
-			; TODO - Add code to error check.
-			; 	 If there was an error: print
-			; 	 the code field in hex onto
-			;	 the screen.
-
-			rts
+@wait:			wai					; Wait for disk IRQ
+			pla
+			pha
+			and DISK_REG_STATUS
+			beq @wait				; Has the disk been marked as completed? If not, wait
+			pla
+			lda DISK_REG_CODE			; Load A with the code
+			plp 					; Restore flags
+			rts					; Return
 .endproc
 
 ; A   - Disk to read (values must be: 1,2, or 3), contents
@@ -625,6 +632,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 .endproc
 
 ; A - Disk the file system is on
+; A - Returned 0 for success
 .proc fs_initialize
 			pha					; Save the disk number
 			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the initial directory's address in RAM
@@ -714,6 +722,14 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts					; Return
 .endproc
 
+; ($5) - Sector number of the file
+; A - Returned 0 for success
+.proc fs_load_file_init
+.endproc
+
+; A - Returned 0 for success
+.proc fs_load_next_file_desc
+.endproc
 
 ; ($7) - Address to file name (zero terminated)
 ; ($5) - Load address

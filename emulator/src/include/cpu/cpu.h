@@ -1,7 +1,7 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include <global.h>
+#include "../global.h"
 
 #define IO_VIDEO_MASK (1 << 0)
 

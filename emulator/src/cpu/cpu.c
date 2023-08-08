@@ -108,13 +108,18 @@ void call_interrupt() {
 
         if (!pin_NMI) {
                 // NMI
+                waiting = 0;
                 pc = PTR(0xFFFA) | (PTR(0xFFFB) << 8);
                 pin_NMI = 1; // Not the correct way to do it, but desired effect is achieved
         } else if (!pin_IRQ && !register_p.I) {
                 // IRQ
+                waiting = 0;
                 pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
         } else if (!pin_RES) {
                 // Reset
+                stopped = 0;
+                waiting = 0;
+
                 pc = PTR(0xFFFC) | (PTR(0xFFFD) << 8);
                 pin_RES = 1; // Not the correct way to do it, but desired effect is achieved
         }
@@ -125,17 +130,15 @@ void call_interrupt() {
 
 // Preform one cycle on the 6502
 void tick_65C02() {
-        if ((waiting && ((pin_IRQ || register_p.I) && pin_NMI && pin_RES)) || (stopped && pin_RES)) {
+        if ((!pin_IRQ && !register_p.I) || !pin_NMI || !pin_RES) // NMI, RES, or IRQ pins went low, check if IRQs are unmasked
+                call_interrupt();
+
+        if (waiting || stopped) {
                 // We are waiting
                 cycle_count++; // Should this be done this way?
                 return;
         }
 
-        stopped = 0;
-        waiting = 0;
-
-        if ((!pin_IRQ && !register_p.I) || !pin_NMI || !pin_RES) // NMI, RES, or IRQ pins went low, check if IRQs are unmasked
-                call_interrupt();
 
         uint8_t opcode = NEXT_BYTE;
         

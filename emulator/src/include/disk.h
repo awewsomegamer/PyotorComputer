@@ -1,7 +1,7 @@
 #ifndef DISK_H
 #define DISK_H
 
-#include <global.h>
+#include "global.h"
 
 #define SECTOR_SIZE 512
 

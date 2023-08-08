@@ -1,11 +1,14 @@
-#include <ctrl_reg.h>
-#include <ram.h>
+#include "include/global.h"
+#include "include/ctrl_reg.h"
+#include "include/ram.h"
+#include <SDL2/SDL_timer.h>
 #include <stdio.h>
 #include <time.h>
-#include <video.h>
-#include <audio.h>
-#include <disk.h>
-#include <cpu/cpu.h>
+#include "include/scheduler.h"
+#include "include/video.h"
+#include "include/audio.h"
+#include "include/disk.h"
+#include "include/cpu/cpu.h"
 
 struct control_register {
         uint16_t address;        // Address 								 @ 48512 -> 48513
@@ -145,6 +148,10 @@ struct disk_register {
 	
 */
 
+void send_irq() {
+	pin_IRQ = 0; // Call interrupt
+}
+
 void tick_control_register() {
 	struct control_register *reg = (struct control_register *)(general_memory + KERNAL_DAT_BASE); // Temporary "KERNAL_DAT_BASE"
 	
@@ -175,7 +182,7 @@ void tick_control_register() {
 		case 0x01: { // Sprite Mode (40x40)
 			// 8 bytes wide, 5 bytes tall
 			video_draw_sprite(reg->address, reg->data, reg->foreground, reg->background, 
-					  ((reg->status >> 4) & 1) | (((reg->status >> 3) & 1) << 1) | (((reg->status >> 2) & 1 ) << 2));
+					((reg->status >> 4) & 1) | (((reg->status >> 3) & 1) << 1) | (((reg->status >> 2) & 1 ) << 2));
 
 			break;
 		}
@@ -194,7 +201,7 @@ void tick_control_register() {
 		case 0x03: // 40x12 Terminal Mode
 			// Address behaves like index into screen: y * 40 + x
 			video_draw_character(reg->address, reg->data, reg->foreground, reg->background, 
-					     ((reg->status >> 4) & 1) | (((reg->status >> 3) & 1) << 1) | (((reg->status >> 2) & 1 ) << 2));
+					((reg->status >> 4) & 1) | (((reg->status >> 3) & 1) << 1) | (((reg->status >> 2) & 1 ) << 2));
 
 			break;
 		
@@ -237,21 +244,21 @@ void tick_control_register() {
 			video_clear_character_buffer();
 
 			break;
-
 		}
 	}
 
 	struct disk_register *disk_reg = (struct disk_register*)(general_memory + KERNAL_DAT_BASE + sizeof(struct control_register));
+
 	if ((disk_reg->status >> 7) & 1) {
 		disk_reg->code = disk_operation_buffer(disk_reg->buffer_length, disk_reg->buffer_address,
-						       disk_reg->status & 0b111, disk_reg->sector, (disk_reg->status >> 6) & 1);
+						disk_reg->status & 0b111, disk_reg->sector, (disk_reg->status >> 6) & 1);
 
 		disk_reg->status &= 0b01000000; // Clear all bits except for R/W
 
 		if (disk_reg->code >= 0 && disk_reg->code <= 2)
-			disk_reg->status |= disk_reg->code << 3;
-
-		pin_IRQ = 0; // Call interrupt to notify CPU disk operation is done (code and status fields are set)
+			disk_reg->status |= 8 << disk_reg->code;
+		
+		schedule_function(&send_irq, SDL_GetTicks64() + 250);
 	}
 
 	// Interrupt Acknowledgement Byte contains new data

@@ -1,7 +1,7 @@
 #ifndef RAM_H
 #define RAM_H
 
-#include <global.h>
+#include "global.h"
 
 #define PAGE_SIZE 0x100
 #define KB_16 0x3E80
