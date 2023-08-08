@@ -58,16 +58,16 @@
 			stz VIDEO_REG_BG			; Set background to black
 			ldx #$0					;
 			ldy #$0					;
-			lda #$FF					;
+			lda #$1					;
 @draw_bg:		jsr put_pixel				;
-			; lda $0					;
-			; txa					;
-			; adc $0					;
-			; tya					;
-			; sbc $0					;
-			; rol a					; ASL A also produces a pretty cool result
-			; adc $0					;
-			; sta $0					;
+			lda $0					;
+			txa					;
+			adc $0					;
+			tya					;
+			sbc $0					;
+			rol a					; ASL A also produces a pretty cool result
+			adc $0					;
+			sta $0					;
 			inx					;
 			bne @bg_over				;
 			iny					;
@@ -528,12 +528,12 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			ora DISK_REG_STATUS			; Or D1 together with bound bit
 			sta DISK_REG_STATUS			; Store final status
 @wait:			wai					; Wait for disk IRQ
-			pla
-			pha
-			and DISK_REG_STATUS
+			pla					; Pull the mask off the stack
+			pha					; Push it back just in case
+			and DISK_REG_STATUS			; And it with the status
 			beq @wait				; Has the disk been marked as completed? If not, wait
-			pla
-			lda DISK_REG_CODE			; Load A with the code
+			pla					; Pull the just in case mask off
+			lda DISK_REG_CODE			; Load A with the return code
 			plp 					; Restore flags
 			rts					; Return
 .endproc
@@ -544,6 +544,8 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ;       DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
 ;       apropriate values.
 .proc write_disk
+			php					; Push flags
+			cli					; Enable interrupts
 			pha					; Save A
 			lda #$1					; Load A with 1
 			sta DISK_REG_STATUS			; Put it in the disk status #%00000001
@@ -552,18 +554,23 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			beq @ls_over 				; A is zero, we are done
 			rol DISK_REG_STATUS 			; Bit shift disk bound bit left by 1
 			bra @left_shift 			; Loop
-@ls_over:		lda #$C0 				; Set D1 | R/W
+@ls_over:		lda DISK_REG_STATUS			; Save the value (we need it for later)
+			asl a					; Shift left
+			asl a					; Shift left
+			asl a					; Shift left
+			pha					; Push the value to stack
+			lda #$C0 				; Set D1 | R/W
 			ora DISK_REG_STATUS			; Or D1 together with bound bit
 			sta DISK_REG_STATUS			; Store final status
-			; TODO - Add code to wait for the
-			;	 disk operation to finish.
-
-			; TODO - Add code to error check.
-			; 	 If there was an error: print
-			; 	 the code field in hex onto
-			;	 the screen.
-
-			rts					; Return
+@wait:			wai					; Wait for disk IRQ
+			pla					; Pull the mask off the stack
+			pha					; Push it back just in case
+			and DISK_REG_STATUS			; And it with the status
+			beq @wait				; Has the disk been marked as completed? If not, wait
+			pla					; Pull the just in case mask off
+			lda DISK_REG_CODE			; Load A with the return code
+			plp 					; Restore flags
+			rts
 .endproc
 
 ; A   - Disk to read (values must be: 1,2, or 3), contents
