@@ -45,20 +45,6 @@ void *emulate_thread(void *arg) {
                         cycle_count = 0;
                         last_tick_base = SDL_GetTicks64();
                         last_second = time(NULL);
-
-                        // for (int i = 0; i < 6; i++)
-                        //         printf("%02X ", *(general_memory + 5 + i));
-                        // printf("\n-----------------------\n");
-
-                        // for (int i = 0; i < 16; i++)
-                        //         printf("%02X ", *(general_memory + i + 0x400));
-
-                        // printf(" :: ");
-
-                        for (int i = 0; i < 16; i++)
-                                printf("%02X ", *(general_memory + i + 48578 + 1024));
-        
-                        printf("\n");
                 }
         }
 

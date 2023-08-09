@@ -53,10 +53,13 @@ void file_system_editing() {
 				free(new_name);
 			}
 
-			if (index < MAX_FILES_PER_DIR)
+			if (index < MAX_FILES_PER_DIR) {
 				strncpy(init->entries[index].name, new_name, 13);
-			else
+				write_to_fs(init, 0);
+			} else {
 				strncpy(current_dir_list->entries[index - MAX_FILES_PER_DIR].name, new_name, 13);
+				write_to_fs(current_dir_list, current_dir_list_sector * SECTOR_SIZE);
+			}
 
 			printf("Renamed file %s to %s\n", file_name, new_name);
 			free(file_name);

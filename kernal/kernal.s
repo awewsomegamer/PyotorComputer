@@ -876,9 +876,9 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 
 			jsr memcpy				; Memcpy
 
-			; jsr fs_load_next_file_desc
-			; beq @return
-			; bra @loop
+			jsr fs_load_next_file_desc
+			beq @return
+			bra @loop
 @return:		rts
 .endproc
 
