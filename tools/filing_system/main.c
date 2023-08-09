@@ -18,7 +18,7 @@ const uint8_t version_low = 0;
 const char *identifier = "SFS ";
 
 void file_system_editing() {
-	printf("File system editting options:\n1) Add file\n2) Update file\n3) Delete file\n4) Add directory of files\n");
+	printf("File system editting options:\n1) Add file\n2) Update file\n3) Delete file\n4) Rename a file\n5) Add directory of files\n");
 	
 	for (;;) {
 		char choice = get_char();
@@ -36,10 +36,38 @@ void file_system_editing() {
 			delete_file(NULL);
 			goto fs_edit_cycle_complete;
 
-		case '4':
+		case '4': {
+			printf("Enter name of file to rename: ");
+			char *file_name = malloc(512);
+			scanf("%s", file_name);
+			
+			printf("Enter the new name of file: ");
+			char *new_name = malloc(512);
+			scanf("%s", new_name);
+
+			uint8_t index = find_file(file_name);
+
+			if (index == FILE_NOT_FOUND) {
+				printf("Unable to find file %s\n", file_name);
+				free(file_name);
+				free(new_name);
+			}
+
+			if (index < MAX_FILES_PER_DIR)
+				strncpy(init->entries[index].name, new_name, 13);
+			else
+				strncpy(current_dir_list->entries[index - MAX_FILES_PER_DIR].name, new_name, 13);
+
+			printf("Renamed file %s to %s\n", file_name, new_name);
+			free(file_name);
+			free(new_name);
+
+			goto fs_edit_cycle_complete;
+		}
+
+		case '5':
 			add_files_in_dir();
 			goto fs_edit_cycle_complete;
-
 		}
 	}
 

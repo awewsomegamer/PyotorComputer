@@ -287,18 +287,19 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			jsr cmp_str
 			bcc @compare_end
 
+			lda #.LOBYTE($400)
+			sta $5
+			lda #.HIBYTE($400)
+			sta $6
 			lda #.LOBYTE(TERMINAL_BUFFER + 5)
 			sta $7
 			lda #.HIBYTE(TERMINAL_BUFFER + 5)
 			sta $8
-			jsr fs_find_file
-
-			lda #$1
-			jsr fs_load_file_init
+			jsr fs_load_file
 			
-			lda #.LOBYTE(FS_CUR_FILE)
+			lda #.LOBYTE($400)
 			sta $5
-			lda #.HIBYTE(FS_CUR_FILE)
+			lda #.HIBYTE($400)
 			sta $6
 			ldx TERMINAL_CHAR_X
 			ldy TERMINAL_CHAR_Y
@@ -589,6 +590,43 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts
 .endproc
 
+; $5 - Destination, incremented to ($5) + ($7)
+; $7 - Source, incremented to ($7) + ($9)
+; $9 - Byte count, decremented to 0
+.proc memcpy
+			pha					; Save A register
+@loop:			phx					; Save X register
+			ldx #$00				; Load X with 0
+			lda $9					; Load A with the low byte of the counter
+			bne @cmp_low_over			; If the low byte is not 0, then jump over
+			inx					; Otherwise, increment X
+@cmp_low_over:		lda $A					; Load A with the high byte of the counter
+			bne @cmp_high_over			; If the high byte is not 0, then jump over
+			txa					; Otherwise, transfer X to A to update flags
+			bne @complete				; If X wasn't 0 (incremented in previous step) then we are done
+@cmp_high_over:		plx					; Otherwise, pull X off the stack
+
+			lda ($7)				; Load in the current source byte
+			sta ($5)				; Store it in the current destination byte
+			
+			dec $9					; Decrement lower byte of counter
+			lda $9					; Load it
+			cmp #$FF				; Compare it to see if it rolled over
+			bne @dec_low_over_9			; If not, jump over
+			dec $A					; Otherwise, decrement high byte
+@dec_low_over_9:	inc $7					; Increment low byte of source
+			bne @inc_low_over_7			; If not, jump over
+			inc $8					; Otherwise, increment high byte
+@inc_low_over_7:	inc $5					; Increment lower byte of destination
+			bne @inc_low_over_5			; If not, jump over
+			dec $6					; Otherwise increment high byte
+@inc_low_over_5:	bra @loop				; Loop
+
+@complete:		plx
+			pla
+			rts
+.endproc
+
 ; A   - Disk to read (values must be: 1,2, or 3), contents
 ;       are not preserved.
 ; MEM - Bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI should be set in
@@ -750,35 +788,98 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; ($5) - Base address of file entry
 ; A - Returned 0 for success
 .proc fs_load_file_init
-			pha
-			phy
-			ldy #FS_FILE_ENTRY_SECT_LO
-			lda ($5), y
-			sta DISK_SECTOR_LO
-			ldy #FS_FILE_ENTRY_SECT_HI
-			lda ($5), y
-			sta DISK_SECTOR_HI
-			stz DISK_SECTOR_COUNT_HI
-			lda #$2
-			sta DISK_SECTOR_COUNT_LO
-			lda #.LOBYTE(FS_CUR_FILE)
-			sta DISK_BUFF_ADDR_LO
-			lda #.HIBYTE(FS_CUR_FILE)
-			sta DISK_BUFF_ADDR_HI
-			ply
-			pla
-			jmp read_disk
+			pha					; Save disk number
+			phy					; Save Y register
+			ldy #FS_FILE_ENTRY_SECT_LO		; Load in the offset for sector low
+			lda ($5), y				; Get the low byte
+			sta DISK_SECTOR_LO			; Store it in the disk register
+			ldy #FS_FILE_ENTRY_SECT_HI		; Load in the offset for sector high
+			lda ($5), y				; Get the high byte
+			sta DISK_SECTOR_HI			; Store it in the disk register
+			stz DISK_SECTOR_COUNT_HI		; Zero the sector count high byte
+			lda #$2					; Load A with 2 for the lower byte
+			sta DISK_SECTOR_COUNT_LO		; Set the lower byte of the sector count
+			lda #.LOBYTE(FS_CUR_FILE)		; Load the low byte of where the disk should be read to
+			sta DISK_BUFF_ADDR_LO			; Store it
+			lda #.HIBYTE(FS_CUR_FILE)		; Load the high byte of where the disk should be read to
+			sta DISK_BUFF_ADDR_HI			; Store it
+			ply					; Restore Y register
+			pla					; Restore disk number
+			jmp read_disk				; Read the disk
 .endproc
 
-; A - Returned 0 for success
+; A - Disk the file is on (same as the one used for fs_initialize)
+; A - Returned 0 for no new descriptors
 .proc fs_load_next_file_desc
+			pha					; Save disk number
+			phx					; Save the X register
+			ldx #$00				; Zero it
+			lda FS_FILE_N_DESC_LO			; Get the low byte
+			sta DISK_SECTOR_LO			; Store it in the disk register
+			bne @over				; This byte is not 0, skip over the next instruction
+			inx					; This byte is 0, increment the zero counter
+@over:			lda FS_FILE_N_DESC_HI			; Get the low byte
+			sta DISK_SECTOR_HI			; Store it in the disk register
+			bne @read_disk				; The low byte is not zero, thus we can read the disk
+			txa					; Transfer X to A to set the flags
+			bne @no_new_sector			; If X was 1, then there is no new sector to be read
+@read_disk:		stz DISK_SECTOR_COUNT_HI		; Zero the sector count high byte
+			lda #$2					; Load A with 2 for the lower byte
+			sta DISK_SECTOR_COUNT_LO		; Set the lower byte of the sector count
+			lda #.LOBYTE(FS_CUR_FILE)		; Load the low byte of where the disk should be read to
+			sta DISK_BUFF_ADDR_LO			; Store it
+			lda #.HIBYTE(FS_CUR_FILE)		; Load the high byte of where the disk should be read to
+			sta DISK_BUFF_ADDR_HI			; Store it
+			plx					; Restore the X register
+			pla					; Restore disk number
+			jmp read_disk				; Read the disk
+@no_new_sector:		plx					; Restore the X register
+			pla					; Pull A off the stack
+			lda #$00				; Return value is set to 0
+			rts					; Return
 .endproc
 
-; ($7) - Address to file name (zero terminated)
 ; ($5) - Load address
+; ($7) - Address to file name
 ; Current dir should be the directory of the file
 ; A - Returned as 0 for success
 .proc fs_load_file
+			lda $5					; Get the low byte of the load address
+			pha
+			lda $6					; Get the high byte of the load address
+			pha
+			jsr fs_find_file			; Find the file
+			cmp #FILE_NOT_FOUND_IDX
+			bne @over
+			pla
+			pla
+			rts
+@over:			
+
+			lda #$1
+			jsr fs_load_file_init			; Load file initializer
+			
+			pla
+			sta $6					; Move it to high byte of destination
+			pla
+			sta $5					; Move it to low byte of destination
+			
+@loop:			lda #.LOBYTE(FS_CUR_FILE)		; Get the low byte of the source address
+			sta $7					; Move it to low byte of source
+			lda #.HIBYTE(FS_CUR_FILE)		; Get the high byte of the source address
+			sta $8					; Move it to high byte of source
+
+			lda #.LOBYTE(1000)			; Get the low byte of the counter
+			sta $9					; Store it in the low byte of the counter
+			lda #.HIBYTE(1000)			; Get the high byte of the counter
+			sta $A					; Store it in the high byte of the counter
+
+			jsr memcpy				; Memcpy
+
+			; jsr fs_load_next_file_desc
+			; beq @return
+			; bra @loop
+@return:		rts
 .endproc
 
 ; ($7) - Address to file name (zero terminated)
