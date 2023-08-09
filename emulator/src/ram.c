@@ -1,7 +1,7 @@
-#include <ram.h>
-#include <stdio.h>
-#include <video.h>
-#include <cpu/cpu.h>
+#include "include/ram.h"
+#include "include/global.h"
+#include "include/video.h"
+#include "include/cpu/cpu.h"
 
 uint8_t *general_memory = NULL;
 
@@ -13,9 +13,11 @@ void mem_byte_write(uint8_t byte, uint16_t address) {
         if (KERNAL_MEM(address)) {
                 DBG(1, printf("Tried to write to KERNAL ROM address");)
                 
+                char *memdump = malloc(48);
+
                 for (int i = 0; i < 16; i++)
-                        printf("%02X ", *(general_memory + i));
-                printf("\n");
+                        sprintf(memdump + i * 3, "%02X ", *(general_memory + i));
+                DBG(1, printf("%s", memdump);)
 
                 DBG(1, reg_dump_65C02();)
                 

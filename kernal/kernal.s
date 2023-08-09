@@ -619,7 +619,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			inc $8					; Otherwise, increment high byte
 @inc_low_over_7:	inc $5					; Increment lower byte of destination
 			bne @inc_low_over_5			; If not, jump over
-			dec $6					; Otherwise increment high byte
+			inc $6					; Otherwise increment high byte
 @inc_low_over_5:	bra @loop				; Loop
 
 @complete:		plx
@@ -847,32 +847,25 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			pla
 			pla
 			rts
-@over:			
-
-			lda #$1
+@over:			lda #$1
 			jsr fs_load_file_init			; Load file initializer
-			
 			pla
 			sta $6					; Move it to high byte of destination
 			pla
 			sta $5					; Move it to low byte of destination
-			
 @loop:			lda #.LOBYTE(FS_CUR_FILE)		; Get the low byte of the source address
 			sta $7					; Move it to low byte of source
 			lda #.HIBYTE(FS_CUR_FILE)		; Get the high byte of the source address
 			sta $8					; Move it to high byte of source
-
 			lda #.LOBYTE(1000)			; Get the low byte of the counter
 			sta $9					; Store it in the low byte of the counter
 			lda #.HIBYTE(1000)			; Get the high byte of the counter
 			sta $A					; Store it in the high byte of the counter
-
 			jsr memcpy				; Memcpy
-
-			; lda #$1
-			; jsr fs_load_next_file_desc
-			; beq @return
-			; bra @loop
+			lda #$1
+			jsr fs_load_next_file_desc
+			beq @return
+			bra @loop
 @return:		rts
 .endproc
 

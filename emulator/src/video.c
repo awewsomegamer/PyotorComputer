@@ -1,13 +1,12 @@
-#include "global.h"
+#include "include/global.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <video.h>
-#include <ram.h>
-#include <cpu/cpu.h>
-#include <kbd.h>
-#include <audio.h>
-
+#include "include/video.h"
+#include "include/ram.h"
+#include "include/cpu/cpu.h"
+#include "include/kbd.h"
+#include "include/audio.h"
 #include <SDL2/SDL.h>
 
 SDL_Window* window = NULL;
