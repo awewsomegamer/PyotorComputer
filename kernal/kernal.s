@@ -812,29 +812,22 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; A - Returned 0 for no new descriptors
 .proc fs_load_next_file_desc
 			pha					; Save disk number
-			phx					; Save the X register
-			ldx #$00				; Zero it
 			lda FS_FILE_N_DESC_LO			; Get the low byte
 			sta DISK_SECTOR_LO			; Store it in the disk register
-			bne @over				; This byte is not 0, skip over the next instruction
-			inx					; This byte is 0, increment the zero counter
-@over:			lda FS_FILE_N_DESC_HI			; Get the low byte
+			ora FS_FILE_N_DESC_HI			; Or high and low bytes together
+			beq @no_new_sector			; If the result is 0, there is no new sector to be read
+			lda FS_FILE_N_DESC_HI			; Get the low byte
 			sta DISK_SECTOR_HI			; Store it in the disk register
-			bne @read_disk				; The low byte is not zero, thus we can read the disk
-			txa					; Transfer X to A to set the flags
-			bne @no_new_sector			; If X was 1, then there is no new sector to be read
-@read_disk:		stz DISK_SECTOR_COUNT_HI		; Zero the sector count high byte
+			stz DISK_SECTOR_COUNT_HI		; Zero the sector count high byte
 			lda #$2					; Load A with 2 for the lower byte
 			sta DISK_SECTOR_COUNT_LO		; Set the lower byte of the sector count
 			lda #.LOBYTE(FS_CUR_FILE)		; Load the low byte of where the disk should be read to
 			sta DISK_BUFF_ADDR_LO			; Store it
 			lda #.HIBYTE(FS_CUR_FILE)		; Load the high byte of where the disk should be read to
 			sta DISK_BUFF_ADDR_HI			; Store it
-			plx					; Restore the X register
 			pla					; Restore disk number
 			jmp read_disk				; Read the disk
-@no_new_sector:		plx					; Restore the X register
-			pla					; Pull A off the stack
+@no_new_sector:		pla					; Pull A off the stack
 			lda #$00				; Return value is set to 0
 			rts					; Return
 .endproc
@@ -876,9 +869,10 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 
 			jsr memcpy				; Memcpy
 
-			jsr fs_load_next_file_desc
-			beq @return
-			bra @loop
+			; lda #$1
+			; jsr fs_load_next_file_desc
+			; beq @return
+			; bra @loop
 @return:		rts
 .endproc
 
@@ -928,25 +922,18 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta DISK_BUFF_ADDR_LO			; Store it to the right byte
 			lda #.HIBYTE(FS_CUR_DIR)		; Load the higher byte of the initial directory's address in RAM
 			sta DISK_BUFF_ADDR_HI			; Store it to the right byte
-			phx					; Save the X register
-			ldx #$00				; Zero it, if it remains 0 by @next_cmp, we have a new directory
 			lda FS_DIR_N_DIR_ENT_LO			; Load in the next link's low byte
 			sta DISK_SECTOR_LO			; Store it
-			bne @next_cmp				; If byte is not 0, then go to the higher byte
-			inx					; Otherwise increment X
-@next_cmp:		lda FS_DIR_N_DIR_ENT_HI			; Load in the next link's high byte
+			ora FS_DIR_N_DIR_ENT_HI			; Or the lower byte with the high byte
+			beq @no_next_dir			; If the result is 0, there is no next directory
+			lda FS_DIR_N_DIR_ENT_HI			; Load in the next link's high byte
 			sta DISK_SECTOR_HI			; Store it
-			bne @read				; If the byte is not 0, then go onto read the directory
-			txa					; If the byte is 0, transfer X to A
-			bne @no_next_dir			; If the byte is 1, then there is not another directory
-@read:			plx					; Restore X
 			lda #$2					; Two sectors will be read
 			sta DISK_SECTOR_COUNT_LO		; Set the right byte
 			stz DISK_SECTOR_COUNT_HI		; Zero the higher byte
 			pla					; Restore the disk number
 			jmp read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
-@no_next_dir:		plx					; Restore X
-			pla					; Restore A
+@no_next_dir:		pla					; Restore A
 			lda #$00				; Load error value
 			rts					; Return
 .endproc
@@ -977,27 +964,14 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			pha					; Save it
 			lda $1					; Load temporary value 1
 			pha					; Save it
-			lda CURRENT_PROGRAM_BASE
-			php
-			pla
-			sta $0
-			lda CURRENT_PROGRAM_BASE + 1
-			php
-			pla
-			ora $0
-			sta $0
-			bbr1 $0, @terminal_over
+			lda CURRENT_PROGRAM_BASE		; Load in lower byte of program address
+			ora CURRENT_PROGRAM_BASE + 1		; Or it with higher byte of program address 
+			bne @terminal_over			; If the result is not 0, a program is running, jump over
 			jsr terminal_handler			; Handle the terminal
 @terminal_over:		lda CURRENT_PROGRAM_IRQ			; Check if user defined IRQ (non-zero)
-			php					; Load the current status into stack
-			pla					; Load status into A
-			sta $0					; Store in tmp value
-			lda CURRENT_PROGRAM_IRQ + 1		; Check if user defined IRQ (non-zero)
-			php					; Load the current status into stack
-			pla					; Load status into A
-			ora $0					; OR the two statuses together
-			sta $0					; Store A back to 0 for BBS
-			bbs1 $0, @over				; Jump over if the zero flag is set
+			lda CURRENT_PROGRAM_IRQ			; Load in lower byte of program IRQ handler address
+			ora CURRENT_PROGRAM_IRQ + 1		; or it with the higher byte of the program IRQ handler address
+			beq @over				; If it 0, no custom handler, jump over
 			lda #.HIBYTE(@over)			; High byte of return address
 			pha					; Push high byte
 			lda #.LOBYTE(@over)			; Low byte of return address
@@ -1023,16 +997,9 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			pha					; Save it
 			lda $1					; Load temporary value 1
 			pha					; Save it
-			lda CURRENT_PROGRAM_NMI			; Check if user defined NMI (non-zero)
-			php					; Load the current status into stack
-			pla					; Load status into A
-			sta $0					; Store in tmp value
-			lda CURRENT_PROGRAM_NMI + 1		; Check if user defined NMI (non-zero)
-			php					; Load the current status into stack
-			pla					; Load status into A
-			ora $0					; OR the two statuses together
-			sta $0					; Store A back to 0 for BBS
-			bbs1 $0, @over				; Jump over if the zero flag is set
+			lda CURRENT_PROGRAM_NMI			; Load A with the lower byte of the NMI handler address
+			ora CURRENT_PROGRAM_NMI + 1		; Or A with the higher byte of the NMI handler address
+			beq @over				; If the result is 0, no handler, then jump over
 			lda #.HIBYTE(@over)			; High byte of return address
 			pha					; Push high byte
 			lda #.LOBYTE(@over)			; Low byte of return address
