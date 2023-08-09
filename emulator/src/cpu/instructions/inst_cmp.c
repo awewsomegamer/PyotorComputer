@@ -1,4 +1,4 @@
-#include <cpu/instructions/inst_macros.h>
+#include "../../include/cpu/instructions/inst_macros.h"
 
 void INST_CPX_IMM() { CMP_SET(register_x, NEXT_BYTE) }
 void INST_CPY_IMM() { CMP_SET(register_y, NEXT_BYTE) }

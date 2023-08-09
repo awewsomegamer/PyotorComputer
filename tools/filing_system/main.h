@@ -24,9 +24,9 @@ struct directory_listing_entry {
 
 struct initial_directory_listing {
 	struct directory_listing_entry entries[MAX_FILES_PER_DIR]; // Uses the first ~1000 bytes of data
-	uint16_t next_free_sector; // The next free sector on disk
 	uint8_t next_free_entry; // Next free entry in this directory
 	uint16_t next_directory_listing; // Pointer to the next sector containing directory listing
+	uint16_t next_free_sector; // The next free sector on disk
 	uint8_t version_high;
 	uint8_t version_low;
 	char identifier[4];
@@ -41,10 +41,10 @@ struct directory_listing {
 struct initial_file_descriptor {
 	uint8_t data[1000]; // 1000 bytes of file data
 	uint16_t next_descriptor; // Pointer to the next file descriptor
-	uint16_t size_in_sectors; // The total size of the file in sectors
-	uint16_t bytes_unused_last_kb; // The amount of bytes unsused in the last KB of data
 	uint8_t attributes; // D 0 0 0 0 0 0 0
 			    // D(eleted) - 1 deleted, 0 not deleted
+	uint16_t size_in_sectors; // The total size of the file in sectors
+	uint16_t bytes_unused_last_kb; // The amount of bytes unsused in the last KB of data
 }__attribute__((packed, aligned(1024))); // 1024 byte field
 
 struct file_descriptor {

@@ -1,4 +1,4 @@
-#include <cpu/instructions/inst_macros.h>
+#include "../../include/cpu/instructions/inst_macros.h"
 
 void INST_LDA_IMM() { register_a = NEXT_BYTE; SET_NZ(register_a) }
 void INST_LDX_IMM() { register_x = NEXT_BYTE; SET_NZ(register_x) }

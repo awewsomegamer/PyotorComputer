@@ -1,10 +1,7 @@
-#include <global.h>
-#include <cpu/cpu.h>
-#include <cpu/instructions/inst_macros.h>
-#include <ram.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <sys/types.h>
+#include "../include/global.h"
+#include "../include/cpu/cpu.h"
+#include "../include/cpu/instructions/inst_macros.h"
+#include "../include/ram.h"
 
 // ** TODO: Implement BCD mode
 

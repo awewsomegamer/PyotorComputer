@@ -1,4 +1,4 @@
-#include <cpu/instructions/inst_macros.h>
+#include "../../include/cpu/instructions/inst_macros.h"
 
 void INST_STA_ABS() { mem_byte_write(register_a, NEXT_WORD); }
 void INST_STX_ABS() { mem_byte_write(register_x, NEXT_WORD); }

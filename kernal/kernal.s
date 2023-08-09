@@ -31,16 +31,27 @@
 			.define TERMINAL_STATUS		48577
 
 			.define FS_CUR_DIR		48578 ; For initial directory and for current working directory
-			.define FS_DIR_N_FREE_SECT_LO	FS_CUR_DIR + 992
-			.define FS_DIR_N_FREE_SECT_HI	FS_CUR_DIR + 993
-			.define FS_DIR_N_FREE_ENT	FS_CUR_DIR + 994
-			.define FS_DIR_N_DIR_ENT_LO	FS_CUR_DIR + 995
-			.define FS_DIR_N_DIR_ENT_HI	FS_CUR_DIR + 996
-			.define FS_DIR_N_FREE_VER_HI	FS_CUR_DIR + 997
-			.define FS_DIR_N_FREE_VER_LO	FS_CUR_DIR + 998
-			.define FS_DIR_IDENTIFIER	FS_CUR_DIR + 999
+			.define FS_DIR_N_FREE_ENT	FS_CUR_DIR + 992
+			.define FS_DIR_N_DIR_ENT_LO	FS_CUR_DIR + 993 
+			.define FS_DIR_N_DIR_ENT_HI	FS_CUR_DIR + 994
+			.define FS_DIR_N_FREE_SECT_LO	FS_CUR_DIR + 995 ; Only for initial descriptors
+			.define FS_DIR_N_FREE_SECT_HI	FS_CUR_DIR + 996 ; Only for initial descriptors
+			.define FS_DIR_VER_HI		FS_CUR_DIR + 997 ; Only for initial descriptors
+			.define FS_DIR_VER_LO		FS_CUR_DIR + 998 ; Only for initial descriptors 
+			.define FS_DIR_IDENTIFIER	FS_CUR_DIR + 999 ; Only for initial descriptors
+			.define FS_FILE_ENTRY_SECT_LO	13
+			.define FS_FILE_ENTRY_SECT_HI	14
+			.define FS_FILE_ENTRY_SECT_ATTR	15
 
 			.define FS_CUR_FILE		FS_CUR_DIR + 1024 ; For initial file descriptor and other file descriptors
+			.define FS_FILE_N_DESC_LO	FS_CUR_FILE + 1000
+			.define FS_FILE_N_DESC_HI	FS_CUR_FILE + 1001
+			.define FS_FILE_ATTRS		FS_CUR_FILE + 1002
+			.define FS_FILE_SZ_LO		FS_CUR_FILE + 1003 ; Only for initial descriptors
+			.define FS_FILE_SZ_HI		FS_CUR_FILE + 1004 ; Only for initial descriptors
+			.define FS_FILE_UNUSED_LO	FS_CUR_FILE + 1005 ; Only for initial descriptors
+			.define FS_FILE_UNUSED_HI	FS_CUR_FILE + 1006 ; Only for initial descriptors
+
 			.define MAX_FILES_PER_DIR	62
 			.define FILE_NOT_FOUND_IDX	132
 
@@ -282,11 +293,16 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			sta $8
 			jsr fs_find_file
 
-			clc
-			adc #'A'
+			lda #$1
+			jsr fs_load_file_init
+			
+			lda #.LOBYTE(FS_CUR_FILE)
+			sta $5
+			lda #.HIBYTE(FS_CUR_FILE)
+			sta $6
 			ldx TERMINAL_CHAR_X
 			ldy TERMINAL_CHAR_Y
-			jsr putchar
+			jsr putstr
 
 			inc TERMINAL_CHAR_Y
 			stz TERMINAL_CHAR_X
@@ -699,6 +715,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 
 ; ($7) - Address to file name (zero terminated)
 ; A - Returned as the file index or 132 if the file was not found
+; ($5) - The base address of the entry in the current directory
 .proc fs_find_file
 			lda #$1					; Disk number (make this dynamic)
 			jsr fs_initialize			; Load initialization directory
@@ -729,9 +746,28 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts					; Return
 .endproc
 
-; ($5) - Sector number of the file
+; A - Disk the file is on (same as the one used for fs_initialize)
+; ($5) - Base address of file entry
 ; A - Returned 0 for success
 .proc fs_load_file_init
+			pha
+			phy
+			ldy #FS_FILE_ENTRY_SECT_LO
+			lda ($5), y
+			sta DISK_SECTOR_LO
+			ldy #FS_FILE_ENTRY_SECT_HI
+			lda ($5), y
+			sta DISK_SECTOR_HI
+			stz DISK_SECTOR_COUNT_HI
+			lda #$2
+			sta DISK_SECTOR_COUNT_LO
+			lda #.LOBYTE(FS_CUR_FILE)
+			sta DISK_BUFF_ADDR_LO
+			lda #.HIBYTE(FS_CUR_FILE)
+			sta DISK_BUFF_ADDR_HI
+			ply
+			pla
+			jmp read_disk
 .endproc
 
 ; A - Returned 0 for success
@@ -759,7 +795,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			cmp #MAX_FILES_PER_DIR			; Have we read all files in the directory?
 			bne @next_entry				; If not, go to the next entry
 			lda #$01				; If so, set the disk number (TODO: Make this dynamic)
-			jsr fs_next_dir			; Read in the next directory
+			jsr fs_next_dir				; Read in the next directory
 			bne @new_dir				; If it is not 0, we have a new directory
 			lda #FILE_NOT_FOUND_IDX			; Otherwise, just say no file was found
 			rts					; Return
@@ -792,7 +828,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			lda #.HIBYTE(FS_CUR_DIR)		; Load the higher byte of the initial directory's address in RAM
 			sta DISK_BUFF_ADDR_HI			; Store it to the right byte
 			phx					; Save the X register
-			lda #$00				; Zero it, if it remain 0 by @next_cmp, we have a new directory
+			ldx #$00				; Zero it, if it remains 0 by @next_cmp, we have a new directory
 			lda FS_DIR_N_DIR_ENT_LO			; Load in the next link's low byte
 			sta DISK_SECTOR_LO			; Store it
 			bne @next_cmp				; If byte is not 0, then go to the higher byte

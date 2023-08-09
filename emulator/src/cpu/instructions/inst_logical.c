@@ -1,5 +1,5 @@
-#include "cpu/cpu.h"
-#include <cpu/instructions/inst_macros.h>
+#include "../../include/cpu/cpu.h"
+#include "../../include/cpu/instructions/inst_macros.h"
 
 uint8_t ARIT_LEFT_SHIFT(uint8_t what) {
         uint8_t result = (what << 1);

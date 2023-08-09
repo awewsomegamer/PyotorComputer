@@ -15,7 +15,7 @@ void schedule_function(void (*function)(), uint64_t when) {
 				int index = i * 8 + j;
 				scheduled[index].function = function;
 				scheduled[index].when = when;
-				DBG(1, printf("Scheduled task %d with pointer of %p to execute at %d", index, function, when);)
+				DBG(1, printf("Scheduled task %d with pointer of %p to execute at %d ticks", index, function, when);)
 
 				return;
 			}

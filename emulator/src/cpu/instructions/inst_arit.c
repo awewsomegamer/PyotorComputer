@@ -1,4 +1,4 @@
-#include <cpu/instructions/inst_macros.h>
+#include "../../include/cpu/instructions/inst_macros.h"
 
 void INST_ADC_IND_X() { ARIT_ADD_SET(PTR(PTR(OFF_X(CUR_BYTE)) | (PTR(OFF_X(NEXT_BYTE + 1)) << 8))) }
 void INST_ADC_IND_Y() { ARIT_ADD_SET(PTR(OFF_Y(PTR(CUR_BYTE) | (PTR(NEXT_BYTE + 1) << 8)))) }

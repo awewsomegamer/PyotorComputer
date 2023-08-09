@@ -1,8 +1,8 @@
 #ifndef INSTRUCTION_MACROS_H
 #define INSTRUCTION_MACROS_H
 
-#include <cpu/cpu.h>
-#include <ram.h>
+#include "../cpu.h"
+#include "../../ram.h"
 
 #define OFF_X(value) (uint8_t)((value) + register_x)
 #define OFF_X_ABS(value) (uint16_t)((value) + register_x)

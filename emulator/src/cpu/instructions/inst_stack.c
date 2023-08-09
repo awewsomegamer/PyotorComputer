@@ -1,5 +1,4 @@
-#include <cpu/instructions/inst_macros.h>
-#include <stdio.h>
+#include "../../include/cpu/instructions/inst_macros.h"
 
 void INST_PHP() { mem_byte_write(*(uint8_t *)&register_p, 0x100 + (register_s--)); } // PUSH P
 void INST_PLP() { *(uint8_t *)&register_p = PTR(0x100 + (++register_s)); } // PULL P

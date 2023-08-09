@@ -1,6 +1,6 @@
-#include <disk.h>
+#include "include/disk.h"
+#include "include/ram.h"
 #include <math.h>
-#include <ram.h>
 
 FILE *connected_disks[3];
 

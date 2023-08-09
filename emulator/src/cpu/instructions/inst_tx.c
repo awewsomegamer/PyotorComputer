@@ -1,4 +1,4 @@
-#include <cpu/instructions/inst_macros.h>
+#include "../../include/cpu/instructions/inst_macros.h"
 
 void INST_TYA() { register_a = register_y; SET_NZ(register_a) }
 void INST_TAY() { register_y = register_a; SET_NZ(register_y) }

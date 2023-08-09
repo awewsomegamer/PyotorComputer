@@ -1,6 +1,5 @@
-#include <cpu/cpu.h>
-#include <cpu/instructions/inst_macros.h>
-#include <stdio.h>
+#include "../../include/cpu/cpu.h"
+#include "../../include/cpu/instructions/inst_macros.h"
 
 void INST_RTI() {
         // Return from interrupt
