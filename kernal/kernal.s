@@ -386,21 +386,29 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			pha					; Save A
 			lda ($5) 				; Load character
 			beq @end 				; If the character is a '\0' terminate
-			jsr putchar 				; Put the character
-			inx					; Increment X coordinate
-			cpx #40					; Is it at the end of the row?
-			bne @no_roll_over			; If not, jump over the following
-			ldx #$0					; Reset X coordinate to the start of the row
-			iny					; Go to the next column
-@no_roll_over:		lda $05 				; Load lower half of character address
-			inc 					; Increment
-			sta $05 				; Store lower half of character address
-			bne @inc_lwr_addr_ovr 			; If the lower half didn't roll over to 0, jump over
-					      			; higher half incrementation
-			lda $06 				; Load higher half of character address
-			inc 					; Increment
-			sta $06 				; Store higher of character address
+
+			cmp #$0A				; Is the character a '\n'?
+			beq @new_line				; If so, new line
+			
+			jsr putchar				; Put the character (carry flag is set)
+			
+@putchar_over:
+			cpy #12					; Otherwise, have we drawn one scrolling character?
+			bcc @new_line_over			; If not, jump over
+			ldy #10					; If so, go back 2 characters
+@new_line_over:
+			inx					; Increment X
+			cpx #40					; Is X 40?
+			bne @no_new_line			; If not, no new line is required, jump over
+@new_line:		iny					; Increment Y
+			ldx #$00				; Zero X
+@no_new_line:
+
+			inc $05 				; Increment lower half
+			bne @inc_lwr_addr_ovr 			; If the lower half didn't roll over to 0, jump over higher half incrementation
+			inc $06 				; Increment higher half
 @inc_lwr_addr_ovr:	bra @putstr 				; Loop
+
 @end:		 	pla 					; Restore A
 			rts					; Return
 .endproc
@@ -837,6 +845,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; Current dir should be the directory of the file
 ; A - Returned as 0 for success
 .proc fs_load_file
+			sei					; Disable interrupts
 			lda $5					; Get the low byte of the load address
 			pha
 			lda $6					; Get the high byte of the load address
@@ -866,7 +875,8 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			jsr fs_load_next_file_desc
 			beq @return
 			bra @loop
-@return:		rts
+@return:		cli					; Enable interrupts
+			rts
 .endproc
 
 ; ($7) - Address to file name (zero terminated)

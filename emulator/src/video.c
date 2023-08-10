@@ -8,6 +8,7 @@
 #include "include/kbd.h"
 #include "include/audio.h"
 #include <SDL2/SDL.h>
+#include <unistd.h>
 
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;

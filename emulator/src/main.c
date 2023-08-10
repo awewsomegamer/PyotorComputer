@@ -26,7 +26,6 @@ void *emulate_thread(void *arg) {
         const double wait_between_insts = (double)1/(double)SYS_IPS;
         double current_debt = 0;
 
-        uint64_t value = 0;
         while (running) {
                 tick_65C02();
                 current_debt += wait_between_insts;
@@ -35,19 +34,8 @@ void *emulate_thread(void *arg) {
                 tick_control_register();
 
                 if (current_debt >= 0.0001) {
-                        usleep(1); // Wait 1 ms
+                        usleep(1);
                         current_debt = 0;
-                }
-
-                uint64_t new = 0;
-                for (int i = 5; i < 11; i++)
-                        new |= *(general_memory + i) << (i - 5);
-                
-                if (new != value) {
-                        for (int i = 5; i < 11; i++)
-                                printf("%02X ", *(general_memory + i));
-                        printf("\n");
-                        value = new;
                 }
 
                 if (time(NULL) - last_second == 1) {
