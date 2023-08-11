@@ -272,17 +272,17 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			lda #.HIBYTE(DIR_CMD)
 			sta $8
 			jsr cmp_str
-			bcc @find_cmp
+			bcc @load_cmp
 
 			jsr fs_list_directory
 
-@find_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
+@load_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
 			sta $5
 			lda #.HIBYTE(TERMINAL_BUFFER)
 			sta $6
-			lda #.LOBYTE(FIND_CMD)
+			lda #.LOBYTE(LOAD_CMD)
 			sta $7
-			lda #.HIBYTE(FIND_CMD)
+			lda #.HIBYTE(LOAD_CMD)
 			sta $8
 			jsr cmp_str
 			bcc @compare_end
@@ -297,16 +297,12 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			sta $8
 			jsr fs_load_file
 			
-			; lda #.LOBYTE($400)
-			; sta $5
-			; lda #.HIBYTE($400)
-			; sta $6
-			; ldx TERMINAL_CHAR_X
-			; ldy TERMINAL_CHAR_Y
-			; jsr putstr
-
-			; inc TERMINAL_CHAR_Y
-			; stz TERMINAL_CHAR_X
+			ldy TERMINAL_CHAR_Y
+			beq @load_no_sub
+			dey
+@load_no_sub:		lda #'A'
+			jsr putchar
+			
 
 @compare_end:		ply					; Restore Y
 			pla					; Restore A
@@ -1025,7 +1021,7 @@ FG_CMD:			.asciiz "FG"
 BG_CMD:			.asciiz "BG"
 JUMP_CMD:		.asciiz "JUMP"
 DIR_CMD:		.asciiz "DIR"
-FIND_CMD:		.asciiz "FIND"
+LOAD_CMD:		.asciiz "LOAD"
 CMD_NO_MATCH:		.asciiz "Command parameters insufficient"
 
 .segment "VECTORS"
