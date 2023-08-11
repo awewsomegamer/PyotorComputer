@@ -297,16 +297,16 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			sta $8
 			jsr fs_load_file
 			
-			lda #.LOBYTE($400)
-			sta $5
-			lda #.HIBYTE($400)
-			sta $6
-			ldx TERMINAL_CHAR_X
-			ldy TERMINAL_CHAR_Y
-			jsr putstr
+			; lda #.LOBYTE($400)
+			; sta $5
+			; lda #.HIBYTE($400)
+			; sta $6
+			; ldx TERMINAL_CHAR_X
+			; ldy TERMINAL_CHAR_Y
+			; jsr putstr
 
-			inc TERMINAL_CHAR_Y
-			stz TERMINAL_CHAR_X
+			; inc TERMINAL_CHAR_Y
+			; stz TERMINAL_CHAR_X
 
 @compare_end:		ply					; Restore Y
 			pla					; Restore A
@@ -386,29 +386,21 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			pha					; Save A
 			lda ($5) 				; Load character
 			beq @end 				; If the character is a '\0' terminate
-
-			cmp #$0A				; Is the character a '\n'?
-			beq @new_line				; If so, new line
-			
-			jsr putchar				; Put the character (carry flag is set)
-			
-@putchar_over:
-			cpy #12					; Otherwise, have we drawn one scrolling character?
-			bcc @new_line_over			; If not, jump over
-			ldy #10					; If so, go back 2 characters
-@new_line_over:
-			inx					; Increment X
-			cpx #40					; Is X 40?
-			bne @no_new_line			; If not, no new line is required, jump over
-@new_line:		iny					; Increment Y
-			ldx #$00				; Zero X
-@no_new_line:
-
-			inc $05 				; Increment lower half
+			cmp #$0A				; Have we received a new line character?
+			beq @new_line				; If so, print a new line, do not bother with this character
+			jsr putchar				; Put the character (carry flag is set)			
+			cpy #12					; Printed a character on the 12th, scroll, line or further?
+			bcc @no_scroll				; If not then skip over the following
+			ldy #11					; Set Y back to the last displayable line
+@no_scroll:		inx					; Increment X
+			cpx #40					; Are we at the end of a line?
+			bne @no_new_line			; If not, no new line required, skip following
+@new_line:		ldx #$00				; Zero X
+			iny					; Increment Y
+@no_new_line:		inc $05 				; Increment lower half
 			bne @inc_lwr_addr_ovr 			; If the lower half didn't roll over to 0, jump over higher half incrementation
 			inc $06 				; Increment higher half
 @inc_lwr_addr_ovr:	bra @putstr 				; Loop
-
 @end:		 	pla 					; Restore A
 			rts					; Return
 .endproc
