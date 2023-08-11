@@ -31,18 +31,10 @@ _start:			lda #.LOBYTE(COOL_TEXT)
 			sta $6
 			lda #8
 			jsr $DF1D
-			; cpy #12
-			; beq _quit
-			; bra _start
+			cpy #12
+			beq _quit
+			bra _start
 _quit:			rts
-
-; _irq_handler:		lda #.LOBYTE(COOL_TEXT)
-; 			sta $5
-; 			lda #.HIBYTE(COOL_TEXT)
-; 			sta $6
-; 			lda #%00001000
-; 			jsr $DDA1
-; 			rti
 
 COOL_TEXT:		.asciiz " Happy Father's Day  Boldog Apaknapjat "
 
