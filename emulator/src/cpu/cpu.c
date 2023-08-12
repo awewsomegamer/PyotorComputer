@@ -16,9 +16,9 @@ struct reg_flags *register_p = NULL;
 uint16_t *pc = NULL;
 
 // Pins
-uint8_t *pins; // I N R 0 0 0 0 0
+uint8_t *pins = NULL; // I N R 0 0 0 0 0
 
-uint8_t *emulator_flags; // W S
+uint8_t *emulator_flags = NULL; // W S 0 0 0 0 0 0
 
 // Clock
 uint64_t cycle_count = 0;
@@ -101,6 +101,7 @@ void INST_BIT(uint8_t opcode) {
 void call_interrupt() {
         mem_byte_write(((*pc) >> 8) & 0xFF, 0x100 + (*register_s--)); // High
         mem_byte_write((*pc) & 0xFF, 0x100 + (*register_s--)); // Low
+
 
         if (!((*pins >> 6) & 1)) {
                 // NMI
@@ -239,7 +240,6 @@ void init_65C02() {
         register_p = (struct reg_flags *)(memory + MEMORY_SIZE + REGISTER_P_OFF);
         pins = (uint8_t *)(memory + MEMORY_SIZE + PINS_OFF);
         emulator_flags = (uint8_t *)(memory + MEMORY_SIZE + EMU_FLAGS_OFF);
-        *(uint8_t *)&register_p = 0b00110100;
 
         ASSERT(register_a != NULL);
         ASSERT(register_x != NULL);
@@ -249,6 +249,15 @@ void init_65C02() {
         ASSERT(register_p != NULL);
         ASSERT(pins != NULL);
         ASSERT(emulator_flags != NULL);
+
+        *register_a = 0x00;
+        *register_x = 0x00;
+        *register_y = 0x00;
+        *register_s = 0xFF;
+        *pc = 0;
+        *(uint8_t *)register_p = 0b00110100;
+        *pins = 0xE0;
+        *emulator_flags = 0x00;
 
         init_arithmetic_instructions();
         init_comparison_instructions();

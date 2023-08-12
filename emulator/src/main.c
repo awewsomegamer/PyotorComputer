@@ -37,6 +37,10 @@ void *emulate_thread(void *arg) {
 
                 tick_control_register();
 
+                reg_dump_65C02();
+
+                sleep(1);
+
                 if (current_debt >= threshold) {
                         usleep(1);
                         current_debt = 0;
@@ -68,9 +72,8 @@ int main(int argc, char **argv) {
         sys_ips = malloc(sizeof(double));
         *sys_ips = SYS_IPS;
 
-
-        init_65C02();
         init_shared_memory();
+        init_65C02();
         init_video();
 
         for (int i = 1; i < argc; i++) {
@@ -93,22 +96,23 @@ int main(int argc, char **argv) {
                         
                         load_file(address, argv[i + 2]);
                 }
-        }
-        
-        *pins |= (1 << 5);
+        }        
 
-        // pthread_t emulation_thread_t;
-        // pthread_create(&emulation_thread_t, NULL, emulate_thread, NULL);
+        *pins &= ~(1 << 5);
+
+        pthread_t emulation_thread_t;
+        pthread_create(&emulation_thread_t, NULL, emulate_thread, NULL);
 
         while (running) {
                 update();
-                // do_task();
+                do_task();
         }
         
-        // pthread_join(emulation_thread_t, NULL);
+        pthread_join(emulation_thread_t, NULL);
         destroy_video();
         destroy_65C02();
         disconnect_all();
+        destroy_shared_memory();
 
         DBG(1, printf("Emulator stopped");)
 

@@ -1,7 +1,7 @@
-#include <audio.h>
+#include "include/audio.h"
 #include <SDL2/SDL.h>
 #include <math.h>
-#include <ram.h>
+#include "include/ram.h"
 
 SDL_AudioDeviceID audio_device;
 SDL_AudioSpec audio_spec;
