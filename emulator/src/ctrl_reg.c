@@ -149,11 +149,11 @@ struct disk_register {
 */
 
 void send_irq() {
-	pin_IRQ = 0; // Call interrupt
+	*pins &= ~(1 << 7); // Call interrupt
 }
 
 void tick_control_register() {
-	struct control_register *reg = (struct control_register *)(general_memory + KERNAL_DAT_BASE); // Temporary "KERNAL_DAT_BASE"
+	struct control_register *reg = (struct control_register *)(memory + KERNAL_DAT_BASE); // Temporary "KERNAL_DAT_BASE"
 	
 	if ((reg->status >> 7) & 1) {
 		reg->status &= ~(1 << 7); // Clear D1
@@ -247,7 +247,7 @@ void tick_control_register() {
 		}
 	}
 
-	struct disk_register *disk_reg = (struct disk_register*)(general_memory + KERNAL_DAT_BASE + sizeof(struct control_register));
+	struct disk_register *disk_reg = (struct disk_register*)(memory + KERNAL_DAT_BASE + sizeof(struct control_register));
 
 	if ((disk_reg->status >> 7) & 1) {
 		disk_reg->code = disk_operation_buffer(disk_reg->buffer_length, disk_reg->buffer_address,
@@ -262,13 +262,13 @@ void tick_control_register() {
 	}
 
 	// Interrupt Acknowledgement Byte contains new data
-	if (*(general_memory + 48527) != 0) {
+	if (*(memory + 48527) != 0) {
 		// Currently, specific fields are not tested for
 		// as there is no code to emulate each device
 		// telling the IO controller to interrupt the CPU.
 		// Thus, there is no code to tell any one specific
 		// device that its interrupt has been handled, so:
-		pin_IRQ = 1;
-		*(general_memory + 48527) = 0;
+		*pins |= 1 << 7;
+		*(memory + 48527) = 0;
 	}
 }

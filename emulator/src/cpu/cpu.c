@@ -2,24 +2,23 @@
 #include "../include/cpu/cpu.h"
 #include "../include/cpu/instructions/inst_macros.h"
 #include "../include/ram.h"
+#include <stdint.h>
+#include <stdio.h>
 
 // ** TODO: Implement BCD mode
 
 // Initial states of registers
-uint8_t register_a = 0;
-uint8_t register_x = 0;
-uint8_t register_y = 0;
-uint8_t register_s = 0xFF;
-struct reg_flags register_p;
-uint16_t pc = 0;
+uint8_t *register_a = NULL;
+uint8_t *register_x = NULL;
+uint8_t *register_y = NULL;
+uint8_t *register_s = NULL;
+struct reg_flags *register_p = NULL;
+uint16_t *pc = NULL;
 
 // Pins
-uint8_t pin_IRQ = 1;
-uint8_t pin_NMI = 1;
-uint8_t pin_RES = 1;
+uint8_t *pins; // I N R 0 0 0 0 0
 
-uint8_t waiting = 0;
-uint8_t stopped = 0;
+uint8_t *emulator_flags; // W S
 
 // Clock
 uint64_t cycle_count = 0;
@@ -51,7 +50,7 @@ void INST_BBS(int index) {
         uint8_t addr = NEXT_BYTE;
         uint8_t off = NEXT_BYTE;
 
-        cycle_count += 5 + (((pc + (int8_t)off) / PAGE_SIZE == pc / PAGE_SIZE) ? 1 : 2);
+        cycle_count += 5 + (((*pc + (int8_t)off) / PAGE_SIZE == *pc / PAGE_SIZE) ? 1 : 2);
 
         if (((PTR(addr) >> index) & 1) == 1)
                 pc += (int8_t)off;
@@ -61,7 +60,7 @@ void INST_BBR(int index) {
         uint8_t addr = NEXT_BYTE;
         uint8_t off = NEXT_BYTE;
 
-        cycle_count += 5 + (((pc + (int8_t)off) / PAGE_SIZE == pc / PAGE_SIZE) ? 1 : 2);
+        cycle_count += 5 + (((*pc + (int8_t)off) / PAGE_SIZE == *pc / PAGE_SIZE) ? 1 : 2);
 
         if (((PTR(addr) >> index) & 1) == 0)
                 pc += (int8_t)off;
@@ -72,7 +71,7 @@ void INST_RMB(int index) { mem_byte_write(PTR(CUR_BYTE) & ~(1 << index), NEXT_BY
 
 void INST_BIT(uint8_t opcode) { 
         uint8_t value = 0;
-        switch (PTR(pc - 1)) {
+        switch (PTR(*pc - 1)) {
         case 0x24: // ZPG
                 value = PTR(NEXT_BYTE);
                 break;
@@ -90,52 +89,51 @@ void INST_BIT(uint8_t opcode) {
                 break;
         }
 
-        uint8_t result = value & register_a;
-        register_p.Z = (result == 0);
+        uint8_t result = value & *register_a;
+        register_p->Z = (result == 0);
 
         if (opcode != 0x89) { // Apparently IMM does not set these flags?
-                register_p.N = (result >> 7) & 1;
-                register_p.V = (result >> 6) & 1;
+                register_p->N = (result >> 7) & 1;
+                register_p->V = (result >> 6) & 1;
         }
 }
 
 void call_interrupt() {
-        mem_byte_write(((pc) >> 8) & 0xFF, 0x100 + (register_s--)); // High
-        mem_byte_write((pc) & 0xFF, 0x100 + (register_s--)); // Low
+        mem_byte_write(((*pc) >> 8) & 0xFF, 0x100 + (*register_s--)); // High
+        mem_byte_write((*pc) & 0xFF, 0x100 + (*register_s--)); // Low
 
-        if (!pin_NMI) {
+        if (!((*pins >> 6) & 1)) {
                 // NMI
-                waiting = 0;
-                pc = PTR(0xFFFA) | (PTR(0xFFFB) << 8);
-                pin_NMI = 1; // Not the correct way to do it, but desired effect is achieved
-        } else if (!pin_IRQ && !register_p.I) {
+                *emulator_flags &= ~(1 << 7); // Unset waiting flag
+                *pc = PTR(0xFFFA) | (PTR(0xFFFB) << 8);
+                *pins |= 1 << 6; // Not the correct way to do it, but desired effect is achieved
+        } else if (!((*pins >> 7) & 1) && !register_p->I) {
                 // IRQ
-                waiting = 0;
-                pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
-        } else if (!pin_RES) {
+                *emulator_flags &= ~(1 << 7); // Unset waiting flag
+                *pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
+        } else if (!((*pins >> 5) & 1)) {
                 // Reset
-                stopped = 0;
-                waiting = 0;
+                *emulator_flags &= ~(1 << 7); // Unset waiting flag
+                *emulator_flags &= ~(1 << 6); // Unset stopped flag
 
-                pc = PTR(0xFFFC) | (PTR(0xFFFD) << 8);
-                pin_RES = 1; // Not the correct way to do it, but desired effect is achieved
+                *pc = PTR(0xFFFC) | (PTR(0xFFFD) << 8);
+                *pins |= 1 << 5; // Not the correct way to do it, but desired effect is achieved
         }
 
         INST_PHP(); // Push flags
-        register_p.I = 1; // Disable interrupts
+        register_p->I = 1; // Disable interrupts
 }
 
 // Preform one cycle on the 6502
 void tick_65C02() {
-        if ((!pin_IRQ && !register_p.I) || !pin_NMI || !pin_RES) // NMI, RES, or IRQ pins went low, check if IRQs are unmasked
+        if ((!((*pins >> 7) & 1) && !register_p->I) || !((*pins >> 6) & 1) || !((*pins >> 5) & 1)) // NMI, RES, or IRQ pins went low, check if IRQs are unmasked
                 call_interrupt();
 
-        if (waiting || stopped) {
+        if (((*emulator_flags >> 7) & 1) || ((*emulator_flags >> 6) & 1)) {
                 // We are waiting
                 cycle_count++; // Should this be done this way?
                 return;
         }
-
 
         uint8_t opcode = NEXT_BYTE;
         
@@ -185,43 +183,43 @@ void tick_65C02() {
 
 // Porcessor instructions
 void INST_BRK() {
-        mem_byte_write(((pc + 1) >> 8) & 0xFF, 0x100 + (register_s--)); // High
-        mem_byte_write((pc + 1) & 0xFF, 0x100 + (register_s--)); // Low
+        mem_byte_write(((*pc + 1) >> 8) & 0xFF, 0x100 + (*register_s--)); // High
+        mem_byte_write((*pc + 1) & 0xFF, 0x100 + (*register_s--)); // Low
         INST_PHP(); // Push flags
 
         // Change flags
-        register_p.B = 1; 
-        register_p.I = 1;
-        register_p.D = 0;
+        register_p->B = 1; 
+        register_p->I = 1;
+        register_p->D = 0;
 
-        pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
+        *pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
 }
-void INST_WAI() { waiting = 1; }
-void INST_STP() { stopped = 1; }
+void INST_WAI() { *emulator_flags |= 1 << 7; }
+void INST_STP() { *emulator_flags |= 1 << 6; }
 
 // Just NOP
 void INST_NOP() { ; }
 
 void reg_dump_65C02() {
         printf("-- 65C02 REG DUMP --\n");
-        printf("A     : %02X (%d)\n", register_a, register_a);
-        printf("X     : %02X (%d)\n", register_x, register_x);
-        printf("Y     : %02X (%d)\n", register_y, register_y);
-        printf("S     : %02X (%d)\n", register_s, register_s);
-        printf("P     : %02X (", *(uint8_t *)&register_p);
-        if (register_p.N) printf("N");
-        if (register_p.V) printf(" | V");
-        if (register_p.unused) printf(" | Unused");
-        if (register_p.B) printf(" | B");
-        if (register_p.D) printf(" | D");
-        if (register_p.I) printf(" | I");
-        if (register_p.Z) printf(" | Z");
-        if (register_p.C) printf(" | C");
+        printf("A     : %02X (%d)\n", *register_a, *register_a);
+        printf("X     : %02X (%d)\n", *register_x, *register_x);
+        printf("Y     : %02X (%d)\n", *register_y, *register_y);
+        printf("S     : %02X (%d)\n", *register_s, *register_s);
+        printf("P     : %02X (", *(uint8_t *)register_p);
+        if (register_p->N) printf("N");
+        if (register_p->V) printf(" | V");
+        if (register_p->unused) printf(" | Unused");
+        if (register_p->B) printf(" | B");
+        if (register_p->D) printf(" | D");
+        if (register_p->I) printf(" | I");
+        if (register_p->Z) printf(" | Z");
+        if (register_p->C) printf(" | C");
         printf(")\n");
 
-        printf("PC    : %04X (%02X", pc, PTR(pc));
-        if (pc + 1 < UINT16_MAX) printf(" %02X", PTR(pc + 1));
-        if (pc + 2 < UINT16_MAX) printf(" %02X", PTR(pc + 2));
+        printf("PC    : %04X (%02X", *pc, PTR(*pc));
+        if (*pc + 1 < UINT16_MAX) printf(" %02X", PTR(*pc + 1));
+        if (*pc + 2 < UINT16_MAX) printf(" %02X", PTR(*pc + 2));
         printf(")\n");
 
         printf("CYCLE : %X (%ul)\n", cycle_count, cycle_count);
@@ -233,7 +231,24 @@ void reg_dump_65C02() {
 void init_65C02() {
         DBG(1, printf("Initializing 65C02 CPU");)
 
+        register_a = (uint8_t *)(memory + MEMORY_SIZE + REGISTER_A_OFF);
+        register_x = (uint8_t *)(memory + MEMORY_SIZE + REGISTER_X_OFF);
+        register_y = (uint8_t *)(memory + MEMORY_SIZE + REGISTER_Y_OFF);
+        register_s = (uint8_t *)(memory + MEMORY_SIZE + REGISTER_S_OFF);
+        pc = (uint16_t *)(memory + MEMORY_SIZE + REGISTER_IP_OFF);
+        register_p = (struct reg_flags *)(memory + MEMORY_SIZE + REGISTER_P_OFF);
+        pins = (uint8_t *)(memory + MEMORY_SIZE + PINS_OFF);
+        emulator_flags = (uint8_t *)(memory + MEMORY_SIZE + EMU_FLAGS_OFF);
         *(uint8_t *)&register_p = 0b00110100;
+
+        ASSERT(register_a != NULL);
+        ASSERT(register_x != NULL);
+        ASSERT(register_y != NULL);
+        ASSERT(register_s != NULL);
+        ASSERT(pc != NULL);
+        ASSERT(register_p != NULL);
+        ASSERT(pins != NULL);
+        ASSERT(emulator_flags != NULL);
 
         init_arithmetic_instructions();
         init_comparison_instructions();
@@ -259,5 +274,5 @@ void init_65C02() {
 
 void destroy_65C02() {
         DBG(1, printf("Destroying 65C02");)
-        free(general_memory);
+        free(memory);
 }

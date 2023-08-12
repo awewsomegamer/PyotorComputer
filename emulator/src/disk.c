@@ -21,10 +21,10 @@ uint8_t disk_operation_buffer(uint16_t sectors, uint16_t address, uint8_t device
 	
 	if (operation == 1) {
 		DBG(1, printf("Writing disk %d at sector 0x%04X from memory 0x%04X for %d sectors", disk_index, sector, address, sectors);)
-		fwrite(general_memory + address, 1, sectors * SECTOR_SIZE, connected_disks[disk_index]);
+		fwrite(memory + address, 1, sectors * SECTOR_SIZE, connected_disks[disk_index]);
 	} else {
 		DBG(1, printf("Reading disk %d at sector 0x%04X to memory 0x%04X for %d sectors", disk_index, sector, address, sectors);)
-		fread(general_memory + address, 1, sectors * SECTOR_SIZE, connected_disks[disk_index]);
+		fread(memory + address, 1, sectors * SECTOR_SIZE, connected_disks[disk_index]);
 	}
 
 	DBG(1, printf("Disk operation completed successfully");)

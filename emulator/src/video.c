@@ -54,7 +54,7 @@ void video_draw_character(uint16_t address, uint8_t data, uint8_t foreground, ui
 }
 
 void video_draw_sprite(uint16_t address, uint8_t data, uint8_t foreground, uint8_t background, uint8_t properties) {
-        uint8_t *spr_data = (uint8_t *)(general_memory + (data * SPRITE_HEIGHT + sprite_table_address));
+        uint8_t *spr_data = (uint8_t *)(memory + (data * SPRITE_HEIGHT + sprite_table_address));
 
         int cx = (address & 0xFF) * SPRITE_WIDTH;
         int cy = ((address >> 8) & 0xFF) * SPRITE_HEIGHT;
@@ -124,9 +124,9 @@ void update() {
                                         break;
 
                                 if (((chr_data[i] >> j) & 1) && !((properties >> 1) & 1)) {
-                                        *(draw_buffer + (i + cy) * VRAM_WIDTH + (rx + cx)) = *(general_memory + 48517);
+                                        *(draw_buffer + (i + cy) * VRAM_WIDTH + (rx + cx)) = *(memory + 48517);
                                 } else if (!((chr_data[i] >> j) & 1) && !(properties & 1)) {
-                                        *(draw_buffer + (i + cy) * VRAM_WIDTH + (rx + cx)) = *(general_memory + 48518);
+                                        *(draw_buffer + (i + cy) * VRAM_WIDTH + (rx + cx)) = *(memory + 48518);
                                 }
                                 
                                 rx++;

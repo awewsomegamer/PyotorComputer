@@ -9,6 +9,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <string.h>
+#include "shared_memory.h"
 
 #ifdef DEBUG
         #define DBG(msg, what) \
@@ -26,5 +27,6 @@
 #define ASSERT(cond) if (!(cond)) { printf("[%s@%d] : Assertion "#cond" failed, exiting\n", __FILE__, __LINE__); exit(1); }
 
 extern uint8_t running;
+extern uint32_t *sys_ips;
 
 #endif

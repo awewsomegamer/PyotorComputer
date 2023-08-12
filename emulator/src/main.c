@@ -7,17 +7,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include "include/video.h"
 #include "include/ctrl_reg.h"
 #include "include/disk.h"
 #include "include/scheduler.h"
+#include "include/shared_memory.h"
 
 #ifndef SYS_IPS
 #define SYS_IPS 3500000 // Default rated number of instructions per second for a modern 65C02
 #endif
 
 uint8_t running = 1;
+uint32_t *sys_ips;
 
 void *emulate_thread(void *arg) {
         time_t last_second = time(NULL);
@@ -25,7 +28,8 @@ void *emulate_thread(void *arg) {
         uint64_t last_tick_base = SDL_GetTicks64();
         const double wait_between_insts = (double)1/(double)SYS_IPS;
         double current_debt = 0;
-
+        double threshold = 0.0001;
+        
         while (running) {
                 tick_65C02();
                 current_debt += wait_between_insts;
@@ -33,23 +37,25 @@ void *emulate_thread(void *arg) {
 
                 tick_control_register();
 
-                if (current_debt >= 0.0001) {
+                if (current_debt >= threshold) {
                         usleep(1);
                         current_debt = 0;
                 }
 
-                // if (register_p.I) {
-                //         for (int i = 0; i < 16; i++)
-                //                 printf("%02X ", *(general_memory + i));
-                //         printf("\n");
-                // }
-
                 if (time(NULL) - last_second == 1) {
-                        DBG(1, printf("%d IPS %d Cycles", instructions, cycle_count);)
+                        DBG(1, printf("%d IPS, %d Cycles, Threshold (%d): %f", instructions, cycle_count, (instructions > *sys_ips), threshold);)
+                        
+                        // Try and adjust the threshold to better approximate desired speed
+                        if (instructions > *sys_ips)
+                                threshold -= 0.000001;
+                        else if (instructions < *sys_ips)
+                                threshold += 0.000001;
+
                         instructions = 0;
                         cycle_count = 0;
                         last_tick_base = SDL_GetTicks64();
                         last_second = time(NULL);
+
                 }
         }
 
@@ -59,8 +65,12 @@ void *emulate_thread(void *arg) {
 }
 
 int main(int argc, char **argv) {
+        sys_ips = malloc(sizeof(double));
+        *sys_ips = SYS_IPS;
+
+
         init_65C02();
-        init_ram();
+        init_shared_memory();
         init_video();
 
         for (int i = 1; i < argc; i++) {
@@ -68,6 +78,7 @@ int main(int argc, char **argv) {
                         // -disk disk_number disk_file
                         connect_disk(argv[i + 2], atoi(argv[i + 1]));
                 }
+
                 if (strcmp(argv[i], "-load") == 0) {
                         // -load mem mem_file
                         // mem: can be an address (i.e. 0xDCC0) which must be expressed in hex (prefixed with 0x)
@@ -84,17 +95,17 @@ int main(int argc, char **argv) {
                 }
         }
         
-        pin_RES = 0;
+        *pins |= (1 << 5);
 
-        pthread_t emulation_thread_t;
-        pthread_create(&emulation_thread_t, NULL, emulate_thread, NULL);
+        // pthread_t emulation_thread_t;
+        // pthread_create(&emulation_thread_t, NULL, emulate_thread, NULL);
 
         while (running) {
                 update();
-                do_task();
+                // do_task();
         }
         
-        pthread_join(emulation_thread_t, NULL);
+        // pthread_join(emulation_thread_t, NULL);
         destroy_video();
         destroy_65C02();
         disconnect_all();

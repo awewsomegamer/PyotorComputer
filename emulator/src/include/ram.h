@@ -27,7 +27,6 @@
 
 */
 
-
 enum memory_map {
         ZERO_PAGE_BASE = 0x0000,
         STACK_BASE = 0x0100,
@@ -43,13 +42,9 @@ enum memory_map {
 #define KERNAL_DAT_MEM(a)  (KERNAL_DAT_BASE  <= a && a <= KERNAL_MEM_BASE - 1)
 #define KERNAL_MEM(a)      (KERNAL_MEM_BASE  <= a && a <= MEM_TOP - 1)
 
-extern uint8_t *general_memory;
-
 uint8_t mem_byte_read(uint16_t address);
 void mem_byte_write(uint8_t byte, uint16_t address);
 
 void load_file(uint16_t address, char *name);
-
-void init_ram();
 
 #endif

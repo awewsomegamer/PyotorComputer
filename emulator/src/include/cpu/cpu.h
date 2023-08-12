@@ -5,10 +5,10 @@
 
 #define IO_VIDEO_MASK (1 << 0)
 
-extern uint8_t register_a;
-extern uint8_t register_x;
-extern uint8_t register_y;
-extern uint8_t register_s;
+extern uint8_t *register_a;
+extern uint8_t *register_x;
+extern uint8_t *register_y;
+extern uint8_t *register_s;
 
 struct reg_flags {
         uint8_t C : 1;
@@ -21,12 +21,11 @@ struct reg_flags {
         uint8_t N : 1;
 };
 
-extern struct reg_flags register_p;
-extern uint16_t pc;
+extern struct reg_flags *register_p;
+extern uint16_t *pc;
 
-extern uint8_t pin_IRQ;
-extern uint8_t pin_NMI;
-extern uint8_t pin_RES;
+extern uint8_t *pins;
+extern uint8_t *emulator_flags;
 
 extern uint64_t cycle_count;
 
