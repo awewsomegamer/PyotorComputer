@@ -283,5 +283,4 @@ void init_65C02() {
 
 void destroy_65C02() {
         DBG(1, printf("Destroying 65C02");)
-        free(memory);
 }
