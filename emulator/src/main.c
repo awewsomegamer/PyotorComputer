@@ -38,6 +38,12 @@ void *emulate_thread(void *arg) {
                         current_debt = 0;
                 }
 
+                // if (register_p.I) {
+                //         for (int i = 0; i < 16; i++)
+                //                 printf("%02X ", *(general_memory + i));
+                //         printf("\n");
+                // }
+
                 if (time(NULL) - last_second == 1) {
                         DBG(1, printf("%d IPS %d Cycles", instructions, cycle_count);)
                         instructions = 0;

@@ -201,113 +201,121 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			sty TERMINAL_INDEX			; Zero Index
 			sty TERMINAL_CHAR_X			; Zero X coordinate
 
-			lda #.LOBYTE(TERMINAL_BUFFER)
-			sta $5
-			lda #.HIBYTE(TERMINAL_BUFFER)
-			sta $6
-			lda #.LOBYTE(FG_CMD)
-			sta $7
-			lda #.HIBYTE(FG_CMD)
-			sta $8
-			jsr cmp_str
-			bcc @bg_cmp
-			ldy TERMINAL_BUFFER + 3
-			ldx TERMINAL_BUFFER + 4
-			jsr ascii_to_byte
-			sta VIDEO_REG_FG
-			jmp @compare_end
+			lda #.LOBYTE(TERMINAL_BUFFER)		;
+			sta $5					;
+			lda #.HIBYTE(TERMINAL_BUFFER)		;
+			sta $6					;
+			lda #.LOBYTE(FG_CMD)			;
+			sta $7					;
+			lda #.HIBYTE(FG_CMD)			;
+			sta $8					;
+			jsr cmp_str				;
+			bcc @bg_cmp				;
+			ldy TERMINAL_BUFFER + 3			;
+			ldx TERMINAL_BUFFER + 4			;
+			jsr ascii_to_byte			;
+			sta VIDEO_REG_FG			;
+			jmp @compare_end			;
 
-@bg_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
-			sta $5
-			lda #.HIBYTE(TERMINAL_BUFFER)
-			sta $6
-			lda #.LOBYTE(BG_CMD)
-			sta $7
-			lda #.HIBYTE(BG_CMD)
-			sta $8
-			jsr cmp_str
-			bcc @jump_cmp
-			ldy TERMINAL_BUFFER + 3
-			ldx TERMINAL_BUFFER + 4
-			jsr ascii_to_byte
-			sta VIDEO_REG_BG
-			jmp @compare_end
+@bg_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)		;
+			sta $5					;
+			lda #.HIBYTE(TERMINAL_BUFFER)		;
+			sta $6					;
+			lda #.LOBYTE(BG_CMD)			;
+			sta $7					;
+			lda #.HIBYTE(BG_CMD)			;
+			sta $8					;
+			jsr cmp_str				;
+			bcc @jump_cmp				;
+			ldy TERMINAL_BUFFER + 3			;
+			ldx TERMINAL_BUFFER + 4			;
+			jsr ascii_to_byte			;
+			sta VIDEO_REG_BG			;
+			jmp @compare_end			;
 
-@jump_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
-			sta $5
-			lda #.HIBYTE(TERMINAL_BUFFER)
-			sta $6
-			lda #.LOBYTE(JUMP_CMD)
-			sta $7
-			lda #.HIBYTE(JUMP_CMD)
-			sta $8
-			jsr cmp_str
-			bcc @dir_cmp
+@jump_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)		;
+			sta $5					;
+			lda #.HIBYTE(TERMINAL_BUFFER)		;
+			sta $6					;
+			lda #.LOBYTE(JUMP_CMD)			;
+			sta $7					;
+			lda #.HIBYTE(JUMP_CMD)			;
+			sta $8					;
+			jsr cmp_str				;
+			bcc @dir_cmp				;
 
-			ldy TERMINAL_BUFFER + 5
-			ldx TERMINAL_BUFFER + 6
-			jsr ascii_to_byte
-			sta $6
+			ldy TERMINAL_BUFFER + 5			;
+			ldx TERMINAL_BUFFER + 6			;
+			jsr ascii_to_byte			;
+			sta $6					;
 
-			ldy TERMINAL_BUFFER + 7
-			ldx TERMINAL_BUFFER + 8
-			jsr ascii_to_byte
-			sta $5
+			ldy TERMINAL_BUFFER + 7			;
+			ldx TERMINAL_BUFFER + 8			;
+			jsr ascii_to_byte			;
+			sta $5					;
 
-			stz TERMINAL_CHAR_X
-			stz TERMINAL_CHAR_Y
+			stz TERMINAL_CHAR_X			;
+			stz TERMINAL_CHAR_Y			;
 			
-			lda #.HIBYTE(@compare_end)
-			pha
-			lda #.LOBYTE(@compare_end)
-			pha
-			jmp ($5)
+			lda #.HIBYTE(@compare_end)		;
+			pha					;
+			lda #.LOBYTE(@compare_end)		;
+			pha					;
+			jmp ($5)				;
 
-@dir_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
-			sta $5
-			lda #.HIBYTE(TERMINAL_BUFFER)
-			sta $6
-			lda #.LOBYTE(DIR_CMD)
-			sta $7
-			lda #.HIBYTE(DIR_CMD)
-			sta $8
-			jsr cmp_str
-			bcc @load_cmp
+@dir_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)		;
+			sta $5					;
+			lda #.HIBYTE(TERMINAL_BUFFER)		;
+			sta $6					;
+			lda #.LOBYTE(DIR_CMD)			;
+			sta $7					;
+			lda #.HIBYTE(DIR_CMD)			;
+			sta $8					;
+			jsr cmp_str				;
+			bcc @load_cmp				;
 
-			jsr fs_list_directory
+			jsr fs_list_directory			;
+			jmp @compare_end			;
 
-@load_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)
-			sta $5
-			lda #.HIBYTE(TERMINAL_BUFFER)
-			sta $6
-			lda #.LOBYTE(LOAD_CMD)
-			sta $7
-			lda #.HIBYTE(LOAD_CMD)
-			sta $8
-			jsr cmp_str
-			bcc @compare_end
 
-			lda #.LOBYTE($400)
-			sta $5
-			lda #.HIBYTE($400)
-			sta $6
-			lda #.LOBYTE(TERMINAL_BUFFER + 5)
-			sta $7
-			lda #.HIBYTE(TERMINAL_BUFFER + 5)
-			sta $8
-			jsr fs_load_file
+@load_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)		;
+			sta $5					;
+			lda #.HIBYTE(TERMINAL_BUFFER)		;
+			sta $6					;
+			lda #.LOBYTE(LOAD_CMD)			;
+			sta $7					;
+			lda #.HIBYTE(LOAD_CMD)			;
+			sta $8					;
+			jsr cmp_str				;
+			bcc @compare_end			;
+
+			lda #.LOBYTE($400)			;
+			sta $5					;
+			lda #.HIBYTE($400)			;
+			sta $6					;
+			lda #.LOBYTE(TERMINAL_BUFFER + 5)	;
+			sta $7					;
+			lda #.HIBYTE(TERMINAL_BUFFER + 5)	;
+			sta $8					;
+			jsr fs_load_file			;
 			
-			ldy TERMINAL_CHAR_Y
-			beq @load_no_sub
-			dey
-@load_no_sub:		lda #'A'
-			jsr putchar
-			
+			ldy TERMINAL_CHAR_Y			;
+			beq @load_no_sub			;
+			dey					;
+@load_no_sub:		lda #'A'				;
+			jsr putchar				;
+			jmp @compare_end			;
 
-@compare_end:		ply					; Restore Y
+@compare_end:		ldy #$00				; Zero Y
+			lda #$00				; Zero A
+@reset_terminal_buffer:	cpy #TERMINAL_BUFFER_LEN		; See if we are at the end of the buffer
+			beq @terminal_buffer_reset		; If so jump out of the loop
+			sta TERMINAL_BUFFER, y			; Otherwise, zero the current character + y in the buffer
+			iny					; Increment Y
+			bra @reset_terminal_buffer		; Loop
+@terminal_buffer_reset:	ply					; Restore Y
 			pla					; Restore A
-			lda #$0					; Zero A
-			sta TERMINAL_STATUS			; Zero status, we have handled it
+			stz TERMINAL_STATUS			; Zero status, we have handled it
 			jmp terminal				; Start again
 
 reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
@@ -359,15 +367,15 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; X - Lower byte of address
 ; Y - Higher byte of address
 .proc put_pixel
-			stx VIDEO_ADDR_LO
-			sty VIDEO_ADDR_HI
-			sta VIDEO_REG_DATA
-			pha
+			stx VIDEO_ADDR_LO			; Store the X coordinate
+			sty VIDEO_ADDR_HI			; Store the Y coordinate
+			sta VIDEO_REG_DATA			; Store the color
+			pha					; Save A
 			lda #$0					; 320x200 8-bit color mode
-			sta VIDEO_REG_MODE
+			sta VIDEO_REG_MODE			; Set the mode
 			lda #%11000000				; D1 | R/W
-			sta VIDEO_REG_STATUS
-			pla
+			sta VIDEO_REG_STATUS			; Invoke the video register
+			pla					; Restore A
 			rts					; Return
 .endproc
 
@@ -405,22 +413,22 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; ($7) - String B
 ; Carry flag set = strings match
 .proc cmp_str
-@loop:			lda ($7)
-			cmp ($5)
-			bne @fail
-			cmp #$0
-			beq @success
-			inc $5
-			bne @inc_5_over
-			inc $6
-@inc_5_over:		inc $7
-			bne @inc_7_over
-			inc $8
-@inc_7_over:		bra @loop
-@success:		sec
-			bra @end
-@fail:			clc
-@end:			rts
+@loop:			lda ($7)				; Load in the current character of the expected string
+			cmp ($5)				; Compare it against the character of the input string
+			bne @fail				; If they are not equal, goto fail
+			cmp #$0					; Otherwise check if we reached a zero terminator
+			beq @success				; If so, success
+			inc $5					; Otherwise increment the low byte of the input string
+			bne @inc_5_over				; Check to see if it rolled over
+			inc $6					; If it did, increment the high byte too
+@inc_5_over:		inc $7					; Increment the low byte of the expected string
+			bne @inc_7_over				; Check to see if it rolled over
+			inc $8					; If it did, increment the high byte too
+@inc_7_over:		bra @loop				; Loop
+@success:		sec					; Success, set the carry flag
+			bra @end				; Branch to the end
+@fail:			clc					; Fail, clear the carry flag
+@end:			rts					; Return
 .endproc
 
 ; X - Low nibble (ASCII)
@@ -715,27 +723,26 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 @print_dir_loop:	ldy #$0F				; Load offset with 15, to check attributes block
 			lda ($5), y				; Load in the attribute byte
 			and #%11000000				; Select the D and E flags
-			cmp #$40				; Check if the file is not deleted and exists
+			cmp #%01000000				; Check if the file is not deleted and exists
 			bne @next				; If not goto the next file
 			ldy #$00				; If so, zero the offset to print the name
-@print_name_loop:	lda ($5), y				; Load the current character of the name
-			cpy #13					; Check if the offset is 13
-			beq @print_name_end			; If so, we printed all characters
-			iny					; Increment the offset
-			phy					; Save the offset
+@print_name_loop:	cpy #13					; Have we printed all of the characters in the name field?
+			beq @print_name_end			; If so, branch to the end
+			lda ($5), y				; Otherwise, load in the current character
+			iny					; Increment the index
+			phy					; Save the index
 			ldx TERMINAL_CHAR_X			; Load the current X coordinate
 			ldy TERMINAL_CHAR_Y			; Load the current Y coordinate
-			jsr putchar				; Print the current character
-			inx					; Increment the X coordinate
+			jsr putchar				; Print the character
+			cpy #12					; Have we printed a scroll character
+			bcc @no_scroll				; If not, then jump over
+			ldy #11					; Otherwise, load Y with the last row
+@no_scroll:		inx					; Increment the X coordinate
 			stx TERMINAL_CHAR_X			; Store the X coordinate
-			ply					; Restore the offset
-			bra @print_name_loop			; Loop back to the name printing loop
-@print_name_end:	ldy TERMINAL_CHAR_Y			; Load the current Y coordinate
-			cpy #12					; Are we at the end of the screen?
-			bcc @no_nl				; If not, no new line is required
-			ldy #11					; Step Y back to be on screen
-@no_nl:			iny					; Increment the Y coordinate
 			sty TERMINAL_CHAR_Y			; Store the Y coordinate
+			ply					; Restore the character index
+			bra @print_name_loop			; Loop
+@print_name_end:	inc TERMINAL_CHAR_Y			; Increment the Y coordinate
 			stz TERMINAL_CHAR_X			; Zero the X coordinate to go to the beginning of the next line
 @next:			lda $0					; Load file index
 			jsr fs_dir_next_entry			; Read in the next entry
@@ -835,20 +842,20 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 .proc fs_load_file
 			sei					; Disable interrupts
 			lda $5					; Get the low byte of the load address
-			pha
+			pha					; Push the low byte to the stack
 			lda $6					; Get the high byte of the load address
-			pha
+			pha					; Push the high byte to the stack
 			jsr fs_find_file			; Find the file
-			cmp #FILE_NOT_FOUND_IDX
-			bne @over
-			pla
-			pla
-			rts
-@over:			lda #$1
+			cmp #FILE_NOT_FOUND_IDX			; Was the file found?
+			bne @over				; If so, jump over the following
+			pla					; Remove high byte from stack
+			pla					; Remove low byte from stack
+			rts					; Return
+@over:			lda #$1					; Load the disk number (make this dynamic)
 			jsr fs_load_file_init			; Load file initializer
-			pla
+			pla					; Restore high byte
 			sta $6					; Move it to high byte of destination
-			pla
+			pla					; Restore low byte
 			sta $5					; Move it to low byte of destination
 @loop:			lda #.LOBYTE(FS_CUR_FILE)		; Get the low byte of the source address
 			sta $7					; Move it to low byte of source
@@ -859,10 +866,10 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			lda #.HIBYTE(1000)			; Get the high byte of the counter
 			sta $A					; Store it in the high byte of the counter
 			jsr memcpy				; Memcpy
-			lda #$1
-			jsr fs_load_next_file_desc
-			beq @return
-			bra @loop
+			lda #$1					; Load in the disk number (make this dynamic)
+			jsr fs_load_next_file_desc		; Load in the next descriptor of the file
+			beq @return				; If there are no more descriptors, return
+			bra @loop				; Otherwise, loop
 @return:		cli					; Enable interrupts
 			rts
 .endproc
