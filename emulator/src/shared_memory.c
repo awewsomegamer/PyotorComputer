@@ -24,7 +24,7 @@ void init_shared_memory() {
         }
 
         ftruncate(fd, BUFFER_SIZE);
-        memory = mmap((void *)0xDEADBEEF, BUFFER_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        memory = mmap(NULL, BUFFER_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
         if (((uint8_t *) -1) == memory) {
                 printf("Failed to map memory\n");

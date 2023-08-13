@@ -3,6 +3,7 @@
 #include "include/shared_memory.h"
 #include "include/video.h"
 #include "include/cpu/cpu.h"
+#include <stdio.h>
 
 uint8_t mem_byte_read(uint16_t address) {
         return *(memory + address);

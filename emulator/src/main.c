@@ -30,21 +30,14 @@ void *emulate_thread(void *arg) {
         double current_debt = 0;
         double threshold = 0.0001;
 
-        FILE *f = fopen("memdump.bin", "w+");
-
         while (running) {
+                // reg_dump_65C02();
                 tick_65C02();
                 current_debt += wait_between_insts;
                 instructions++;
+                // reg_dump_65C02();
 
                 tick_control_register();
-
-                reg_dump_65C02();
-
-                fseek(f, 0, SEEK_SET);
-                fwrite(memory, 1, BUFFER_SIZE, f);
-
-                sleep(1);
 
                 if (current_debt >= threshold) {
                         usleep(1);
@@ -67,8 +60,6 @@ void *emulate_thread(void *arg) {
 
                 }
         }
-
-        fclose(f);
 
         DBG(1, printf("Emulation thread finished execution");)
 

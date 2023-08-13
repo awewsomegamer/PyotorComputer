@@ -1,11 +1,11 @@
 #include "../../include/cpu/instructions/inst_macros.h"
 
-void INST_INA() { *register_a++; SET_NZ(*register_a) }
-void INST_DEA() { *register_a--; SET_NZ(*register_a) }
-void INST_INX() { *register_x++; SET_NZ(*register_x) }
-void INST_DEX() { *register_x--; SET_NZ(*register_x) }
-void INST_INY() { *register_y++; SET_NZ(*register_y) }
-void INST_DEY() { *register_y--; SET_NZ(*register_y) }
+void INST_INA() { (*register_a)++; SET_NZ(*register_a) }
+void INST_DEA() { (*register_a)--; SET_NZ(*register_a) }
+void INST_INX() { (*register_x)++; SET_NZ(*register_x) }
+void INST_DEX() { (*register_x)--; SET_NZ(*register_x) }
+void INST_INY() { (*register_y)++; SET_NZ(*register_y) }
+void INST_DEY() { (*register_y)--; SET_NZ(*register_y) }
 void INST_INC_ABS() { uint16_t addr = NEXT_WORD; mem_byte_write(PTR(addr) + 1, addr); SET_NZ(PTR(addr)) }
 void INST_DEC_ABS() { uint16_t addr = NEXT_WORD; mem_byte_write(PTR(addr) - 1, addr); SET_NZ(PTR(addr)) }
 void INST_DEC_ZPG() { uint16_t addr = NEXT_BYTE; mem_byte_write(PTR(addr) - 1, addr); SET_NZ(PTR(addr)) }

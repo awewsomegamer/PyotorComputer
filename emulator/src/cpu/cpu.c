@@ -99,22 +99,20 @@ void INST_BIT(uint8_t opcode) {
 }
 
 void call_interrupt() {
-        mem_byte_write(((*pc) >> 8) & 0xFF, 0x100 + (*register_s--)); // High
-        mem_byte_write((*pc) & 0xFF, 0x100 + (*register_s--)); // Low
+        mem_byte_write(((*pc) >> 8) & 0xFF, 0x100 + ((*register_s)--)); // High
+        mem_byte_write((*pc) & 0xFF, 0x100 + ((*register_s)--)); // Low
 
+        *emulator_flags &= ~(1 << 7); // Unset waiting flag
 
         if (!((*pins >> 6) & 1)) {
                 // NMI
-                *emulator_flags &= ~(1 << 7); // Unset waiting flag
                 *pc = PTR(0xFFFA) | (PTR(0xFFFB) << 8);
                 *pins |= 1 << 6; // Not the correct way to do it, but desired effect is achieved
         } else if (!((*pins >> 7) & 1) && !register_p->I) {
                 // IRQ
-                *emulator_flags &= ~(1 << 7); // Unset waiting flag
                 *pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
         } else if (!((*pins >> 5) & 1)) {
                 // Reset
-                *emulator_flags &= ~(1 << 7); // Unset waiting flag
                 *emulator_flags &= ~(1 << 6); // Unset stopped flag
 
                 *pc = PTR(0xFFFC) | (PTR(0xFFFD) << 8);
@@ -129,6 +127,7 @@ void call_interrupt() {
 void tick_65C02() {
         if ((!((*pins >> 7) & 1) && !register_p->I) || !((*pins >> 6) & 1) || !((*pins >> 5) & 1)) // NMI, RES, or IRQ pins went low, check if IRQs are unmasked
                 call_interrupt();
+
 
         if (((*emulator_flags >> 7) & 1) || ((*emulator_flags >> 6) & 1)) {
                 // We are waiting
@@ -172,7 +171,7 @@ void tick_65C02() {
         }
 
         // Check if opcode is valid
-        DBG(0, if (instruction[opcode] == NULL) printf("! Invalid opcode %02X at %04X !\n", opcode, pc - 1);)
+        DBG(0, if (instruction[opcode] == NULL) printf("! Invalid opcode %02X at %04X !\n", opcode, (*pc) - 1);)
 
         // Consult instruction table
         (*instruction[opcode])();
@@ -184,8 +183,8 @@ void tick_65C02() {
 
 // Porcessor instructions
 void INST_BRK() {
-        mem_byte_write(((*pc + 1) >> 8) & 0xFF, 0x100 + (*register_s--)); // High
-        mem_byte_write((*pc + 1) & 0xFF, 0x100 + (*register_s--)); // Low
+        mem_byte_write(((*pc + 1) >> 8) & 0xFF, 0x100 + ((*register_s)--)); // High
+        mem_byte_write((*pc + 1) & 0xFF, 0x100 + ((*register_s)--)); // Low
         INST_PHP(); // Push flags
 
         // Change flags
