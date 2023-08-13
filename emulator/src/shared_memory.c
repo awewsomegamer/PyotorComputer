@@ -62,6 +62,8 @@ void init_shared_memory_client() {
                 exit(1);
         }
 
+        lock = (atomic_flag *)(memory + BUFFER_SIZE - 1);
+
         DBG(1, printf("Initialized shared memory client");)
 }
 
