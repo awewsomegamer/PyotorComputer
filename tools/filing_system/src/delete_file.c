@@ -1,4 +1,4 @@
-#include "main.h"
+#include "include/main.h"
 #include <stdlib.h>
 
 void delete_file(char *file_name) {

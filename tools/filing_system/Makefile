@@ -1,2 +1,2 @@
 all:
-	gcc *.c -o ../filer.out
+	gcc src/*.c -o filer.out -Isrc/include

@@ -1,4 +1,4 @@
-#include "main.h"
+#include "include/main.h"
 #include <stdio.h>
 
 size_t allocated_thingimabobs = 0;

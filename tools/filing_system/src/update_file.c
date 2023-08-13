@@ -1,4 +1,4 @@
-#include "main.h"
+#include "include/main.h"
 
 void update_file(char *file_name) {
 	uint8_t alloc_name = 0;

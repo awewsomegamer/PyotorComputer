@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
         sys_ips = malloc(sizeof(double));
         *sys_ips = SYS_IPS;
 
-        init_shared_memory();
+        init_shared_memory_host();
         init_65C02();
         init_video();
 
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
         destroy_video();
         destroy_65C02();
         disconnect_all();
-        destroy_shared_memory();
+        destroy_shared_memory_host();
 
         DBG(1, printf("Emulator stopped");)
 

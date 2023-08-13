@@ -13,7 +13,7 @@ uint8_t *memory = NULL;
 int fd = 0;
 atomic_char16_t *lock;
 
-void init_shared_memory() {
+void init_shared_memory_host() {
 	DBG(1, printf("Initializing shared memory");)
 
         fd = shm_open(BACKING_FILE, O_RDWR | O_CREAT, 0644);
@@ -36,7 +36,7 @@ void init_shared_memory() {
 	DBG(1, printf("Initialized shared memory");)
 }
 
-void destroy_shared_memory() {
+void destroy_shared_memory_host() {
         DBG(1, printf("Destroying shared memory");)
 
         munmap(memory, BUFFER_SIZE);
@@ -44,6 +44,14 @@ void destroy_shared_memory() {
         shm_unlink(BACKING_FILE);
 
         DBG(1, printf("Destroyed shared memory");)
+}
+
+void init_shared_memory_client() {
+        
+}
+
+void destroy_shared_memory_client() {
+        
 }
 
 void acquire_lock() {

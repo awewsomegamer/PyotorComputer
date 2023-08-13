@@ -10,6 +10,14 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <unistd.h>
+#include <time.h>
+#include <pthread.h>
+#include <string.h>
 
 #define MEMORY_SIZE 		UINT16_MAX
 #define REGISTER_A_OFF 		1 // ( uint8_t  )  : Offset of the contents of the A register - MEMORY_SIZE
@@ -28,9 +36,25 @@
 #define IPS			10 // ( uint32_t )  : The number of instructions per second
 #define BUFFER_SIZE		MEMORY_SIZE + (IPS + 4) + 2 // + 2 for the lock
 
+#ifdef DEBUG
+        #define DBG(msg, what) \
+                if (msg == 1) { \
+                        printf("[%s@%d] : ", __FILE__, __LINE__); \
+                        what \
+                        printf("\n"); \
+                } else { \
+                        what; \
+                }
+#else
+        #define DBG(msg, what) ;
+#endif
+
 extern uint8_t *memory;
 
-void init_shared_memory();
-void destroy_shared_memory();
+void init_shared_memory_host();
+void destroy_shared_memory_host();
+
+void init_shared_memory_client();
+void destroy_shared_memory_client();
 
 #endif
