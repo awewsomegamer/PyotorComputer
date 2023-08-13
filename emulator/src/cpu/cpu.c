@@ -99,6 +99,8 @@ void INST_BIT(uint8_t opcode) {
 }
 
 void call_interrupt() {
+        reg_dump_65C02();
+
         mem_byte_write(((*pc) >> 8) & 0xFF, 0x100 + ((*register_s)--)); // High
         mem_byte_write((*pc) & 0xFF, 0x100 + ((*register_s)--)); // Low
 
@@ -121,6 +123,8 @@ void call_interrupt() {
 
         INST_PHP(); // Push flags
         register_p->I = 1; // Disable interrupts
+
+        reg_dump_65C02();
 }
 
 // Preform one cycle on the 6502
@@ -183,6 +187,7 @@ void tick_65C02() {
 
 // Porcessor instructions
 void INST_BRK() {
+        reg_dump_65C02();
         mem_byte_write(((*pc + 1) >> 8) & 0xFF, 0x100 + ((*register_s)--)); // High
         mem_byte_write((*pc + 1) & 0xFF, 0x100 + ((*register_s)--)); // Low
         INST_PHP(); // Push flags
@@ -193,6 +198,7 @@ void INST_BRK() {
         register_p->D = 0;
 
         *pc = PTR(0xFFFE) | (PTR(0xFFFF) << 8);
+        reg_dump_65C02();
 }
 void INST_WAI() { *emulator_flags |= 1 << 7; }
 void INST_STP() { *emulator_flags |= 1 << 6; }

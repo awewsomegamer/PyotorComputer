@@ -3,8 +3,10 @@
 
 void INST_RTI() {
         // Return from interrupt
+        reg_dump_65C02();
         INST_PLP();
         (*pc) = PTR(0x100 + ++(*register_s)) | (PTR(0x100 + ++(*register_s)) << 8);
+        reg_dump_65C02();
 }
 
 void INST_JSR() {

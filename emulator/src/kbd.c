@@ -1,4 +1,5 @@
 #include <SDL2/SDL_timer.h>
+#include <stdio.h>
 #include "include/kbd.h"
 #include "include/cpu/cpu.h"
 #include "include/ram.h"

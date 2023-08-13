@@ -1,6 +1,6 @@
 #include "../../include/cpu/instructions/inst_macros.h"
 
-void INST_PHP() { mem_byte_write(*(uint8_t *)&register_p, 0x100 + ((*register_s)--)); } // PUSH P
+void INST_PHP() { mem_byte_write(*(uint8_t *)register_p, 0x100 + ((*register_s)--)); } // PUSH P
 void INST_PLP() { *(uint8_t *)register_p = PTR(0x100 + (++(*register_s))); } // PULL P
 void INST_PHA() { mem_byte_write(*register_a, 0x100 + ((*register_s)--)); } // PUSH A
 void INST_PLA() { *register_a = PTR(0x100 + (++(*register_s))); SET_NZ(*register_a)} // PULL A
