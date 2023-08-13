@@ -1,4 +1,4 @@
-all: asm emu kern fs
+all: asm emu kern fs mon
 
 DBG =
 SPEED ?=
@@ -14,6 +14,9 @@ kern:
 
 fs:
 	make -C tools/filing_system
+
+mon:
+	make -C tools/monitor
 
 clean:
 	rm -rf ./bin/*

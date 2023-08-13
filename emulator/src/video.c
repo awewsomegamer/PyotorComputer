@@ -96,6 +96,8 @@ void update() {
         case SDL_QUIT:
                 DBG(1, printf("Quitting");)
                 running = 0;
+                *emulator_flags &= ~(1 << 5);
+
                 break;
         case SDL_KEYDOWN:
                 keyboard_request(event.key.keysym.scancode);

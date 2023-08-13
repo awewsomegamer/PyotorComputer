@@ -4,8 +4,8 @@
 void INST_SED() { register_p->D = 1; }
 void INST_CLD() { register_p->D = 0; }
 void INST_CLV() { register_p->V = 0; }
-void INST_SEI() { register_p->I = 1; printf("SEI %d\n", register_p->I); }
-void INST_CLI() { register_p->I = 0; printf("CLI %d\n", register_p->I); }
+void INST_SEI() { register_p->I = 1; }
+void INST_CLI() { register_p->I = 0; }
 void INST_SEC() { register_p->C = 1; }
 void INST_CLC() { register_p->C = 0; }
 

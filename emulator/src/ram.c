@@ -6,10 +6,13 @@
 #include <stdio.h>
 
 uint8_t mem_byte_read(uint16_t address) {
+        // Possibly need a lock here
         return *(memory + address);
 }
 
 void mem_byte_write(uint8_t byte, uint16_t address) {
+        shared_memory_acquire_lock();
+
         if (KERNAL_MEM(address)) {
                 DBG(1, printf("Tried to write to KERNAL ROM address");)
                 
@@ -25,6 +28,8 @@ void mem_byte_write(uint8_t byte, uint16_t address) {
         }
 
         *(memory + address) = byte;
+
+        shared_memory_release_lock();
 }
 
 void load_file(uint16_t address, char *name) {

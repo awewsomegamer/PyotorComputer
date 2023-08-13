@@ -29,13 +29,13 @@ void *emulate_thread(void *arg) {
         const double wait_between_insts = (double)1/(double)SYS_IPS;
         double current_debt = 0;
         double threshold = 0.0001;
+        
+        *emulator_flags |= 1 << 5;
 
         while (running) {
-                // reg_dump_65C02();
                 tick_65C02();
                 current_debt += wait_between_insts;
                 instructions++;
-                // reg_dump_65C02();
 
                 tick_control_register();
 
