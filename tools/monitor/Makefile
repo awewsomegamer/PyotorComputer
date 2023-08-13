@@ -1,2 +1,2 @@
 all:
-	gcc src/*.c -o monitor.out -Isrc/include
+	gcc src/*.c -o monitor.out -Isrc/include -lcurses
