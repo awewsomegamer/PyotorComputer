@@ -3,17 +3,19 @@
 
 #include <stdarg.h>
 #include <stdint.h>
+#include "global.h"
+#include "shared_memory.h"
 
-#define AM_ABS 		00		// Absolute
-#define AM_AIX 		01		// Absolute indexed indirect 
-#define AM_ABX 		02		// Absolute indexed X
-#define AM_ABY 		03		// Absolute indexed Y
-#define AM_AIN		04		// Absolute indirect
-#define AM_A__	 	05		// Accumulator
-#define AM_IMM	 	06		// Immediate
-#define AM_IMP	 	07		// Implied
-#define AM_REL	 	08		// Relative
-#define AM_STK		09		// Stack
+#define AM_ABS 		0		// Absolute
+#define AM_AIX 		1		// Absolute indexed indirect 
+#define AM_ABX 		2		// Absolute indexed X
+#define AM_ABY 		3		// Absolute indexed Y
+#define AM_AIN		4		// Absolute indirect
+#define AM_A__	 	5		// Accumulator
+#define AM_IMM	 	6		// Immediate
+#define AM_IMP	 	7		// Implied
+#define AM_REL	 	8		// Relative
+#define AM_STK		9		// Stack
 #define AM_ZP_ 		10		// Zero page
 #define AM_INX 		11		// Zero page indexed indirect
 #define AM_ZPX 		12		// Zero page indexed X
@@ -40,7 +42,7 @@ static const char *instruction_name_lookup[] = {
 	"BEQ", "SBC", "SBC", "NOP", "NOP", "SBC", "INC", "SMB7", "SED", "SBC", "PLX", "NOP", "NOP", "SBC", "INC", "BBS7"
 };
 
-static const char *instruction_addr_mode_lookup[] = {
+static const char instruction_addr_mode_lookup[] = {
 	AM_STK, AM_INX, AM_IMP, AM_IMP, AM_ZP_, AM_ZP_, AM_ZP_, AM_ZP_, AM_STK, AM_IMM, AM_A__, AM_IMP, AM_ABS, AM_ABS, AM_ABS, AM_REL,
 	AM_REL, AM_INY, AM_IND, AM_IMP, AM_ZP_, AM_ZPX, AM_ZPX, AM_ZP_, AM_IMP, AM_ABY, AM_A__, AM_IMP, AM_ABS, AM_ABX, AM_ABX, AM_REL,
 	AM_ABS, AM_INX, AM_IMP, AM_IMP, AM_ZP_, AM_ZP_, AM_ZP_, AM_ZP_, AM_STK, AM_IMM, AM_A__, AM_IMP, AM_ABS, AM_ABS, AM_ABS, AM_REL,
@@ -59,6 +61,27 @@ static const char *instruction_addr_mode_lookup[] = {
 	AM_REL, AM_INY, AM_IND, AM_IMP, AM_IMP, AM_ZPX, AM_ZPX, AM_ZP_, AM_IMP, AM_ABY, AM_STK, AM_IMP, AM_IMP, AM_ABX, AM_ABX, AM_REL,
 };
 
-uint8_t print_args(uint8_t opcode, ...);
+static const int instruction_size_lookup[] = {
+	[AM_ABS] = 3,
+	[AM_AIX] = 3,
+	[AM_ABX] = 3,
+	[AM_ABY] = 3,
+	[AM_AIN] = 3,
+	[AM_A__] = 1,
+	[AM_IMM] = 2,
+	[AM_IMP] = 1,
+	[AM_REL] = 2,
+	[AM_STK] = 1,
+	[AM_ZP_] = 2,
+	[AM_INX] = 2,
+	[AM_ZPX] = 2,
+	[AM_ZPY] = 2,
+	[AM_IND] = 2,
+	[AM_INY] = 2
+};
+
+extern int pc;
+
+char *print_instruction(uint8_t *buffer);
 
 #endif

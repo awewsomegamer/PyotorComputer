@@ -1,11 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "include/global.h"
 #include "include/shared_memory.h"
-
-#include <ncurses.h>
-#include <string.h>
-#include <locale.h>
-#include <curses.h>
+#include "include/disassemble.h"
 
 int max_x = 0;
 int max_y = 0;
@@ -31,17 +28,50 @@ void init_ncurses() {
         }
 }
 
-int main() {
-	init_shared_memory_client();
-	init_ncurses();
+int main(int argc, char **argv) {
+        switch (argc) {
+        case 2: {
+                FILE *code = fopen(argv[1], "r");
+                
+                fseek(code, 0, SEEK_END);
+                size_t size = ftell(code);
+                fseek(code, 0, SEEK_SET);
 
-	// While running
-	while ((*(memory + EMU_FLAGS_OFF) >> 5) & 1) {
-		
+                uint8_t *buffer = malloc(size);
+                fread(buffer, 1, size, code);
 
-	}
+                for (int i = 0; i < 10; i++) {
+                        char *str = print_instruction(buffer);
+                        printf("%s\n", str);
+                        free(str);
+                }
 
-	destroy_shared_memory_client();
+
+                break;
+        }
+
+        case 3: {
+
+                break;
+        }
+
+        default: {
+                init_shared_memory_client();
+                init_ncurses();
+
+                // While running
+                while ((*(memory + EMU_FLAGS_OFF) >> 5) & 1) {
+                        
+
+                }
+
+	        destroy_shared_memory_client();
+
+                break;
+        }
+        }
+
+
 
 	return 0;
 }
