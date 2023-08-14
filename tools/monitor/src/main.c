@@ -1,3 +1,4 @@
+#include <curses.h>
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,8 +8,10 @@
 #include "include/disassemble.h"
 #include <assert.h>
 
-#define NUM_INST_TO_DISASSEMBLE max_y - 1
-
+#define LABEL_COLUMN 0
+#define CODE_COLUMN (max_x / 3)
+#define CODE_COLUMN_END (max_x * 3/4)
+#define DISASM_START_ROW ((max_y / 2) - 1)
 int max_x = 0;
 int max_y = 0;
 
@@ -23,9 +26,6 @@ void init_ncurses() {
         keypad(stdscr, TRUE);
 	
 	getmaxyx(stdscr, max_y, max_x);
-
-        max_y--;
-        max_x--;
 
         if (max_x == 0 || max_y == 0) {
                 // Screen too small
@@ -99,23 +99,50 @@ int main(int argc, char **argv) {
         while ((*(memory + EMU_FLAGS_OFF) >> 5) & 1) {
                 pc = *(memory + CUR_INST_OFF) | (*(memory + CUR_INST_OFF + 1) << 8);
 
-                for (int i = 0; i < NUM_INST_TO_DISASSEMBLE; i++) {
+                for (int i = DISASM_START_ROW; i < max_y; i++) {
                         char *str = print_instruction(memory, &flags);
+                        char *printable_str = malloc(max_x + 1);
+                        memset(printable_str, 0, max_x + 1);
 
-                        move(i, 40);
-
-                        if (flags & 1)
-                                move(i, 16);
-
-                        printw("%s%c", str, (flags & 1 ? ':' : 0));
-                        free(str);
+                        int length = CODE_COLUMN_END - CODE_COLUMN - 5;
+                        int x = CODE_COLUMN;
 
                         if (flags & 1) {
+                                length = CODE_COLUMN - LABEL_COLUMN - 5;
+                                x = LABEL_COLUMN;
+                        }
+
+                        strncpy(printable_str, str, length);
+                        
+                        if (strlen(str) > length) {
+                                memset(printable_str + length, '.', 3);
+                                if (flags & 1)
+                                        printable_str[length + 3] = ':';
+                                printable_str[length + 4] = ' ';
+                        }
+
+                        move(i, x);
+                        printw("%s%c", printable_str, (flags & 1 ? ':' : 0));
+                        
+                        if (flags & 1) {
                                 str = print_instruction(memory, &flags);
-                                move(i, 40);
-                                printw("%s", str);
+                                memset(printable_str, 0, max_x + 1);
+                                length = CODE_COLUMN_END - CODE_COLUMN - 5;
+
+                                strncpy(printable_str, str, length);
+
+                                if (strlen(str) > length) {
+                                        memset(printable_str + length, '.', 3);
+                                        if (flags & 1)
+                                                printable_str[length + 3] = ':';
+                                }
+
+                                move(i, CODE_COLUMN);
+                                printw("%s", printable_str);
                                 free(str);
                         }
+
+                        free(printable_str);
                 }
 
                 refresh();

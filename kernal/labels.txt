@@ -114,6 +114,6 @@ al 00DD2C .@logo_over
 al 00DD2E .@done
 al 00DD04 .@draw_logo
 al 00DCE4 .@end
-al 00DCE2 .@bg_over
+al 00DCE2 .@bg_overgsdfgsdfgsdfgsdfgsdfgsdfgsdfgsdfgsdfgsdfgsdfgsdfgsdfgsdfsdfgsdfgsdfgsdfgsdfgdsfgdsfg
 al 00DCCC .@draw_bg
 al 00DCC0 .entry
