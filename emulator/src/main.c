@@ -20,7 +20,7 @@
 #endif
 
 uint8_t running = 1;
-uint32_t *sys_ips;
+double *sys_ips;
 
 void *emulate_thread(void *arg) {
         time_t last_second = time(NULL);
@@ -67,10 +67,11 @@ void *emulate_thread(void *arg) {
 }
 
 int main(int argc, char **argv) {
-        sys_ips = malloc(sizeof(double));
+        init_shared_memory_host();
+
+        sys_ips = (double *)(memory + IPS_OFF);
         *sys_ips = SYS_IPS;
 
-        init_shared_memory_host();
         init_65C02();
         init_video();
 

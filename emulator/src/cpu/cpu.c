@@ -14,6 +14,7 @@ uint8_t *register_y = NULL;
 uint8_t *register_s = NULL;
 struct reg_flags *register_p = NULL;
 uint16_t *pc = NULL;
+uint16_t *cur_inst = NULL;
 
 // Pins
 uint8_t *pins = NULL; // I N R 0 0 0 0 0
@@ -135,6 +136,7 @@ void tick_65C02() {
                 return;
         }
 
+        *cur_inst = *pc;
         uint8_t opcode = NEXT_BYTE;
         
         uint8_t high_nibble = ((opcode >> 4) & 0xF);
@@ -235,10 +237,11 @@ void init_65C02() {
         register_x = (uint8_t *)(memory + REGISTER_X_OFF);
         register_y = (uint8_t *)(memory + REGISTER_Y_OFF);
         register_s = (uint8_t *)(memory + REGISTER_S_OFF);
-        pc = (uint16_t *)(memory + REGISTER_IP_OFF);
+        pc = (uint16_t *)(memory + REGISTER_PC_OFF);
         register_p = (struct reg_flags *)(memory + REGISTER_P_OFF);
         pins = (uint8_t *)(memory + PINS_OFF);
         emulator_flags = (uint8_t *)(memory + EMU_FLAGS_OFF);
+        cur_inst = (uint16_t *)(memory + CUR_INST_OFF);
 
         ASSERT(register_a != NULL);
         ASSERT(register_x != NULL);
@@ -248,6 +251,7 @@ void init_65C02() {
         ASSERT(register_p != NULL);
         ASSERT(pins != NULL);
         ASSERT(emulator_flags != NULL);
+        ASSERT(cur_inst != NULL);
 
         *register_a = 0x00;
         *register_x = 0x00;

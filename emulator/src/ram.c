@@ -6,8 +6,11 @@
 #include <stdio.h>
 
 uint8_t mem_byte_read(uint16_t address) {
-        // Possibly need a lock here
-        return *(memory + address);
+        shared_memory_acquire_lock();
+        uint8_t value = *(memory + address);
+        shared_memory_release_lock();
+
+        return value;
 }
 
 void mem_byte_write(uint8_t byte, uint16_t address) {

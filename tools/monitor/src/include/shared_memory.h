@@ -23,7 +23,7 @@
 #define REGISTER_A_OFF 		MEMORY_SIZE + 1         // ( uint8_t  )  : Offset of the contents of the A register - MEMORY_SIZE
 #define REGISTER_X_OFF 		MEMORY_SIZE + 2         // ( uint8_t  )  : Offset of the contents of the X register - MEMORY_SIZE
 #define REGISTER_Y_OFF 		MEMORY_SIZE + 3         // ( uint8_t  )  : Offset of the contents of the Y register - MEMORY_SIZE
-#define REGISTER_IP_OFF 	MEMORY_SIZE + 4         // ( uint16_t )  : Offset of the contents of the IP register - MEMORY_SIZE
+#define REGISTER_PC_OFF 	MEMORY_SIZE + 4         // ( uint16_t )  : Offset of the contents of the IP register - MEMORY_SIZE
 #define REGISTER_S_OFF 		MEMORY_SIZE + 6         // ( uint8_t  )  : Offset of the contents of the S register - MEMORY_SIZE
 #define REGISTER_P_OFF 		MEMORY_SIZE + 7         // ( uint8_t  )  : Offset of the contents of the P register - MEMORY_SIZE
 #define PINS_OFF		MEMORY_SIZE + 8         // ( uint8_t  )  : I N R 0 0 0 0 0
@@ -31,11 +31,13 @@
 				                        //		     | `----- value of pin_NMI
 				                        //		     `------- value of pin_IRQ
 #define EMU_FLAGS_OFF		MEMORY_SIZE + 9         // ( uint8_t  )  : W S R 0 0 0 0 0
-                                                        //                 | | `-- Emulator running boolean
-				                        //		     | `---- Stopped
-				                        //		     `------ Waiting
-#define IPS			MEMORY_SIZE + 10        // ( double  )  : The number of instructions per second
-#define BUFFER_SIZE		MEMORY_SIZE + (IPS + 8) + 1 // + 1 for the lock
+                                                        //                 | | `--- Emulator running boolean
+				                        //		   | `----- Stopped
+				                        //		   `------- Waiting
+
+#define IPS_OFF			MEMORY_SIZE + 10        // ( double   )  : The number of instructions per second
+#define CUR_INST_OFF            MEMORY_SIZE + 18        // ( uint16_t )  : The PC at which the current instruction starts at
+#define BUFFER_SIZE		MEMORY_SIZE + (CUR_INST_OFF + 8) + 1 // + 1 for the lock
 
 #ifdef DEBUG
         #define DBG(msg, what) \

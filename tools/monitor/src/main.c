@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
 
         // While running
         while ((*(memory + EMU_FLAGS_OFF) >> 5) & 1) {
-                pc = *(memory + REGISTER_IP_OFF) | (*(memory + REGISTER_IP_OFF + 1) << 8);
+                pc = *(memory + CUR_INST_OFF) | (*(memory + CUR_INST_OFF + 1) << 8);
 
                 for (int i = 0; i < NUM_INST_TO_DISASSEMBLE; i++) {
                         char *str = print_instruction(memory, &flags);
