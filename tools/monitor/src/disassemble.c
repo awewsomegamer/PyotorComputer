@@ -5,48 +5,91 @@
 
 struct label *labels;
 size_t label_count = 0;
+uint16_t code_org = 0;
 int pc = 0;
 
-char *print_instruction(uint8_t *buffer) {
-	char *instruction_str = malloc(3);
+// Flags
+// 0 0 0 0 0 S O L
+//	     | | `-- Last call to this function returned a label (1: yes, 0: no)
+//	     | `---- Use origin (1: yes, 0: no)
+//	     `------ Single mode disassembly (1: yes, 0: no)
+
+char *print_instruction(uint8_t *buffer, uint8_t *flags) {
+	// Make this size dynamic
+	char *instruction_str = malloc(512);
 
 	uint8_t opcode = *(buffer + pc);
+	uint8_t a = *(buffer + pc + 1);
+	uint8_t b = *(buffer + pc + 2);
+	uint16_t word = a | (b << 8);
+
+	int label_index = -1;
+	for (int i = 0; i < label_count; i++) {
+		if ((pc + ((*flags >> 1) & 1 ? code_org : 0)) == labels[i].address && (*flags & 1) == 0) {
+			*flags |= 1;
+			label_index = i;
+			goto return_label;
+		}
+
+		if (labels[i].address == word || labels[i].address == (pc + (int8_t)a))
+			label_index = i;
+	}
+
+	*flags &= ~(1 << 0);
 
 	sprintf(instruction_str, "%s", instruction_name_lookup[opcode]);
 
-	uint8_t a = *(buffer + pc + 1);
-	uint8_t b = (*(buffer + pc + 2) << 8);
-	uint16_t word = a | (b << 8);
-
-	instruction_str = realloc(instruction_str, 8);
-
 	switch (instruction_addr_mode_lookup[opcode]) {
 	case AM_ABS: {
-		// Implement label resolution here
-		sprintf(instruction_str + 3, " %04X", word);
+		if (label_index != -1) {
+			sprintf(instruction_str + 3, " %s", labels[label_index].name);
+			break;
+		}
+
+		sprintf(instruction_str + 3, " $%04X", word);
 
 		break;
 	}
 	
 	case AM_AIX: {
+		if (label_index != -1) {
+			sprintf(instruction_str + 3, " (%s, X)", labels[label_index].name);
+			break;
+		}
+
 		sprintf(instruction_str + 3, " (%04X, X)", word);
 
 		break;
 	}
 
 	case AM_ABX: {
+		if (label_index != -1) {
+			sprintf(instruction_str + 3, " %s, X", labels[label_index].name);
+			break;
+		}
+
 		sprintf(instruction_str + 3, " %04X, X", word);
 
 		break;
 	}
 
 	case AM_ABY: {
+		if (label_index != -1) {
+			sprintf(instruction_str + 3, " %s, Y", labels[label_index].name);
+			break;
+		}
+
 		sprintf(instruction_str + 3, " %04X, Y", word);
 
 		break;
 	}
 
 	case AM_AIN: {
+		if (label_index != -1) {
+			sprintf(instruction_str + 3, " (%s)", labels[label_index].name);
+			break;
+		}
+
 		sprintf(instruction_str + 3, " (%04X)", word);
 
 		break;
@@ -59,7 +102,12 @@ char *print_instruction(uint8_t *buffer) {
 	}
 
 	case AM_IMM: {
-		sprintf(instruction_str + 3, " %02X", a);
+		if (label_index != -1) {
+			sprintf(instruction_str + 3, " #%s", labels[label_index].name);
+			break;
+		}
+
+		sprintf(instruction_str + 3, " #$%02X", a);
 
 		break;
 	}
@@ -69,7 +117,12 @@ char *print_instruction(uint8_t *buffer) {
 	}
 
 	case AM_REL: {
-		sprintf(instruction_str + 3, " %02X", a);
+		if (label_index != -1) {
+			sprintf(instruction_str + 3, " %s", labels[label_index].name);
+			break;
+		}
+
+		sprintf(instruction_str + 3, " $%02X", a);
 
 		break;
 	}
@@ -85,59 +138,50 @@ char *print_instruction(uint8_t *buffer) {
 	}
 
 	case AM_INX: {
-		sprintf(instruction_str + 3, " (%02X, X)", a);
+		sprintf(instruction_str + 3, " ($%02X, X)", a);
 
 		break;
 	}
 
 	case AM_ZPX: {
-		sprintf(instruction_str + 3, " %02X, X", a);
+		sprintf(instruction_str + 3, " $%02X, X", a);
 
 		break;
 	}
 
 	case AM_ZPY: {
-		sprintf(instruction_str + 3, " %02X, Y", a);
+		sprintf(instruction_str + 3, " $%02X, Y", a);
 
 		break;
 	}
 
 	case AM_IND: {
-		sprintf(instruction_str + 3, " (%02X)", a);
+		sprintf(instruction_str + 3, " ($%02X)", a);
 
 		break;
 	}
 
 	case AM_INY: {
-		sprintf(instruction_str + 3, " (%02X), Y", a);
+		sprintf(instruction_str + 3, " ($%02X), Y", a);
 
 		break;
 	}
 	}
 
-	pc += instruction_size_lookup[instruction_addr_mode_lookup[opcode]];
+	// If not in single dissassembly mode, increment PC
+	if (!((*flags >> 2) & 1))
+		pc += instruction_size_lookup[instruction_addr_mode_lookup[opcode]];
+
+	return instruction_str;
+
+	return_label:;
+
+	strcpy(instruction_str, labels[label_index].name);
 
 	return instruction_str;
 }
 
-uint64_t hash_address(uint16_t address) {
-	uint8_t a = address & 0xFF;
-	uint8_t b = (address >> 8) & 0xFF;
-
-	uint64_t h = (h * 256 + a) % label_count;
-	h = (h * 256 + b) % label_count;
-
-	return h;
-}
-
 void parse_labels(FILE *file) {
-	fseek(file, 0, SEEK_SET);
-	char c = 0;
-	
-	while ((c = fgetc(file)) != EOF)
-		if (c == '\n')
-			label_count++;
-
 	fseek(file, 0, SEEK_SET);
 	char *line = NULL;
 	size_t len = 0;
@@ -154,14 +198,9 @@ void parse_labels(FILE *file) {
 		strcpy(name, line + 11);
 		name[strlen(name) - 1] = 0;
 
-		uint64_t index = hash_address(address);
+		labels[label_count].name = name;
+		labels[label_count].address = address;
 
-		labels[index].name = name;
-		labels[index].address = address;
+		labels = (struct label *)realloc(labels, (++label_count + 1) * sizeof(struct label));
 	}
-}
-
-char *print_label() {
-
-	return NULL;
 }

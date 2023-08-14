@@ -88,9 +88,9 @@ extern struct label *labels;
 
 
 extern int pc;
+extern uint16_t code_org;
 
-char *print_instruction(uint8_t *buffer);
-uint64_t hash_address(uint16_t address);
+char *print_instruction(uint8_t *buffer, uint8_t *flags);
 void parse_labels(FILE *file);
 char *print_label();
 

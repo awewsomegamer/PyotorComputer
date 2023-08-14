@@ -35,8 +35,10 @@ int main(int argc, char **argv) {
         FILE *labels;
 
         if (argc > 1 && strcmp(argv[1], "-d") == 0) {
+                uint8_t flags = 0b00000000;
+
                 if (argc < 2) {
-                        printf("Disassembly mode:\nmonitor -d assembled.bin [labels.txt]\n");
+                        printf("Disassembly mode:\nmonitor -d assembled.bin [labels.txt] [$binary_origin]\n");
                         return 1;
                 }
 
@@ -48,6 +50,11 @@ int main(int argc, char **argv) {
                         fclose(labels);
                 }
 
+                if (argc > 4) {
+                        flags |= 1 << 1;
+                        code_org = strtol(argv[4], NULL, 16);
+                }
+
                 assert(code != NULL);
 
                 fseek(code, 0, SEEK_END);
@@ -57,9 +64,15 @@ int main(int argc, char **argv) {
                 uint8_t *buffer = malloc(size);
                 fread(buffer, 1, size, code);
 
+
                 while (pc < size) {
-                        char *str = print_instruction(buffer);
-                        // printf("%s\n", str);
+                        char *str = print_instruction(buffer, &flags);
+
+                        if (flags & 1)
+                                printf("%s:\n", str);
+                        else
+                                printf("\t%s\n", str);
+                        
                         free(str);
                 }
 
