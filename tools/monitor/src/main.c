@@ -1,3 +1,4 @@
+#include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,6 +6,8 @@
 #include "include/shared_memory.h"
 #include "include/disassemble.h"
 #include <assert.h>
+
+#define NUM_INST_TO_DISASSEMBLE max_y - 1
 
 int max_x = 0;
 int max_y = 0;
@@ -28,6 +31,8 @@ void init_ncurses() {
                 // Screen too small
                 exit(1);
         }
+
+        addch('A');
 }
 
 int main(int argc, char **argv) {
@@ -81,45 +86,46 @@ int main(int argc, char **argv) {
 
         if (argc > 1) {
                 labels = fopen(argv[1], "r");
-
+                parse_labels(labels);
+                fclose(labels);
         }
 
-        switch (argc) {
-        case 2: {  
+        init_shared_memory_client();
+        init_ncurses();
 
-                break;
-        }
+        uint8_t flags = 0b00000000;
 
-        case 3: {
-                
-                break;
-        }
+        // While running
+        while ((*(memory + EMU_FLAGS_OFF) >> 5) & 1) {
+                pc = *(memory + REGISTER_IP_OFF) | (*(memory + REGISTER_IP_OFF + 1) << 8);
 
-        case 4: {
+                for (int i = 0; i < NUM_INST_TO_DISASSEMBLE; i++) {
+                        char *str = print_instruction(memory, &flags);
 
-                break;
-        }
+                        move(i, 40);
 
-        case 5: {
+                        if (flags & 1)
+                                move(i, 16);
 
-                break;
-        }
+                        printw("%s%c", str, (flags & 1 ? ':' : 0));
+                        free(str);
 
-        default: {
-                init_shared_memory_client();
-                init_ncurses();
-
-                // While running
-                while ((*(memory + EMU_FLAGS_OFF) >> 5) & 1) {
-                        
-
+                        if (flags & 1) {
+                                str = print_instruction(memory, &flags);
+                                move(i, 40);
+                                printw("%s", str);
+                                free(str);
+                        }
                 }
 
-	        destroy_shared_memory_client();
+                refresh();
+                erase();
+        }
 
-                break;
-        }
-        }
+        endwin();
+
+        destroy_shared_memory_client();
+
 
 	return 0;
 }
