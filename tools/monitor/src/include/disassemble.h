@@ -80,8 +80,19 @@ static const int instruction_size_lookup[] = {
 	[AM_INY] = 2
 };
 
+struct label {
+        char *name;
+        uint16_t address;
+};
+extern struct label *labels;
+
+
 extern int pc;
 
 char *print_instruction(uint8_t *buffer);
+uint64_t hash_address(uint16_t address);
+void parse_labels(FILE *file);
+char *print_label();
+
 
 #endif
