@@ -101,11 +101,13 @@ int main(int argc, char **argv) {
         uint8_t flags = 0b00000000;
 
         // While running
+        uint16_t cur_pc = 0;
         while ((*(memory + EMU_FLAGS_OFF) >> 5) & 1) {
-                pc = *(memory + CUR_INST_OFF) | (*(memory + CUR_INST_OFF + 1) << 8);
+                cur_pc = *(memory + CUR_INST_OFF) | (*(memory + CUR_INST_OFF + 1) << 8);
+                pc = cur_pc;
 
-                draw_disassembly(&flags);
-                draw_registers();
+                int cur_inst_len = draw_disassembly(&flags);
+                draw_registers(cur_pc, cur_inst_len);
 
                 refresh();
                 erase();
