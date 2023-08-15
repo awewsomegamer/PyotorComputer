@@ -1,2 +1,2 @@
 all:
-	gcc src/*.c -o monitor.out -Isrc/include -lcurses
+	gcc src/*.c -o sysdbg.out -Isrc/include -lcurses
