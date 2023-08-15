@@ -19,7 +19,7 @@ struct reg_flags {
         uint8_t unused : 1;
         uint8_t V : 1;
         uint8_t N : 1;
-};
+}__attribute__((packed));
 
 extern struct reg_flags *register_p;
 extern uint16_t *pc;

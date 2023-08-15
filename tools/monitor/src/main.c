@@ -36,8 +36,8 @@ void init_ncurses() {
                 use_default_colors();
 
                 init_pair(MON_COLOR_HIGHLIGHTED, COLOR_BLACK, COLOR_WHITE);
-                init_pair(MON_COLOR_ON, COLOR_BLACK, COLOR_GREEN);
-                init_pair(MON_COLOR_OFF, COLOR_BLACK, COLOR_RED);
+                init_pair(MON_COLOR_GREEN, COLOR_BLACK, COLOR_GREEN);
+                init_pair(MON_COLOR_RED, COLOR_BLACK, COLOR_RED);
         }
 }
 

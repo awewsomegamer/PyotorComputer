@@ -21,13 +21,21 @@
 
 #define MON_COLOR_REGULAR 0
 #define MON_COLOR_HIGHLIGHTED 1
-#define MON_COLOR_ON 2
-#define MON_COLOR_OFF 3
+#define MON_COLOR_GREEN 2
+#define MON_COLOR_RED 3
 
 #define HIGHLIGHT_ON if ((has_colors() == TRUE)) \
                                 attron(COLOR_PAIR(MON_COLOR_HIGHLIGHTED));
 #define HIGHLIGHT_OFF if ((has_colors() == TRUE)) \
                                 attroff(COLOR_PAIR(MON_COLOR_HIGHLIGHTED));
+#define GREEN_ON if ((has_colors() == TRUE)) \
+                                attron(COLOR_PAIR(MON_COLOR_GREEN));
+#define GREEN_OFF if ((has_colors() == TRUE)) \
+                                attroff(COLOR_PAIR(MON_COLOR_GREEN));
+#define RED_ON if ((has_colors() == TRUE)) \
+                                attron(COLOR_PAIR(MON_COLOR_RED));
+#define RED_OFF if ((has_colors() == TRUE)) \
+                                attroff(COLOR_PAIR(MON_COLOR_RED));
 
 extern int max_x;
 extern int max_y;
