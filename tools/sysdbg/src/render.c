@@ -179,7 +179,7 @@ void draw_registers(uint16_t cur_pc, int cur_inst_len) {
 	move(y++, x);
 	printw("S: %02X (%d)", *(memory + REGISTER_S_OFF), *(memory + REGISTER_S_OFF));
 	move(y++, x);
-	printw("PC: %02X (%d)", *(memory + CUR_INST_OFF), *(memory + CUR_INST_OFF));
+	printw("PC: %04X (%d)", cur_pc, cur_pc);
 
 	move(y, x);
 	printw("Flags: %02X (%d)", *(memory + REGISTER_P_OFF), *(memory + REGISTER_P_OFF));

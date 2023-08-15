@@ -44,7 +44,7 @@ void *emulate_thread(void *arg) {
                         current_debt = 0;
                 }
 
-                sleep(1);
+                usleep(50000);
         
                 if (time(NULL) - last_second == 1) {
                         DBG(1, printf("%d IPS, %d Cycles, Threshold (%d): %f", instructions, cycle_count, (instructions > *sys_ips), threshold);)

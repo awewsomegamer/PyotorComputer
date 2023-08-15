@@ -1,22 +1,12 @@
-all: asm emu kern fs mon
-
 DBG =
 SPEED ?=
 
-asm:
+all:
 	make -C assembler
-
-emu:
 	make -C emulator $(DBG) SPD=$(SPEED)
-
-kern:
 	make -C kernal
-
-fs:
 	make -C tools/filing_system
-
-mon:
-	make -C tools/monitor
+	make -C tools/sysdbg
 
 clean:
 	rm -rf ./bin/*
