@@ -53,12 +53,11 @@
 #endif
 
 extern uint8_t *memory;
+extern uint8_t lock_owned;
 
 void init_shared_memory_host();
-void destroy_shared_memory_host();
-
 void init_shared_memory_client();
-void destroy_shared_memory_client();
+void destroy_shared_memory();
 
 void shared_memory_acquire_lock();
 void shared_memory_release_lock();

@@ -62,7 +62,8 @@ int draw_disassembly(uint8_t *flags) {
 
 		move(i, x);
 		printw("%s%c", printable_str, (*flags & 1 ? ':' : 0));
-
+		free(str);
+		
 		if (i == DISASM_START_ROW + 1)
 			HIGHLIGHT_OFF
 		

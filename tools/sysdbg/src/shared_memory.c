@@ -11,6 +11,7 @@
 uint8_t *memory = NULL;
 int fd = 0;
 atomic_flag *lock;
+uint8_t lock_owned = 0;
 
 void init_shared_memory_host() {
 	DBG(1, printf("Initializing shared memory host");)
@@ -35,16 +36,6 @@ void init_shared_memory_host() {
 	DBG(1, printf("Initialized shared memory host");)
 }
 
-void destroy_shared_memory_host() {
-        DBG(1, printf("Destroying shared memory host");)
-
-        munmap(memory, BUFFER_SIZE);
-        close(fd);
-        shm_unlink(BACKING_FILE);
-
-        DBG(1, printf("Destroyed shared memory host");)
-}
-
 void init_shared_memory_client() {
         DBG(1, printf("Initializing shared memory client");)
 
@@ -67,20 +58,23 @@ void init_shared_memory_client() {
         DBG(1, printf("Initialized shared memory client");)
 }
 
-void destroy_shared_memory_client() {
-        DBG(1, printf("Destroying shared memory client");)
+void destroy_shared_memory() {
+        DBG(1, printf("Destroying shared memory host");)
 
         munmap(memory, BUFFER_SIZE);
         close(fd);
         shm_unlink(BACKING_FILE);
 
-        DBG(1, printf("Destroyed shared memory client");)
+        DBG(1, printf("Destroyed shared memory host");)
 }
 
 void shared_memory_acquire_lock() {
-        while (atomic_flag_test_and_set_explicit(lock, memory_order_acquire));
+        while (atomic_flag_test_and_set_explicit(lock, memory_order_acquire))
+                __builtin_ia32_pause();
+        lock_owned = 1;                
 }
 
 void shared_memory_release_lock() {
         atomic_flag_clear_explicit(lock, memory_order_release);
+        lock_owned = 0;
 }

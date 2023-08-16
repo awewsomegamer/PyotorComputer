@@ -8,9 +8,12 @@
 #include "include/shared_memory.h"
 #include "include/disassemble.h"
 #include <assert.h>
+#include <signal.h>
 
 int max_x = 0;
 int max_y = 0;
+
+uint8_t running = 1;
 
 void init_ncurses() {
 	setlocale(LC_ALL, "en_US.UTF-8");
@@ -41,9 +44,16 @@ void init_ncurses() {
         }
 }
 
+void terminate(int sig) {
+        signal(sig, SIG_IGN);
+        running = 0;
+}
+
 int main(int argc, char **argv) {
         FILE *code;
         FILE *labels;
+
+        signal(SIGINT, terminate);
 
         if (argc > 1 && strcmp(argv[1], "-d") == 0) {
                 uint8_t flags = 0b00000000;
@@ -99,24 +109,31 @@ int main(int argc, char **argv) {
         init_ncurses();
 
         uint8_t flags = 0b00000000;
-
+        
         // While running
         uint16_t cur_pc = 0;
-        while ((*(memory + EMU_FLAGS_OFF) >> 5) & 1) {
+        while (running && ((*(memory + EMU_FLAGS_OFF) >> 5) & 1)) {
+                shared_memory_acquire_lock();
+                
                 cur_pc = *(memory + CUR_INST_OFF) | (*(memory + CUR_INST_OFF + 1) << 8);
                 pc = cur_pc;
 
                 int cur_inst_len = draw_disassembly(&flags);
                 draw_registers(cur_pc, cur_inst_len);
 
+                shared_memory_release_lock();
+
                 refresh();
                 erase();
         }
 
+        clear();
         endwin();
 
-        destroy_shared_memory_client();
+        if (lock_owned)
+                shared_memory_release_lock();
 
+        // destroy_shared_memory_client();
 
 	return 0;
 }

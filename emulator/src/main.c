@@ -26,14 +26,16 @@ void *emulate_thread(void *arg) {
         time_t last_second = time(NULL);
         uint64_t instructions = 0;
         uint64_t last_tick_base = SDL_GetTicks64();
-        const double wait_between_insts = (double)1/(double)SYS_IPS;
+        double wait_between_insts = (double)1/(double)*sys_ips;
         double current_debt = 0;
         double threshold = 0.0001;
         
         *emulator_flags |= 1 << 5;
+        
 
         while (running) {
                 tick_65C02();
+                wait_between_insts = (double)1/(double)*sys_ips;
                 current_debt += wait_between_insts;
                 instructions++;
 
@@ -44,8 +46,6 @@ void *emulate_thread(void *arg) {
                         current_debt = 0;
                 }
 
-                usleep(50000);
-        
                 if (time(NULL) - last_second == 1) {
                         DBG(1, printf("%d IPS, %d Cycles, Threshold (%d): %f", instructions, cycle_count, (instructions > *sys_ips), threshold);)
                         
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
         destroy_video();
         destroy_65C02();
         disconnect_all();
-        destroy_shared_memory_host();
+        destroy_shared_memory();
 
         DBG(1, printf("Emulator stopped");)
 

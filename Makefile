@@ -2,11 +2,11 @@ DBG =
 SPEED ?=
 
 all:
-	make -C assembler
+	make -C assembler $(DBG)
 	make -C emulator $(DBG) SPD=$(SPEED)
-	make -C kernal
-	make -C tools/filing_system
-	make -C tools/sysdbg
+	make -C kernal $(DBG)
+	make -C tools/filing_system $(DBG)
+	make -C tools/sysdbg $(DBG)
 
 clean:
 	rm -rf ./bin/*
