@@ -274,6 +274,15 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			jsr cmp_str				;
 			bcc @load_cmp				;
 
+			lda #$2					; Get the second argument
+			jsr terminal_buffer_get_arg		; Get it
+			txa					; Check how many characters were read
+			beq @compare_end			; If zero were read, jump over
+			lda TERMINAL_BUFFER, y			; Otherwise load in the character
+			clc					; Clear the carry flag
+			sbc #'A'				; Subtract A, to get disk index from A, B, C
+			inc					; Increment it into a disk index
+
 			jsr fs_list_directory			;
 			jmp @compare_end			;
 
@@ -625,10 +634,32 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			bne @inc_low_over_5			; If not, jump over
 			inc $6					; Otherwise increment high byte
 @inc_low_over_5:	bra @loop				; Loop
-
 @complete:		plx
 			pla
 			rts
+.endproc
+
+; A - The argument's index (one based)
+; X - Returned as the count of characters within the
+;     argument
+; Y - Returned as the offset into the buffer at which
+;     the start of the argument is located at
+; No input registers are preserved
+.proc terminal_buffer_get_arg
+			ldy #$0					; Load character index with zero
+@loop:			ldx #$0					; At the beginning of each loop, load character count with zero
+			cmp #$0					; Have we counted through all arguments?
+			beq @end				; If so, end
+			pha					; Otherwise, save the current argument count
+@advance_buffer:	lda TERMINAL_BUFFER, y			; Load in the current character
+			beq @divider_found			; If we reached a "space" then we completed an argument
+			iny					; If not increment the character index
+			inx					; Increment the character count
+			bra @advance_buffer			; Loop
+@divider_found:		pla					; Restore the current argument index
+			dec					; Decrement the argument index
+			bra @loop				; If we are not at 0, loop
+@end:			rts					; Return
 .endproc
 
 ; A   - Disk to read (values must be: 1,2, or 3), contents
@@ -713,8 +744,15 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			jmp read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
 .endproc
 
+; A - Disk the file system is on
+; A - Returned 9 for success
+.proc fs_new_dir
+.endproc
+
+; A - Disk index
 .proc fs_list_directory
 			sei					; Disable interrupts
+			jsr fs_initialize			; Initialize the initial directory descriptor
 			lda #.LOBYTE(FS_CUR_DIR)		; Lower byte of the first entry's address
 			sta $5					; Store it
 			lda #.HIBYTE(FS_CUR_DIR)		; High byte of the first entry's address
