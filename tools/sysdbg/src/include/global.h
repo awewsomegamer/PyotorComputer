@@ -39,5 +39,6 @@
 
 extern int max_x;
 extern int max_y;
+extern uint8_t running;
 
 #endif

@@ -639,6 +639,41 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts
 .endproc
 
+; A  - Value to set destination to
+; $5 - Destination, incremented to ($5) + ($7)
+; $9 - Byte count, decremented to 0
+.proc memset
+			pha
+@loop:			phx					; Save X register
+			ldx #$00				; Load X with 0
+			lda $9					; Load A with the low byte of the counter
+			bne @cmp_low_over			; If the low byte is not 0, then jump over
+			inx					; Otherwise, increment X
+@cmp_low_over:		lda $A					; Load A with the high byte of the counter
+			bne @cmp_high_over			; If the high byte is not 0, then jump over
+			txa					; Otherwise, transfer X to A to update flags
+			bne @complete				; If X wasn't 0 (incremented in previous step) then we are done
+@cmp_high_over:		plx					; Otherwise, pull X off the stack
+			pla					; Pull value 
+			sta ($5)				; Store in destination
+			pha					; Push value
+			dec $9					; Decrement lower byte of counter
+			lda $9					; Load it
+			cmp #$FF				; Compare it to see if it rolled over
+			bne @dec_low_over_9			; If not, jump over
+			dec $A					; Otherwise, decrement high byte
+@dec_low_over_9:	inc $7					; Increment low byte of source
+			bne @inc_low_over_7			; If not, jump over
+			inc $8					; Otherwise, increment high byte
+@inc_low_over_7:	inc $5					; Increment lower byte of destination
+			bne @inc_low_over_5			; If not, jump over
+			inc $6					; Otherwise increment high byte
+@inc_low_over_5:	bra @loop				; Loop
+@complete:		plx					; Restore X
+			pla					; Restore A
+			rts					; Return
+.endproc
+
 ; A - The argument's index (one based)
 ; X - Returned as the count of characters within the
 ;     argument
@@ -747,6 +782,8 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; A - Disk the file system is on
 ; A - Returned 9 for success
 .proc fs_new_dir
+
+
 .endproc
 
 ; A - Disk index

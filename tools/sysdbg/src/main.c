@@ -7,13 +7,18 @@
 #include "include/render.h"
 #include "include/shared_memory.h"
 #include "include/disassemble.h"
+#include "include/input.h"
 #include <assert.h>
 #include <signal.h>
+#include <unistd.h>
+#include <pthread.h>
 
 int max_x = 0;
 int max_y = 0;
 
 uint8_t running = 1;
+
+pthread_t poll_thread;
 
 void init_ncurses() {
 	setlocale(LC_ALL, "en_US.UTF-8");
@@ -24,6 +29,7 @@ void init_ncurses() {
 
         intrflush(stdscr, FALSE);
         keypad(stdscr, TRUE);
+        nodelay(stdscr, TRUE);
 	
 	getmaxyx(stdscr, max_y, max_x);
 
@@ -122,7 +128,11 @@ int main(int argc, char **argv) {
                 draw_registers(cur_pc, cur_inst_len);
 
                 shared_memory_release_lock();
-
+                
+                int c = 0;
+                if ((c = getch()) != ERR)
+                        interpret_key(c);
+                        
                 refresh();
                 erase();
         }
@@ -132,8 +142,6 @@ int main(int argc, char **argv) {
 
         if (lock_owned)
                 shared_memory_release_lock();
-
-        // destroy_shared_memory_client();
 
 	return 0;
 }
