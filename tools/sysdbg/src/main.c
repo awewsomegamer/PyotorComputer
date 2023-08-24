@@ -117,6 +117,7 @@ int main(int argc, char **argv) {
         uint8_t flags = 0b00000000;
         
         // While running
+        char cmd = ' ';
         uint16_t cur_pc = 0;
         while (running && ((*(memory + EMU_FLAGS_OFF) >> 5) & 1)) {
                 shared_memory_acquire_lock();
@@ -126,14 +127,19 @@ int main(int argc, char **argv) {
 
                 int cur_inst_len = draw_disassembly(&flags);
                 draw_registers(cur_pc, cur_inst_len);
-
+                draw_sys_info();
+                
                 shared_memory_release_lock();
                 
                 int c = 0;
-                if ((c = getch()) != ERR)
+                if ((c = getch()) != ERR) {
                         interpret_key(c);
-                        
+                        cmd = c;
+                }
+
                 refresh();
+
+                usleep(1000);
                 erase();
         }
 

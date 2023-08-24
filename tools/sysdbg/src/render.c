@@ -220,3 +220,13 @@ void draw_registers(uint16_t cur_pc, int cur_inst_len) {
 
 	draw_memdump_instruction_area(x, y, cur_inst_len, cur_pc);
 }
+
+void draw_sys_info() {
+	draw_window(SYS_INFO_LABEL, SYS_INFO_COLUMN, SYS_INFO_END_COLUMN, SYS_INFO_START_ROW, SYS_INFO_END_ROW);
+	
+	int x = SYS_INFO_COLUMN;
+	int y = SYS_INFO_START_ROW + 1;
+
+	move(y++, x);
+	printw("IPS: %lu", *((uint64_t *)(memory + IPS_OFF)));
+}

@@ -780,10 +780,39 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 .endproc
 
 ; A - Disk the file system is on
-; A - Returned 9 for success
+; A - Returned 0 for success
 .proc fs_new_dir
-
-
+			pha					; Save disk number
+			lda #.LOBYTE(FS_CUR_DIR)		; Load low byte of destination address
+			sta $5					; Store it
+			lda #.HIBYTE(FS_CUR_DIR)		; Load high byte of destination address
+			sta $6					; Store it
+			lda #.LOBYTE(1024)			; Load low byte of count
+			sta $9					; Store it
+			lda #.HIBYTE(1024)			; Load high byte of count
+			sta $A					; Store it
+			lda #$0					; Load the value to set the memory with
+			jsr memset				; Set memory
+			lda #$2					; Load in low byte of the next free sector
+			sta FS_DIR_N_FREE_SECT_LO		; Store it
+			lda #'S'				; Load identifier 'S'
+			sta FS_DIR_IDENTIFIER + 0		; Store in the correct offsets
+			sta FS_DIR_IDENTIFIER + 2		; Store in the correct offsets 
+			lda #'F'				; Load identifier 'F'
+			sta FS_DIR_IDENTIFIER + 1		; Store in the correct offset
+			lda #' '				; Load identifier ' '
+			sta FS_DIR_IDENTIFIER + 3		; Store in the correct offset
+			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the initial directory's address in RAM
+			sta DISK_BUFF_ADDR_LO			; Store it to the right byte
+			lda #.HIBYTE(FS_CUR_DIR)		; Load the higher byte of the initial directory's address in RAM
+			sta DISK_BUFF_ADDR_HI			; Store it to the right byte
+			stz DISK_SECTOR_LO			; Zero the lower byte of the sector index
+			stz DISK_SECTOR_HI			; Zero the higher byte of the sector index
+			lda #$2					; Two sectors will be written
+			sta DISK_SECTOR_COUNT_LO		; Set the right byte
+			stz DISK_SECTOR_COUNT_HI		; Zero the higher byte
+			pla					; Restore disk number
+			jmp write_disk				; Write the changes to the file system
 .endproc
 
 ; A - Disk index

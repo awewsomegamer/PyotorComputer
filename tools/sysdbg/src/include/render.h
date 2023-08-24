@@ -6,5 +6,6 @@
 
 int draw_disassembly(uint8_t *flags);
 void draw_registers(uint16_t cur_pc, int cur_inst_len);
+void draw_sys_info();
 
 #endif

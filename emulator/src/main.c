@@ -20,7 +20,7 @@
 #endif
 
 uint8_t running = 1;
-double *sys_ips;
+uint64_t *sys_ips;
 
 void *emulate_thread(void *arg) {
         time_t last_second = time(NULL);
@@ -31,35 +31,35 @@ void *emulate_thread(void *arg) {
         double threshold = 0.0001;
         
         *emulator_flags |= 1 << 5;
-        
 
         while (running) {
-                tick_65C02();
-                wait_between_insts = (double)1/(double)*sys_ips;
-                current_debt += wait_between_insts;
-                instructions++;
+                if (instructions < *sys_ips) {
+                        tick_65C02();
+                        wait_between_insts = (double)1/(double)*sys_ips;
+                        current_debt += wait_between_insts;
+                        instructions++;
 
-                tick_control_register();
+                        tick_control_register();
 
-                if (current_debt >= threshold) {
-                        usleep(1);
-                        current_debt = 0;
+                        if (current_debt >= threshold) {
+                                usleep(1);
+                                current_debt = 0;
+                        }
                 }
 
                 if (time(NULL) - last_second == 1) {
                         DBG(1, printf("%d IPS, %d Cycles, Threshold (%d): %f", instructions, cycle_count, (instructions > *sys_ips), threshold);)
                         
-                        // Try and adjust the threshold to better approximate desired speed
+                        // Try adjusting the threshold to better approximate desired speed
                         if (instructions > *sys_ips)
-                                threshold -= 0.000001;
+                                threshold -= 0.0000001;
                         else if (instructions < *sys_ips)
-                                threshold += 0.000001;
+                                threshold += 0.0000001;
 
                         instructions = 0;
                         cycle_count = 0;
                         last_tick_base = SDL_GetTicks64();
                         last_second = time(NULL);
-
                 }
         }
 
@@ -71,7 +71,7 @@ void *emulate_thread(void *arg) {
 int main(int argc, char **argv) {
         init_shared_memory_host();
 
-        sys_ips = (double *)(memory + IPS_OFF);
+        sys_ips = (uint64_t *)(memory + IPS_OFF);
         *sys_ips = SYS_IPS;
 
         init_65C02();
