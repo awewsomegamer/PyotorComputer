@@ -776,7 +776,41 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta DISK_SECTOR_COUNT_LO		; Set the right byte
 			stz DISK_SECTOR_COUNT_HI		; Zero the higher byte
 			pla					; Restore the disk number
-			jmp read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
+			jsr read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
+			lda #'S'
+			cmp FS_DIR_IDENTIFIER + 0
+			bne @not_sfs
+			cmp FS_DIR_IDENTIFIER + 2
+			bne @not_sfs
+			lda #'F'
+			cmp FS_DIR_IDENTIFIER + 1
+			bne @not_sfs
+			lda #' '
+			cmp FS_DIR_IDENTIFIER + 3
+			bne @not_sfs
+			dec FS_DIR_VER_HI
+			bne @sfs_no_support
+			lda FS_DIR_VER_LO
+			bne @sfs_no_support
+			bra @return
+@sfs_no_support:	inc FS_DIR_VER_HI
+			lda #.LOBYTE(FS_VER_NO_SUPPORT)
+			sta $5
+			lda #.HIBYTE(FS_VER_NO_SUPPORT)
+			sta $6
+			bra @error
+@not_sfs:		lda #.LOBYTE(FS_NOT_VALID)
+			sta $5
+			lda #.HIBYTE(FS_NOT_VALID)
+			sta $6
+@error:			lda #$E0
+			sta VIDEO_REG_BG
+			ldx #$0
+			ldy TERMINAL_CHAR_Y
+			iny
+			lda #$04
+			jsr putstr
+@return:		rts
 .endproc
 
 ; A - Disk the file system is on
@@ -802,6 +836,8 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta FS_DIR_IDENTIFIER + 1		; Store in the correct offset
 			lda #' '				; Load identifier ' '
 			sta FS_DIR_IDENTIFIER + 3		; Store in the correct offset
+			lda #$1					; High number of the version
+			sta FS_DIR_VER_HI			; Store it
 			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the initial directory's address in RAM
 			sta DISK_BUFF_ADDR_LO			; Store it to the right byte
 			lda #.HIBYTE(FS_CUR_DIR)		; Load the higher byte of the initial directory's address in RAM
@@ -1133,7 +1169,9 @@ BG_CMD:			.asciiz "BG"
 JUMP_CMD:		.asciiz "JUMP"
 DIR_CMD:		.asciiz "DIR"
 LOAD_CMD:		.asciiz "LOAD"
-CMD_NO_MATCH:		.asciiz "Command parameters insufficient"
+CMD_NO_MATCH:		.asciiz "Command parameters insufficient!"
+FS_VER_NO_SUPPORT:	.asciiz "File system version not supported!"
+FS_NOT_VALID:		.asciiz "Unsupported file system!"
 
 .segment "VECTORS"
 			.addr nmi_handler
