@@ -28,33 +28,33 @@ void *emulate_thread(void *arg) {
         uint64_t last_tick_base = SDL_GetTicks64();
         double wait_between_insts = (double)1/(double)*sys_ips;
         double current_debt = 0;
-        double threshold = 0.0001;
+        double threshold = 96;
         
         *emulator_flags |= 1 << 5;
 
         while (running) {
-                if (instructions < *sys_ips) {
+                if (*sys_ips > 0) {
                         tick_65C02();
-                        wait_between_insts = (double)1/(double)*sys_ips;
+                        wait_between_insts = (double)1000000/(double)*sys_ips;
                         current_debt += wait_between_insts;
                         instructions++;
 
                         tick_control_register();
 
                         if (current_debt >= threshold) {
-                                usleep(1);
+                                usleep(wait_between_insts);
                                 current_debt = 0;
                         }
                 }
-
+                
                 if (time(NULL) - last_second == 1) {
                         DBG(1, printf("%d IPS, %d Cycles, Threshold (%d): %f", instructions, cycle_count, (instructions > *sys_ips), threshold);)
                         
                         // Try adjusting the threshold to better approximate desired speed
                         if (instructions > *sys_ips)
-                                threshold -= 0.0000001;
+                                threshold -= 0.000001;
                         else if (instructions < *sys_ips)
-                                threshold += 0.0000001;
+                                threshold += 0.000001;
 
                         instructions = 0;
                         cycle_count = 0;

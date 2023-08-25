@@ -277,14 +277,15 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			lda #$2					; Get the second argument
 			jsr terminal_buffer_get_arg		; Get it
 			txa					; Check how many characters were read
-			beq @compare_end			; If zero were read, jump over
+			beq @dir_cmp_end			; If zero were read, jump over
+			iny
 			lda TERMINAL_BUFFER, y			; Otherwise load in the character
 			clc					; Clear the carry flag
 			sbc #'A'				; Subtract A, to get disk index from A, B, C
 			inc					; Increment it into a disk index
 
 			jsr fs_list_directory			;
-			jmp @compare_end			;
+@dir_cmp_end:		jmp @compare_end			;
 
 
 @load_cmp:		lda #.LOBYTE(TERMINAL_BUFFER)		;
@@ -361,7 +362,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; X - X coordinate
 ; Y - Y coordinate
 .proc putchar
-	 		sta VIDEO_REG_DATA 			; Store data
+			sta VIDEO_REG_DATA 			; Store data
 			stx VIDEO_ADDR_LO 			; Store lower half of address
 			sty VIDEO_ADDR_HI 			; Store higher half of address
 			lda #$03  				; 40x12 Terminal mode
