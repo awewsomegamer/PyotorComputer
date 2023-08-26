@@ -68,6 +68,10 @@
 			.define CHAR_ENTER		$28
 
 .proc entry
+			lda #$01
+			sta $0
+
+
 			stz VIDEO_REG_FG			; Set foreground to black
 			stz VIDEO_REG_BG			; Set background to black
 			ldx #$00				;

@@ -26,7 +26,7 @@ void *emulate_thread(void *arg) {
         time_t last_second = time(NULL);
         uint64_t instructions = 0;
         uint64_t last_tick_base = SDL_GetTicks64();
-        double wait_between_insts = (double)1/(double)*sys_ips;
+        double wait_between_insts = (double)1000000/(double)*sys_ips;
         double current_debt = 0;
         double threshold = 96;
         
@@ -76,6 +76,7 @@ int main(int argc, char **argv) {
 
         init_65C02();
         init_video();
+        init_system_memory();
 
         for (int i = 1; i < argc; i++) {
                 if (strcmp(argv[i], "-disk") == 0) {
@@ -112,7 +113,12 @@ int main(int argc, char **argv) {
         pthread_join(emulation_thread_t, NULL);
         destroy_video();
         destroy_65C02();
+        destroy_system_memory();
         disconnect_all();
+        
+        if (lock_owned)
+                shared_memory_release_lock();
+
         destroy_shared_memory();
 
         DBG(1, printf("Emulator stopped");)

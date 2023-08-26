@@ -50,9 +50,18 @@ enum memory_map {
 #define KERNAL_DAT_MEM(a)  (KERNAL_DAT_BASE  <= a && a <= KERNAL_MEM_BASE - 1)
 #define KERNAL_MEM(a)      (KERNAL_MEM_BASE  <= a && a <= MEM_TOP - 1)
 
+#define ZERO_PAGE_SZ            256
+#define STACK_SZ                256
+#define PROGRAM_MEM_SZ          (KB_16 * 3)
+#define KERNAL_MEM_SZ           (KB_16 / 2)
+#define KERNAL_ROM_SZ           (KB_16 / 2)
+
 uint8_t mem_byte_read(uint16_t address);
 void mem_byte_write(uint8_t byte, uint16_t address);
 
 void load_file(uint16_t address, char *name);
+
+void init_system_memory();
+void destroy_system_memory();
 
 #endif
