@@ -62,6 +62,5 @@ void mem_byte_write(uint8_t byte, uint16_t address);
 void load_file(uint16_t address, char *name);
 
 void init_system_memory();
-void destroy_system_memory();
 
 #endif

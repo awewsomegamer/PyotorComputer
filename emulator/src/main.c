@@ -113,7 +113,6 @@ int main(int argc, char **argv) {
         pthread_join(emulation_thread_t, NULL);
         destroy_video();
         destroy_65C02();
-        destroy_system_memory();
         disconnect_all();
         
         if (lock_owned)

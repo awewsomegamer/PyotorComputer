@@ -24,13 +24,13 @@ There is a total of 64 KiB of addressable memory. <br>
 
 `$0000` -> `$00FF` - 256 B Zero Page <br>
 `$0100` -> `$01FF` - 256 B Stack <br>
-`$0200` -> `$407F` - 16 KB video memory or general purpose RAM (1) <br>
-`$4080` -> `$BD7F` - 32 KB general purpose RAM, intended for user programs <br>
+`$0200` -> `$BD7F` - 48 KB general purpose RAM, banked, intended for user programs <br>
 `$BD80` -> `$DCBF` - 8 KB dedicated Kernal RAM <br>
-`$DCC0` -> `$FFFF` - ~8 KB dedicated Kernal ROM (2) <br>
+`$DCC0` -> `$FFFF` - ~8 KB dedicated Kernal ROM (1) <br>
 
-
-(1): If **bit 0** at address **$0001 is set**, then the 16 KB of RAM is dedicated to **video memory**. If **bit 0** at address **$0001 is clear**, then the 16 KB of RAM is **dedicated to general purpose RAM**.
+(1): The byte at address `$0000` controls the banking. There are a total of 32 banks, 16 for the first half of the 48 KB area and 16 more for the last half.
+The current active bank for the first 24 KB of this area is determined by the lower nibble of the byte at `$0000`. Respectively, the active bank for the higher
+half is determined by the higher nibble of the byte at `$0000`
 
 (2): There is a little bit more memory for the Kernal ROM than *exactly* 8 KB.
 

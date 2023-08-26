@@ -163,7 +163,7 @@
 			stz $0
 
 			lda #'B'
-			sta $200
+			sta $5FBF
 
 			lda #$02
 			sta $0
@@ -181,7 +181,7 @@
 
 			stz $0
 
-			lda $200
+			lda $5FBF
 			jsr putchar
 			inx
 
