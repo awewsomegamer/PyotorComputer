@@ -34,18 +34,24 @@ void mem_byte_write(uint8_t byte, uint16_t address) {
                 return;
         }
 
-        *(memory + address) = byte;
-        
         if (address == 0x0000) {
                 DBG(1, printf("Switching to Bank A #%d and to Bank B #%d", byte & 0b1111, (byte >> 4) & 0b1111);)
 
-                memcpy(bank_a[byte & 0b1111], memory + PROGRAM_MEM_BASE, PROGRAM_MEM_SZ / 2);
-                memcpy(bank_b[(byte >> 4) & 0b1111], memory + PROGRAM_MEM_BASE + (PROGRAM_MEM_SZ / 2), PROGRAM_MEM_SZ / 2);
+                printf("PRE: %c\n", *(memory + 0x200));
 
-                memcpy(memory + PROGRAM_MEM_BASE, bank_a[byte & 0b1111], PROGRAM_MEM_SZ / 2);
+                memcpy(bank_a[*memory & 0b1111], memory + PROGRAM_MEM_BASE,                        PROGRAM_MEM_SZ / 2);
+                memcpy(bank_b[(*memory >> 4) & 0b1111], memory + PROGRAM_MEM_BASE + (PROGRAM_MEM_SZ / 2), PROGRAM_MEM_SZ / 2);
+
+                printf("%d: %c %d: %c\n", *memory & 0b1111, *(bank_a[*memory & 0b1111]), byte & 0b1111, *(bank_a[byte & 0b1111]));
+
+                memcpy(memory + PROGRAM_MEM_BASE,                        bank_a[byte & 0b1111], PROGRAM_MEM_SZ / 2);
                 memcpy(memory + PROGRAM_MEM_BASE + (PROGRAM_MEM_SZ / 2), bank_b[(byte >> 4) & 0b1111], PROGRAM_MEM_SZ / 2);
+
+                printf("POST: %c\n", *(memory + 0x200));
         }
 
+        *(memory + address) = byte;
+        
         shared_memory_release_lock();
 }
 
