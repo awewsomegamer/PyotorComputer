@@ -1,5 +1,8 @@
 			.org 56512
 
+			.define TEMP1			$04
+			.define TEMP2			$01
+
 			.define VIDEO_ADDR_LO 		48512
 			.define VIDEO_ADDR_HI 		48513
 			.define VIDEO_REG_MODE 		48514
@@ -67,25 +70,25 @@
 .proc entry
 			stz VIDEO_REG_FG			; Set foreground to black
 			stz VIDEO_REG_BG			; Set background to black
-			ldx #$0					;
-			ldy #$0					;
-			lda #$1					;
+			ldx #$00				;
+			ldy #$00				;
+			lda #$01				;
 @draw_bg:		jsr put_pixel				;
-			lda $0					;
+			lda TEMP1				;
 			txa					;
-			adc $0					;
+			adc TEMP1				;
 			tya					;
-			sbc $0					;
+			sbc TEMP1				;
 			rol a					; ASL A also produces a pretty cool result
-			adc $0					;
-			sta $0					;
+			adc TEMP1				;
+			sta TEMP1				;
 			inx					;
 			bne @bg_over				;
 			iny					;
 			beq @end				;
 @bg_over:		bra @draw_bg				;
-@end:			ldx #$0					;
-			ldy #$0					;
+@end:			ldx #TEMP1				;
+			ldy #TEMP1				;
 			lda #.LOBYTE(ASZ_LOGO_BMP)		;
 			sta VIDEO_ADDR_LO			;
 			lda #.HIBYTE(ASZ_LOGO_BMP)		;
@@ -96,18 +99,17 @@
 			sta VIDEO_REG_STATUS			;
 			ldx #LOGO_START_X			; Load the starting x-coordinate
 			ldy #LOGO_START_Y			; Load the starting y-coordinate
-			lda #$0					; Load the starting sprite index
-			sta $0					; Zero temporary kernal value 0 (current sprite index)
+			stz TEMP1				; Zero temporary kernal value 0 (current sprite index)
 @draw_logo:		stx VIDEO_ADDR_LO			; Set address low
 			sty VIDEO_ADDR_HI			; Set address high
 			lda #$1					; Draw sprite (8x5) video mode
 			sta VIDEO_REG_MODE			; Set video mode
-			lda $0					; Load current sprite index
+			lda TEMP1				; Load current sprite index
 			cmp #LOGO_SPRITE_COUNT			; Compare to maximum number of sprites allowed
 			beq @done				; The routine is done if the maximum sprite number is reached
 			sta VIDEO_REG_DATA			; The routine is not done yet, draw this sprite
 			inc					; Increment to the next sprite
-			sta $0					; Store the incremented sprite index
+			sta TEMP1				; Store the incremented sprite index
 			lda #%11010000				; Load A with D1 | R/W | B
 			sta VIDEO_REG_STATUS			; Set status
 			inx					; Increment current x-coordinate
@@ -126,17 +128,17 @@
 			lda #$80				; D1
 			sta VIDEO_REG_STATUS			; Store the status
 			lda VIDEO_REG_DATA			; Load A with the current second
-			sta $0					; Store it in the temporary value
+			sta TEMP1				; Store it in the temporary value
 @check_rtc:		lda #$05				; Get current second mode
 			sta VIDEO_REG_MODE			; Store the mode
 			lda #$80				; D1
 			sta VIDEO_REG_STATUS			; Store the status
 			lda VIDEO_REG_DATA			; Load A with the current second	
-			cmp $0					; Is the current time different from last time?
+			cmp TEMP1				; Is the current time different from last time?
 			beq @check_rtc				; If not, jump back to the loop
-			sta $0					; Store the new second
-			inc $1					; Increment counter
-			lda $1					; Load in the amount of unique seconds passed
+			sta TEMP1				; Store the new second
+			inc TEMP2				; Increment counter
+			lda TEMP2				; Load in the amount of unique seconds passed
 			cmp #$3					; Is the counter 3?
 			beq @check_rtc_end			; If so, we're done (3 full seconds have passed)
 			bra @check_rtc				; Otherwise, loop
@@ -280,7 +282,6 @@ enter_routine:		inc TERMINAL_CHAR_Y			; Goto next line
 			beq @dir_cmp_end			; If zero were read, jump over
 			iny
 			lda TERMINAL_BUFFER, y			; Otherwise load in the character
-			clc					; Clear the carry flag
 			sbc #'A'				; Subtract A, to get disk index from A, B, C
 			inc					; Increment it into a disk index
 
@@ -448,22 +449,22 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; Carry flag is cleared
 .proc ascii_to_byte
 			phy					; Save high nibble
-			stz $1					; Zero temporary value 1
-			stx $0					; Put low nibble in temporary value 0
+			stz TEMP2				; Zero temporary value 1
+			stx TEMP1				; Put low nibble in temporary value 0
 			ldy #$0					; Zero indexing register
 @low_byte:		lda HEX_CHARS, y			; Load in the next sequential hex character
-			cmp $0					; Compare to low nibble
+			cmp TEMP1				; Compare to low nibble
 			beq @low_shift				; We found the character, jump to low_shift
 			iny					; We have not found the character, goto next hex character
 			cpy #16					; We could not find the character
 			beq @error				; We have searched all hex characters, no match, error
 			bra @low_byte				; Loop
-@low_shift:		sty $1					; Save where we found it into temporary 1	
+@low_shift:		sty TEMP2				; Save where we found it into temporary 1	
 			ply					; Restore high nubble
-			sty $0					; Put high nibble in temporary 0
+			sty TEMP1				; Put high nibble in temporary 0
 			ldy #$0					; Zero indexing register
 @high_byte:		lda HEX_CHARS, y			; Load in the next sequential hex character
-			cmp $0					; Compare to high nibble
+			cmp TEMP1				; Compare to high nibble
 			beq @high_shift				; We found the character, jump to high_shift
 			iny					; We have not found the character, goto next hex character
 			cpy #16					; Have we searched all characters?
@@ -475,7 +476,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rol a					; Shift to bit 2
 			rol a					; Shift to bit 3
 			rol a					; Shift to bit 4 (Into high nibble)
-			ora $1					; Or together the lower nibble
+			ora TEMP2				; Or together the lower nibble
 			bra @end				; Goto end
 @error:			ldx #$00				; Indicate we have encountered an error
 @end:			rts					; Return
@@ -682,10 +683,10 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ;     the start of the argument is located at
 ; No input registers are preserved
 .proc terminal_buffer_get_arg
+			inc
 			ldy #$0					; Load character index with zero
-@loop:			ldx #$0					; At the beginning of each loop, load character count with zero
-			cmp #$0					; Have we counted through all arguments?
-			beq @end				; If so, end
+@loop:			cmp #$00
+			ldx #$0					; At the beginning of each loop, load character count with zero
 			pha					; Otherwise, save the current argument count
 @advance_buffer:	lda TERMINAL_BUFFER, y			; Load in the current character
 			beq @divider_found			; If we reached a "space" then we completed an argument
@@ -693,6 +694,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			inx					; Increment the character count
 			bra @advance_buffer			; Loop
 @divider_found:		pla					; Restore the current argument index
+			beq @end
 			dec					; Decrement the argument index
 			bra @loop				; If we are not at 0, loop
 @end:			rts					; Return
@@ -860,7 +862,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta $5					; Store it
 			lda #.HIBYTE(FS_CUR_DIR)		; High byte of the first entry's address
 			sta $6					; Store it
-			stz $0					; Zero file index
+			stz TEMP1				; Zero file index
 @print_dir_loop:	ldy #$0F				; Load offset with 15, to check attributes block
 			lda ($5), y				; Load in the attribute byte
 			and #%11000000				; Select the D and E flags
@@ -885,11 +887,11 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			bra @print_name_loop			; Loop
 @print_name_end:	inc TERMINAL_CHAR_Y			; Increment the Y coordinate
 			stz TERMINAL_CHAR_X			; Zero the X coordinate to go to the beginning of the next line
-@next:			lda $0					; Load file index
+@next:			lda TEMP1				; Load file index
 			jsr fs_dir_next_entry			; Read in the next entry
 			cmp #FILE_NOT_FOUND_IDX			; Compare the A register to the maximum number of files per directory
 			beq @end				; If A > MAX_FILES_PER_DIR then finish
-			sta $0					; Save file index
+			sta TEMP1				; Save file index
 @loop:			bra @print_dir_loop			; Otherwise, loop
 @end:			cli					; Enable interrupts
 			rts					; Return
@@ -906,7 +908,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			lda #.HIBYTE(FS_CUR_DIR)		; Load the high byte of the first entry's base
 			sta $6					; Store it
 			phy					; Save the Y register
-			stz $0					; Zero file index
+			stz TEMP1				; Zero file index
 @compare_loop_start:	ldy #$00				; Zero the Y register, to read the first character
 @compare_loop:		cpy #13					; Compare the Y register to 14
 			beq @no_match				; If it is equal, we have reached the end of the string, no match
@@ -916,13 +918,13 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			iny					; Increment to the next character
 			cpy #12					; Have we read all characters in the name?
 			bne @compare_loop			; If not, go back to the compare loop
-			lda $0					; Load file index
+			lda TEMP1				; Load file index
 			bra @return				; Branch to the return statement
-@no_match:		lda $0					; Load file index
+@no_match:		lda TEMP1				; Load file index
 			jsr fs_dir_next_entry			; Get the next entry
 			cmp #FILE_NOT_FOUND_IDX			; Have we read all entries?
 			beq @return				; If so, return
-			sta $0					; Save file index
+			sta TEMP1				; Save file index
 			bra @compare_loop_start			; Go back to the loop starter
 @return:		ply 					; Restore Y register
 			rts					; Return
@@ -1041,11 +1043,11 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts					; Return
 @next_entry:		pha					; Save file index
 			lda $5					; Load in the current address
-			sta $1					; Save the current address
+			sta TEMP1				; Save the current address
 			clc					; Clear the carry flag for addition step
 			adc #$10				; Increment the address by 16, to go to the next entry
 			sta $5					; Store the incremented lower byte
-			cmp $1					; Compare the incremented lower byte to its previous value
+			cmp TEMP1				; Compare the incremented lower byte to its previous value
 			bcs @end				; If the new value is lower than the old one, we rolled over
 			inc $6					; Since we rolled over, increment the higher byte
 @end:			pla					; Restore file index
@@ -1099,9 +1101,9 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			pha					; Save A
 			phx					; Save X
 			phy					; Save Y
-			lda $0					; Load temporary value 0
+			lda TEMP1				; Load temporary value 0
 			pha					; Save it
-			lda $1					; Load temporary value 1
+			lda TEMP2				; Load temporary value 1
 			pha					; Save it
 			lda CURRENT_PROGRAM_BASE		; Load in lower byte of program address
 			ora CURRENT_PROGRAM_BASE + 1		; Or it with higher byte of program address 
@@ -1119,9 +1121,9 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 @over:			lda #$FF				; All interrupts have been taken care off
 			sta IRQ_ACK_BYTE			; Let the IO controller know
 			pla					; Restore temporary value 1
-			sta $1					; Store it
+			sta TEMP2				; Store it
 			pla					; Restore temporary value 0
-			sta $0					; Store it
+			sta TEMP1				; Store it
 			ply					; Restore Y
 			plx					; Restore X
 			pla					; Restore A
@@ -1132,9 +1134,9 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			pha					; Save A
 			phx					; Save X
 			phy					; Save Y
-			lda $0					; Load temporary value 0
+			lda TEMP1				; Load temporary value 0
 			pha					; Save it
-			lda $1					; Load temporary value 1
+			lda TEMP2				; Load temporary value 1
 			pha					; Save it
 			lda CURRENT_PROGRAM_NMI			; Load A with the lower byte of the NMI handler address
 			ora CURRENT_PROGRAM_NMI + 1		; Or A with the higher byte of the NMI handler address
@@ -1145,9 +1147,9 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			pha					; Push it
 			jmp (CURRENT_PROGRAM_NMI)		; Jump to user handler (basically a JSR due to prior push statements)
 @over:			pla					; Restore temporary value 1
-			sta $1					; Store it
+			sta TEMP2				; Store it
 			pla					; Restore temporary value 0
-			sta $0					; Store it
+			sta TEMP1				; Store it
 			ply					; Restore Y
 			plx					; Restore X
 			pla					; Restore A

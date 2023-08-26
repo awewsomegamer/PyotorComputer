@@ -17,14 +17,22 @@
         Zero Page Map:
                 Big Idea:
                 0x00 - 0x?? : Kernal
-                0x?? - 0x?? : User
+                0x?? - 0xFF : User
 
                 Detailed:
-                0x00 : Reserved for Kernal (Temporary value #1)
+                0x00 : Bank teller *
                 0x01 : Reserved for Kernal (Temporary value #2)
                 0x02 : Memory Map Mask
                 0x03 : Keyboard Scancode
+                0x04 : Reserved for Kernal (Temporary value #1)
 
+                * Low nibble contains the memory bank index for
+                  the first half of program memory. The high 
+                  nibble contains the memory bank index for the
+                  second half of program memory.
+
+                  This would allow for 768 KB supposing the program
+                  memory is 48 KB.
 */
 
 enum memory_map {
