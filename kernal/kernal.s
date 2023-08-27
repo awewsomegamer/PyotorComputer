@@ -683,21 +683,25 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ;     the start of the argument is located at
 ; No input registers are preserved
 .proc terminal_buffer_get_arg
-			inc
 			ldy #$0					; Load character index with zero
-@loop:			cmp #$00
-			ldx #$0					; At the beginning of each loop, load character count with zero
-			pha					; Otherwise, save the current argument count
+@loop:			pha					; Otherwise, save the current argument count
 @advance_buffer:	lda TERMINAL_BUFFER, y			; Load in the current character
 			beq @divider_found			; If we reached a "space" then we completed an argument
 			iny					; If not increment the character index
-			inx					; Increment the character count
 			bra @advance_buffer			; Loop
 @divider_found:		pla					; Restore the current argument index
-			beq @end
+			beq @end				; A is zero, we found the argument we ar elooking for
 			dec					; Decrement the argument index
 			bra @loop				; If we are not at 0, loop
-@end:			rts					; Return
+@end:			phy					; Save the index of the beginning of the argument
+			ldx #$00				; Zero the size
+@size_loop:		inx					; Increment the size
+			lda TERMINAL_BUFFER, y			; Get the current character
+			beq @return				; If we reached the end, return
+			iny					; Increment the pointer
+			bra @size_loop				; Loop
+@return:		ply					; Restore Y to the beginning of the argument
+			rts					; Return
 .endproc
 
 ; A   - Disk to read (values must be: 1,2, or 3), contents
