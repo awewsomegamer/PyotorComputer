@@ -2,6 +2,9 @@
 #include "include/ram.h"
 #include <math.h>
 
+#define MUL_OR_NO_DISK_INDEX      3
+#define DISK_NOT_CONNECTED 	  4
+
 FILE *connected_disks[3];
 
 uint8_t disk_operation_buffer(uint16_t sectors, uint16_t address, uint8_t device, uint16_t sector, uint8_t operation) {
@@ -9,12 +12,12 @@ uint8_t disk_operation_buffer(uint16_t sectors, uint16_t address, uint8_t device
 
 	if (disk_index > 2 || disk_index < 0) {
 		DBG(1, printf("Disk index %d is not a valid disk index", disk_index);)
-		return -1; // Multiple or no disks are bound for operation
+		return MUL_OR_NO_DISK_INDEX; // Multiple or no disks are bound for operation
 	}
 
 	if (connected_disks[disk_index] == NULL) {
 		DBG(1, printf("Disk %d is not connected", disk_index);)
-		return -1; // The selected disk is not connected to the system
+		return DISK_NOT_CONNECTED; // The selected disk is not connected to the system
 	}
 
 	fseek(connected_disks[disk_index], sector * SECTOR_SIZE, SEEK_SET);

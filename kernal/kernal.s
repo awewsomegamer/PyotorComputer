@@ -540,6 +540,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; MEM - Set bytes DISK_BUFF_ADDR_LO, DISK_BUFF_ADDR_HI, DISK_SECTOR_LO, 
 ;       DISK_SECTOR_HI, DISK_SECTOR_COUNT_LO, DISK_SECTOR_COUNT_HI to the
 ;       apropriate values.
+; A   - Returned as 0 if successful
 .proc read_disk
 			php					; Push flags
 			cli					; Enable interrupts
@@ -560,6 +561,10 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			ora DISK_REG_STATUS			; Or D1 together with bound bit
 			sta DISK_REG_STATUS			; Store final status
 @wait:			wai					; Wait for disk IRQ
+			lda #$3					; Load A with 3 (first disk error code)
+			cmp DISK_REG_CODE			; Compare it to the current disk code
+			bcc @error				; If it is less than...
+			beq @error				; Or equal, then error
 			pla					; Pull the mask off the stack
 			pha					; Push it back just in case
 			and DISK_REG_STATUS			; And it with the status
@@ -567,6 +572,23 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			pla					; Pull the just in case mask off
 			lda DISK_REG_CODE			; Load A with the return code
 			plp 					; Restore flags
+			lda #$00				; Success
+			rts					; Return
+@error:			pla					;
+			plp					;
+			lda #.LOBYTE(DISK_READ_FAIL)		;
+			sta $5					;
+			lda #.HIBYTE(DISK_READ_FAIL)		;
+			sta $6					;
+			lda #$E0				;
+			sta VIDEO_REG_BG			;
+			ldx #$0					;
+			ldy TERMINAL_CHAR_Y			;
+			lda #$04				;
+			jsr putstr				; 
+			iny
+			sty TERMINAL_CHAR_Y
+			lda #$01				; Fail
 			rts					; Return
 .endproc
 
@@ -783,7 +805,8 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta DISK_SECTOR_COUNT_LO		; Set the right byte
 			stz DISK_SECTOR_COUNT_HI		; Zero the higher byte
 			pla					; Restore the disk number
-			jsr read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
+			jsr read_disk				; Read disk
+			bne @return				; A returned as non-zero, failed to read disk
 			lda #'S'
 			cmp FS_DIR_IDENTIFIER + 0
 			bne @not_sfs
@@ -814,9 +837,10 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta VIDEO_REG_BG
 			ldx #$0
 			ldy TERMINAL_CHAR_Y
-			iny
 			lda #$04
 			jsr putstr
+			iny
+			sty TERMINAL_CHAR_Y
 @return:		rts
 .endproc
 
@@ -862,6 +886,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 .proc fs_list_directory
 			sei					; Disable interrupts
 			jsr fs_initialize			; Initialize the initial directory descriptor
+			bne @end				; Failed to initialize file system, return
 			lda #.LOBYTE(FS_CUR_DIR)		; Lower byte of the first entry's address
 			sta $5					; Store it
 			lda #.HIBYTE(FS_CUR_DIR)		; High byte of the first entry's address
@@ -906,12 +931,13 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; ($5) - The base address of the entry in the current directory
 .proc fs_find_file
 			lda #$1					; Disk number (make this dynamic)
+			phy					; Save the Y register
 			jsr fs_initialize			; Load initialization directory
+			bne @return				; Failed to initialize directory, return
 			lda #.LOBYTE(FS_CUR_DIR)		; Load the low byte of the first entry's base
 			sta $5					; Store it
 			lda #.HIBYTE(FS_CUR_DIR)		; Load the high byte of the first entry's base
 			sta $6					; Store it
-			phy					; Save the Y register
 			stz TEMP1				; Zero file index
 @compare_loop_start:	ldy #$00				; Zero the Y register, to read the first character
 @compare_loop:		cpy #13					; Compare the Y register to 14
@@ -1000,6 +1026,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts					; Return
 @over:			lda #$1					; Load the disk number (make this dynamic)
 			jsr fs_load_file_init			; Load file initializer
+			bne @return				; Failed to load file initializer, return
 			pla					; Restore high byte
 			sta $6					; Move it to high byte of destination
 			pla					; Restore low byte
@@ -1077,9 +1104,11 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta DISK_SECTOR_COUNT_LO		; Set the right byte
 			stz DISK_SECTOR_COUNT_HI		; Zero the higher byte
 			pla					; Restore the disk number
-			jmp read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
+			jsr read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
+			bne @no_next_dir_ld			; See if operation resulted in error
+			rts					; If not, return
 @no_next_dir:		pla					; Restore A
-			lda #$00				; Load error value
+@no_next_dir_ld:	lda #$00				; Load error value
 			rts					; Return
 .endproc
 
@@ -1179,6 +1208,7 @@ LOAD_CMD:		.asciiz "LOAD"
 CMD_NO_MATCH:		.asciiz "Command parameters insufficient!"
 FS_VER_NO_SUPPORT:	.asciiz "File system version not supported!"
 FS_NOT_VALID:		.asciiz "Unsupported file system!"
+DISK_READ_FAIL:		.asciiz "Failed to read the disk!"
 
 .segment "VECTORS"
 			.addr nmi_handler
