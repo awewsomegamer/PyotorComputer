@@ -152,39 +152,6 @@
 			stz TERMINAL_CHAR_Y			; Zero terminal Y coordinate
 			lda #$1					; Set disk number to 1
 			jsr fs_initialize			; Initialize virtual file system from disk 1
-
-			ldx #$00
-			lda #$01
-			sta $0
-
-			lda #'A'
-			sta $200
-
-			stz $0
-
-			lda #'B'
-			sta $5FBF
-
-			lda #$02
-			sta $0
-
-			lda $200
-			jsr putchar
-			inx
-
-			lda #$01
-			sta $0
-
-			lda $200
-			jsr putchar
-			inx
-
-			stz $0
-
-			lda $5FBF
-			jsr putchar
-			inx
-
 			stz TERMINAL_STATUS			; Zero status
 .endproc
 			; Auto commands handling goes here
