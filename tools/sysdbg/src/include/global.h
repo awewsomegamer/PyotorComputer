@@ -19,11 +19,11 @@
 #define REGISTERS_END_ROW (max_y / 2)
 #define REGISTERS_LABEL " REGISTERS "
 
-#define SYS_INFO_COLUMN REGISTERS_COLUMN
-#define SYS_INFO_END_COLUMN (max_x - 1)
-#define SYS_INFO_START_ROW (REGISTERS_END_ROW)
-#define SYS_INFO_END_ROW ((max_y / 4) + SYS_INFO_START_ROW)
-#define SYS_INFO_LABEL " SYSTEM INFORMATION "
+#define INFO_COLUMN REGISTERS_COLUMN
+#define INFO_END_COLUMN (max_x - 1)
+#define INFO_START_ROW (REGISTERS_END_ROW)
+#define INFO_END_ROW ((max_y / 4) + INFO_START_ROW)
+#define INFO_LABEL " INFORMATION "
 
 #define SYSDBG_COLOR_REGULAR 0
 #define SYSDBG_COLOR_HIGHLIGHTED 1
@@ -43,8 +43,34 @@
 #define RED_OFF if ((has_colors() == TRUE)) \
                                 attroff(COLOR_PAIR(SYSDBG_COLOR_RED));
 
+#define DEBUG_MODE_NONE         0
+#define DEBUG_MODE_BREAKPOINT   1
+#define DEBUG_MODE_STEP         2
+#define DEBUG_MODE_CMD          3
+
+#define DEBUG_ACTION_A          0
+#define DEBUG_ACTION_B          1
+#define DEBUG_ACTION_C          2
+
+static const char *debugger_mode_strings[] = {
+        [DEBUG_MODE_NONE] = "None",
+        [DEBUG_MODE_BREAKPOINT] = "Breakpoint",
+        [DEBUG_MODE_STEP] = "Step",
+        [DEBUG_MODE_CMD] = "Command",
+};
+
+#define DEBUG_MODE_TOGGLE(mode, on, off) \
+        debugger_mode = (debugger_mode == mode) ? DEBUG_MODE_NONE : mode; \
+        if (debugger_mode == mode) \
+                on                 \
+        else                       \
+                off
+
 extern int max_x;
 extern int max_y;
+extern uint8_t debugger_mode;
 extern uint8_t running;
+
+size_t char_hash(char c);
 
 #endif

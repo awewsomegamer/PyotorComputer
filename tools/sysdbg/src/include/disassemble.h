@@ -83,6 +83,8 @@ static const int instruction_size_lookup[] = {
 struct label {
         char *name;
         uint16_t address;
+	uint8_t attributes; // 0 0 0 0 0 0 0 B
+			    //	             `- Marked as breakpoint
 };
 extern struct label *labels;
 
@@ -93,6 +95,6 @@ extern uint16_t code_org;
 char *print_instruction(uint8_t *buffer, uint8_t *flags);
 void parse_labels(FILE *file);
 char *print_label();
-
+void toggle_breakpoint(char *symbol);
 
 #endif

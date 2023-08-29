@@ -1,5 +1,6 @@
 #include "include/disassemble.h"
 #include "include/shared_memory.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,11 +56,12 @@ uint8_t mem_byte_read(uint16_t address) {
 }
 
 // Flags
-// 0 0 0 0 R S O L
-//	   | | | `-- Last call to this function returned a label (1: yes, 0: no)
-//	   | | `---- Use origin (1: yes, 0: no)
-//	   | `------ Single mode disassembly (1: yes, 0: no)
-//	   `-------- Buffer is Shared RAM
+// 0 0 0 B R S O L
+//	 | | | | `-- Last call to this function returned a label (1: yes, 0: no)
+//	 | | | `---- Use origin (1: yes, 0: no)
+//	 | | `------ Single mode disassembly (1: yes, 0: no)
+//	 | `-------- Buffer is Shared RAM
+//	 `---------- Reached a breakpoint
 char *print_instruction(uint8_t *buffer, uint8_t *flags) {
 	// Make this size dynamic
 	char *instruction_str = malloc(512);
@@ -223,6 +225,11 @@ char *print_instruction(uint8_t *buffer, uint8_t *flags) {
 	return_label:;
 
 	strcpy(instruction_str, labels[label_index].name);
+	
+	// if (labels[label_index].attributes & 1 && ((*flags >> 4) & 1) == 0) {
+	// 	*((uint64_t *)memory + IPS_OFF) = 0;
+	// 	*flags |= 1 << 4;
+	// }
 
 	return instruction_str;
 }
@@ -249,4 +256,16 @@ void parse_labels(FILE *file) {
 
 		labels = (struct label *)realloc(labels, (++label_count + 1) * sizeof(struct label));
 	}
+}
+
+void toggle_breakpoint(char *symbol) {
+	int i = 0;
+	for (; i < label_count; i++)
+		if (strcmp(labels[i].name, symbol))
+			break;
+
+	if (labels[i].attributes & 1)
+		labels[i].attributes &= ~(1 << 0);
+	else
+		labels[i].attributes |= 1 << 0;
 }

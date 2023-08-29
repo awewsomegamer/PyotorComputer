@@ -15,6 +15,7 @@
 
 int max_x = 0;
 int max_y = 0;
+uint8_t debugger_mode = 0;
 
 uint8_t running = 1;
 
@@ -48,6 +49,11 @@ void init_ncurses() {
                 init_pair(SYSDBG_COLOR_GREEN, COLOR_BLACK, COLOR_GREEN);
                 init_pair(SYSDBG_COLOR_RED, COLOR_BLACK, COLOR_RED);
         }
+}
+
+// Get a better per character hash function
+size_t char_hash(char c) {
+        return (((0x55555 * c) / 0xADAFB) ^ 2) / 8;
 }
 
 void terminate(int sig) {
@@ -111,13 +117,16 @@ int main(int argc, char **argv) {
                 fclose(labels);
         }
 
+        // Implement support for a breakpoints file.
+        // Also the above argc interpreting should be
+        // revised.
+
         init_shared_memory_client();
         init_ncurses();
 
         uint8_t flags = 0b00001000;
         
         // While running
-        char cmd = ' ';
         uint16_t cur_pc = 0;
         while (running && ((*(memory + EMU_FLAGS_OFF) >> 5) & 1)) {
                 shared_memory_acquire_lock();
@@ -132,10 +141,8 @@ int main(int argc, char **argv) {
                 shared_memory_release_lock();
                 
                 int c = 0;
-                if ((c = getch()) != ERR) {
+                if ((c = getch()) != ERR)
                         interpret_key(c);
-                        cmd = c;
-                }
 
                 refresh();
 

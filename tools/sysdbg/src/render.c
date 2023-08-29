@@ -57,15 +57,22 @@ int draw_disassembly(uint8_t *flags) {
 			printable_str[length + 4] = ' ';
 		}
 
-		if (i == DISASM_START_ROW + 1)
+		if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 0) {
 			HIGHLIGHT_ON
+		} else if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 1) {
+			RED_ON
+		}
 
 		move(i, x);
 		printw("%s%c", printable_str, (*flags & 1 ? ':' : 0));
 		free(str);
 		
-		if (i == DISASM_START_ROW + 1)
+		if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 0) {
 			HIGHLIGHT_OFF
+		} else if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 1) {
+			RED_OFF
+		}
+		
 		
 		if (*flags & 1) {
 			str = print_instruction(memory, flags);
@@ -80,14 +87,20 @@ int draw_disassembly(uint8_t *flags) {
 					printable_str[length + 3] = ':';
 			}
 			
-			if (i == DISASM_START_ROW + 1)
+			if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 0) {
 				HIGHLIGHT_ON
+			} else if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 1) {
+				RED_ON
+			}
 
 			move(i, CODE_COLUMN);
 			printw("%s", printable_str);
 
-			if (i == DISASM_START_ROW + 1)
+			if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 0) {
 				HIGHLIGHT_OFF
+			} else if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 1) {
+				RED_OFF
+			}
 
 			free(str);
 		}
@@ -102,66 +115,38 @@ int draw_disassembly(uint8_t *flags) {
 }
 
 void draw_memdump_instruction_area(int x, int y, int cur_inst_len, uint16_t cur_pc) {
-	int bound_low = -24;
-	int bound_high = -16;
+	int rows = REGISTERS_END_ROW - y;
+	int middle = rows / 2;
 
-	for (int i = 0; i < 3; i++) {
-		move(y++, x);
-		for (int j = cur_pc - bound_high; j < cur_pc - bound_low; j++)
-			printw("%02X ", *(memory + j));
+	for (int i = (middle * -8); i < (rows - middle) * 8; i += 8) {
+		move(y, x);
 
-		if (REGISTERS_END_COLUMN - REGISTERS_COLUMN > 50) {
-			addch(' ');
-
-			for (int j = cur_pc - bound_high; j < cur_pc - bound_low; j++)
-				printw("%c ",  ((*(memory + j) > 0x20) ? *(memory + j) : 0));
-		}
-
-		bound_high += 8;
-		bound_low += 8;
-	}
-	
-	move(y++, x);
-	for (int i = cur_pc; i < cur_pc + 8; i++) {
-		if (i - cur_pc < cur_inst_len)
-			HIGHLIGHT_ON
-
-		printw("%02X ", *(memory + i));
-		
-		if (i - cur_pc < cur_inst_len)
-			HIGHLIGHT_OFF
-	}
-	if (REGISTERS_END_COLUMN - REGISTERS_COLUMN > 50) {
-		addch(' ');
-
-		for (int i = cur_pc; i < cur_pc + 8; i++) {
-			if (i - cur_pc < cur_inst_len)
+		for (int j = 0; j < 8; j++) {
+			if (i + j >= 0 && i + j < cur_inst_len)
 				HIGHLIGHT_ON
 
-			printw("%c ",  ((*(memory + i) > 0x20) ? *(memory + i) : 0));
+			printw("%02X ", *(memory + cur_pc + i + j));
 
-			if (i - cur_pc < cur_inst_len)
+			if (i + j >= 0 && i + j < cur_inst_len)
 				HIGHLIGHT_OFF
+
 		}
-	}
-
-	bound_low = 8;
-	bound_high = 16;
-
-	for (int i = 0; i < 3; i++) {
-		move(y++, x);
-		for (int j = cur_pc + bound_low; j < cur_pc + bound_high; j++)
-			printw("%02X ", *(memory + j));
 
 		if (REGISTERS_END_COLUMN - REGISTERS_COLUMN > 50) {
 			addch(' ');
 
-			for (int j = cur_pc + bound_low; j < cur_pc + bound_high; j++)
-				printw("%c ",  ((*(memory + j) > 0x20) ? *(memory + j) : 0));
+			for (int j = 0; j < 8; j++) {
+				if (i + j >= 0 && i + j < cur_inst_len)
+					HIGHLIGHT_ON
+
+				printw("%c ", *(memory + cur_pc + i + j));
+
+				if (i + j >= 0 && i + j < cur_inst_len)
+					HIGHLIGHT_OFF
+			}
 		}
 
-		bound_high += 8;
-		bound_low += 8;
+		y++;
 	}
 }
 
@@ -222,11 +207,17 @@ void draw_registers(uint16_t cur_pc, int cur_inst_len) {
 }
 
 void draw_sys_info() {
-	draw_window(SYS_INFO_LABEL, SYS_INFO_COLUMN, SYS_INFO_END_COLUMN, SYS_INFO_START_ROW, SYS_INFO_END_ROW);
+	draw_window(INFO_LABEL, INFO_COLUMN, INFO_END_COLUMN, INFO_START_ROW, INFO_END_ROW);
 	
-	int x = SYS_INFO_COLUMN;
-	int y = SYS_INFO_START_ROW + 1;
+	int x = INFO_COLUMN;
+	int y = INFO_START_ROW + 1;
 
 	move(y++, x);
+	printw("Debugger mode: %s", debugger_mode_strings[debugger_mode]);
+	move(y++, x);
 	printw("IPS: %lu", *((uint64_t *)(memory + IPS_OFF)));
+}
+
+void render_terminal() {
+
 }

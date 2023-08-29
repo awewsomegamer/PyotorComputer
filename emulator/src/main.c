@@ -34,7 +34,7 @@ void *emulate_thread(void *arg) {
 
         while (running) {
                 if (*sys_ips > 0) {
-                        tick_65C02();
+                        // tick_65C02();
                         wait_between_insts = (double)1000000/(double)*sys_ips;
                         current_debt += wait_between_insts;
                         instructions++;
