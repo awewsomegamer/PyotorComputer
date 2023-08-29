@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
         init_shared_memory_client();
         init_ncurses();
 
-        uint8_t flags = 0b00000000;
+        uint8_t flags = 0b00001000;
         
         // While running
         char cmd = ' ';

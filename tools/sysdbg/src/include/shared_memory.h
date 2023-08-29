@@ -35,10 +35,10 @@
 				                                  //		   `------- Waiting
 #define IPS_OFF			MEMORY_SIZE + 10                  // ( double   )  : The number of instructions per second
 #define CUR_INST_OFF            MEMORY_SIZE + 18                  // ( uint16_t )  : The PC at which the current instruction starts at
-#define BANK_SZ                 (0x5DC0 * 16)                    
-#define BANK_A                  MEMORY_SIZE + 20                  // ( uint8_t *)  : The contents of the 16 lower half memory banks
-#define BANK_B                  MEMORY_SIZE + 20 + BANK_SZ        // ( uint8_t *)  : The contents of the 16 lower half memory banks
-#define BUFFER_SIZE		MEMORY_SIZE + BANK_SZ + 1         // + 1 for the lock
+#define BANK_SZ                 (0x5DC0 * 15)                     //               : 15 * 24 KB
+#define BANK_A_OFF              MEMORY_SIZE + 20                  // ( uint8_t *)  : The contents of the 16 lower half memory banks
+#define BANK_B_OFF              MEMORY_SIZE + 20 + BANK_SZ        // ( uint8_t *)  : The contents of the 16 lower half memory banks
+#define BUFFER_SIZE		MEMORY_SIZE + (BANK_SZ * 2) + 1   // + 1 for the lock
 
 #ifdef DEBUG
         #define DBG(msg, what) \

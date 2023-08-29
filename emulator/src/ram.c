@@ -11,21 +11,30 @@ uint8_t *bank_b = NULL;
 
 uint8_t mem_byte_read(uint16_t address) {
         shared_memory_acquire_lock();
+        uint8_t value = 0;
 
         if (PROGRAM_MEM(address)) {
                 uint16_t offset = (address - PROGRAM_MEM_BASE);
                 uint8_t bank_bucket = offset > PROGRAM_MEM_SZ / 2 ? 1 : 0;
-                int base = PROGRAM_MEM_SZ * (bank_bucket ? ((*memory >> 4) & 0b1111) : 
-                                                           ((*memory)      & 0b1111));
+                uint8_t bank = (bank_bucket ? ((*memory >> 4) & 0b1111) : ((*memory) & 0b1111));
 
-                uint8_t value = *((bank_bucket ? bank_b : bank_a) + (offset % PROGRAM_MEM_SZ / 2) + base);
+                if (bank == 0) {
+                        value = *(memory + address);
+                        shared_memory_release_lock();
+                        
+                        return value;
+                }
+
+                int base = PROGRAM_MEM_SZ * (bank - 1);
+
+                value = *((bank_bucket ? bank_b : bank_a) + (offset % PROGRAM_MEM_SZ / 2) + base);
 
                 shared_memory_release_lock();
                 return value;
         }
 
 
-        uint8_t value = *(memory + address);
+        value = *(memory + address);
         shared_memory_release_lock();
 
         return value;
@@ -51,8 +60,16 @@ void mem_byte_write(uint8_t byte, uint16_t address) {
         if (PROGRAM_MEM(address)) {
                 uint16_t offset = (address - PROGRAM_MEM_BASE);
                 uint8_t bank_bucket = offset > PROGRAM_MEM_SZ / 2 ? 1 : 0;
-                int base = PROGRAM_MEM_SZ * (bank_bucket ? ((*memory >> 4) & 0b1111) : 
-                                                           ((*memory)      & 0b1111));
+                uint8_t bank = (bank_bucket ? ((*memory >> 4) & 0b1111) : ((*memory) & 0b1111));
+
+                if (bank == 0) {
+                        *(memory + address) = byte;
+                        shared_memory_release_lock();
+                        
+                        return;
+                }
+
+                int base = PROGRAM_MEM_SZ * (bank - 1);
 
                 *((bank_bucket ? bank_b : bank_a) + (offset % PROGRAM_MEM_SZ / 2) + base) = byte;
 
