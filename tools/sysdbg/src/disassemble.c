@@ -1,4 +1,5 @@
 #include "include/disassemble.h"
+#include "include/global.h"
 #include "include/shared_memory.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -26,33 +27,20 @@ enum memory_map {
 #define PROGRAM_MEM(a) (PROGRAM_MEM_BASE <= a && a <= KERNAL_DAT_BASE - 1)
 
 uint8_t mem_byte_read(uint16_t address) {
-        shared_memory_acquire_lock();
-        uint8_t value = 0;
-
         if (PROGRAM_MEM(address)) {
                 uint16_t offset = (address - PROGRAM_MEM_BASE);
                 uint8_t bank_bucket = offset > PROGRAM_MEM_SZ / 2 ? 1 : 0;
                 uint8_t bank = (bank_bucket ? ((*memory >> 4) & 0b1111) : ((*memory) & 0b1111));
 
-                if (bank == 0) {
-                        value = *(memory + address);
-                        shared_memory_release_lock();
-                        
-                        return value;
-                }
+                if (bank == 0)
+                        return *(memory + address);
 
                 int base = PROGRAM_MEM_SZ * (bank - 1);
 
-                value = *((bank_bucket ? (memory + BANK_A_OFF) : (memory + BANK_B_OFF)) + (offset % PROGRAM_MEM_SZ / 2) + base);
-
-                shared_memory_release_lock();
-                return value;
+                return *((bank_bucket ? (memory + BANK_A_OFF) : (memory + BANK_B_OFF)) + (offset % PROGRAM_MEM_SZ / 2) + base);
         }
 
-        value = *(memory + address);
-        shared_memory_release_lock();
-
-        return value;
+        return *(memory + address);
 }
 
 // Flags
@@ -66,20 +54,21 @@ char *print_instruction(uint8_t *buffer, uint8_t *flags) {
 	// Make this size dynamic
 	char *instruction_str = malloc(512);
 
-	uint8_t opcode = ((*flags >> 4) & 1) ? mem_byte_read(pc) : *(buffer + pc);
-	uint8_t a = ((*flags >> 4) & 1) ? mem_byte_read(pc + 1) : *(buffer + pc + 1);
-	uint8_t b = ((*flags >> 4) & 1) ? mem_byte_read(pc + 2) : *(buffer + pc + 2);
+	uint8_t opcode = ((*flags >> DISASM_FLAG_RAM) & 1) ? mem_byte_read(pc) : *(buffer + pc);
+	uint8_t a = 	 ((*flags >> DISASM_FLAG_RAM) & 1) ? mem_byte_read(pc + 1) : *(buffer + pc + 1);
+	uint8_t b = 	 ((*flags >> DISASM_FLAG_RAM) & 1) ? mem_byte_read(pc + 2) : *(buffer + pc + 2);
 	uint16_t word = a | (b << 8);
 
 	int label_index = -1;
 	for (int i = 0; i < label_count; i++) {
-		if ((pc + ((*flags >> 1) & 1 ? code_org : 0)) == labels[i].address && (*flags & 1) == 0) {
-			*flags |= 1;
+		int pc_offset = (pc + ((*flags >> DISASM_FLAG_ORG) & 1 ? code_org : 0));
+		if (pc_offset == labels[i].address && ((*flags >> DISASM_FLAG_LABEL) & 1) == 0) {
+			*flags |= 1 << DISASM_FLAG_LABEL;
 			label_index = i;
 			goto return_label;
 		}
 
-		if (labels[i].address == word || labels[i].address == (pc + (int8_t)a))
+		if (labels[i].address == word || labels[i].address == (pc_offset + (int8_t)a))
 			label_index = i;
 	}
 
@@ -226,10 +215,10 @@ char *print_instruction(uint8_t *buffer, uint8_t *flags) {
 
 	strcpy(instruction_str, labels[label_index].name);
 	
-	// if (labels[label_index].attributes & 1 && ((*flags >> 4) & 1) == 0) {
-	// 	*((uint64_t *)memory + IPS_OFF) = 0;
-	// 	*flags |= 1 << 4;
-	// }
+	if ((labels[label_index].attributes & 1) && ((*flags >> DISASM_FLAG_BREAK) & 1) == 0) {
+		*(uint64_t *)(memory + IPS_OFF) = 0;
+		*flags |= 1 << DISASM_FLAG_BREAK;
+	}
 
 	return instruction_str;
 }
@@ -253,19 +242,28 @@ void parse_labels(FILE *file) {
 
 		labels[label_count].name = name;
 		labels[label_count].address = address;
+		labels[label_count].attributes = 0;
 
 		labels = (struct label *)realloc(labels, (++label_count + 1) * sizeof(struct label));
 	}
 }
 
-void toggle_breakpoint(char *symbol) {
-	int i = 0;
-	for (; i < label_count; i++)
-		if (strcmp(labels[i].name, symbol))
+int toggle_breakpoint(char *symbol) {
+	int label_index = -1;
+	for (int i = 0; i < label_count; i++) {
+		if (strcmp(labels[i].name, symbol) == 0) {
+			label_index = i;
 			break;
+		}
+	}
 
-	if (labels[i].attributes & 1)
-		labels[i].attributes &= ~(1 << 0);
+	if (label_index == -1)
+		return -1;
+
+	if (labels[label_index].attributes & 1)
+		labels[label_index].attributes &= ~(1 << 0);
 	else
-		labels[i].attributes |= 1 << 0;
+		labels[label_index].attributes |= 1 << 0;
+
+	return 0;
 }

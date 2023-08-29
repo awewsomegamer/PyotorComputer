@@ -50,6 +50,35 @@ void perform_action(int type) {
 void interpret_key(int key) {
 	uint64_t *ips = (uint64_t *)(memory + IPS_OFF);
 
+	// Action switch
+	switch (key) {
+	case ' ': { // "Action" key
+		if (debugger_mode != DEBUG_MODE_CMD)
+			perform_action(DEBUG_ACTION_A);
+
+		break;
+	}
+
+	case '\n': { // "Action" key
+		perform_action(DEBUG_ACTION_B);
+
+		break;
+	}
+
+	case '\b': { // "Action" key
+		perform_action(DEBUG_ACTION_C);
+
+		break;
+	}
+	}
+
+	if (debugger_mode == DEBUG_MODE_CMD) {
+		cmd_receive_char(key);
+
+		return;
+	}
+
+	// Mode / Key switch
 	switch (key) {
 	case ',': { // Basic speed control
 		*ips = 0;
@@ -86,32 +115,6 @@ void interpret_key(int key) {
 		DEBUG_MODE_TOGGLE(DEBUG_MODE_CMD, ;, ;)
 
 		break;
-	}
-
-	case ' ': { // "Action" key
-		perform_action(DEBUG_ACTION_A);
-
-		break;
-	}
-
-	case '\n': { // "Action" key
-		perform_action(DEBUG_ACTION_B);
-
-		break;
-	}
-
-	case '\b': { // "Action" key
-		perform_action(DEBUG_ACTION_C);
-
-		break;
-	}
-
-	default: {
-		if (debugger_mode == DEBUG_MODE_CMD) {
-			cmd_receive_char(key);
-
-			break;
-		}
 	}
 	}
 }

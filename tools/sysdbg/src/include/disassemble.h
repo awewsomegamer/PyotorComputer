@@ -95,6 +95,6 @@ extern uint16_t code_org;
 char *print_instruction(uint8_t *buffer, uint8_t *flags);
 void parse_labels(FILE *file);
 char *print_label();
-void toggle_breakpoint(char *symbol);
+int toggle_breakpoint(char *symbol);
 
 #endif

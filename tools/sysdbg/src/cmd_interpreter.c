@@ -13,28 +13,28 @@ void execute_cmd() {
 	if (command_buffer_idx == 0)
 		return;
 
-	size_t hash = 0x54A6734DF;
+	uint64_t hash = 0xA5B1C2;
 	
 	int i = 0;
-	for (; i < command_buffer_idx; i++) {
-		hash += command_buffer[i];
-
-		if (command_buffer[i] == ' ')
-			break;
-	}
+	for (; i < command_buffer_idx && command_buffer[i] != ' '; i++)
+		hash += char_hash(command_buffer[i]);
 
 	switch (hash) {
 	case CMD_BREAK_HASH: {
-		int start_idx = i;
-		for (; i < 512 && command_buffer[i] != ' '; i++);
+		int start_idx = ++i;
+		for (; i < command_buffer_idx && command_buffer[i] != ' '; i++);
 		char *symbol = (char *)malloc(i - start_idx);
-		strncpy(symbol, command_buffer + start_idx + 1, (i - start_idx));
+		strncpy(symbol, command_buffer + start_idx, (i - start_idx));
 
-		toggle_breakpoint(symbol);
+		if (toggle_breakpoint(symbol) == -1)
+			// Error
 
 		break;
 	}
 	}
+
+	memset(command_buffer, 0, 512);
+	command_buffer_idx = 0;
 }
 
 void cmd_receive_char(char c) {

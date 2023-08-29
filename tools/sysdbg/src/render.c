@@ -40,65 +40,60 @@ int draw_disassembly(uint8_t *flags) {
 		char *printable_str = malloc(max_x + 1);
 		memset(printable_str, 0, max_x + 1);
 
-		int length = CODE_COLUMN_END - CODE_COLUMN - 5;
+		int length = CODE_COLUMN_END - CODE_COLUMN - 4;
 		int x = CODE_COLUMN;
 
 		if (*flags & 1) {
-			length = CODE_COLUMN - LABEL_COLUMN - 5;
+			length = CODE_COLUMN - LABEL_COLUMN - 4;
 			x = LABEL_COLUMN;
 		}
 
 		strncpy(printable_str, str, length);
 		
 		if (strlen(str) > length) {
-			memset(printable_str + length, '.', 3);
-			if (*flags & 1)
-				printable_str[length + 3] = ':';
-			printable_str[length + 4] = ' ';
+			memset(printable_str + length, '.', 2);
 		}
 
-		if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 0) {
+		if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 			HIGHLIGHT_ON
-		} else if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 1) {
-			RED_ON
+		} else if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 1) {
+		 	RED_ON
 		}
 
 		move(i, x);
-		printw("%s%c", printable_str, (*flags & 1 ? ':' : 0));
+		printw("%s%c", printable_str, ((*flags >> DISASM_FLAG_LABEL) & 1) ? ':' : ' ');
 		free(str);
 		
-		if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 0) {
+		if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 			HIGHLIGHT_OFF
-		} else if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 1) {
+		} else if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 1) {
 			RED_OFF
 		}
-		
 		
 		if (*flags & 1) {
 			str = print_instruction(memory, flags);
 			memset(printable_str, 0, max_x + 1);
-			length = CODE_COLUMN_END - CODE_COLUMN - 5;
+			length = CODE_COLUMN_END - CODE_COLUMN - 4;
 
 			strncpy(printable_str, str, length);
 
 			if (strlen(str) > length) {
 				memset(printable_str + length, '.', 3);
-				if (*flags & 1)
-					printable_str[length + 3] = ':';
+				printable_str[length + 3] = ' ';
 			}
 			
-			if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 0) {
+			if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 				HIGHLIGHT_ON
-			} else if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 1) {
+			} else if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 1) {
 				RED_ON
 			}
 
 			move(i, CODE_COLUMN);
 			printw("%s", printable_str);
 
-			if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 0) {
+			if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 				HIGHLIGHT_OFF
-			} else if (i == DISASM_START_ROW + 1 && ((*flags) & 1) == 1) {
+			} else if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 1) {
 				RED_OFF
 			}
 

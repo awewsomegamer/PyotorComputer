@@ -2,6 +2,7 @@
 #define GLOBAL_H
 
 #include <ncurses.h>
+#include <stdint.h>
 #include <string.h>
 #include <locale.h>
 #include <curses.h>
@@ -43,6 +44,12 @@
 #define RED_OFF if ((has_colors() == TRUE)) \
                                 attroff(COLOR_PAIR(SYSDBG_COLOR_RED));
 
+#define DISASM_FLAG_LABEL       0
+#define DISASM_FLAG_ORG         1
+#define DISASM_FLAG_SINGLE      2
+#define DISASM_FLAG_RAM         3
+#define DISASM_FLAG_BREAK       4
+
 #define DEBUG_MODE_NONE         0
 #define DEBUG_MODE_BREAKPOINT   1
 #define DEBUG_MODE_STEP         2
@@ -71,6 +78,6 @@ extern int max_y;
 extern uint8_t debugger_mode;
 extern uint8_t running;
 
-size_t char_hash(char c);
+uint64_t char_hash(char c);
 
 #endif

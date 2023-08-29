@@ -19,7 +19,7 @@ uint8_t debugger_mode = 0;
 
 uint8_t running = 1;
 
-pthread_t poll_thread;
+size_t signal_character = 0;
 
 void init_ncurses() {
 	setlocale(LC_ALL, "en_US.UTF-8");
@@ -52,7 +52,7 @@ void init_ncurses() {
 }
 
 // Get a better per character hash function
-size_t char_hash(char c) {
+uint64_t char_hash(char c) {
         return (((0x55555 * c) / 0xADAFB) ^ 2) / 8;
 }
 
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
                 int cur_inst_len = draw_disassembly(&flags);
                 draw_registers(cur_pc, cur_inst_len);
                 draw_sys_info();
-                
+
                 shared_memory_release_lock();
                 
                 int c = 0;

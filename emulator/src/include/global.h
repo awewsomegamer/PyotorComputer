@@ -27,5 +27,6 @@
 #define ASSERT(cond) if (!(cond)) { printf("[%s@%d] : Assertion "#cond" failed, exiting\n", __FILE__, __LINE__); exit(1); }
 
 extern uint8_t running;
+extern uint64_t *sys_ips;
 
 #endif
