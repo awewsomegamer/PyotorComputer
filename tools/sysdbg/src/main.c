@@ -53,7 +53,7 @@ void init_ncurses() {
 
 // Get a better per character hash function
 uint64_t char_hash(char c) {
-        return (((0x55555 * c) / 0xADAFB) ^ 2) / 8;
+        return (((0x55555 * c)) ^ 2) / 2;
 }
 
 void terminate(int sig) {
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
         signal(SIGINT, terminate);
 
         if (argc > 1 && strcmp(argv[1], "-d") == 0) {
-                uint8_t flags = 0b00000000;
+                disasm_flags = 0b00000000;
 
                 if (argc < 2) {
                         printf("Disassembly mode:\nmonitor -d assembled.bin [labels.txt] [$binary_origin]\n");
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
                 }
 
                 if (argc > 4) {
-                        flags |= 1 << 1;
+                        disasm_flags |= 1 << DISASM_FLAG_ORG;
                         code_org = strtol(argv[4], NULL, 16);
                 }
 
@@ -98,9 +98,9 @@ int main(int argc, char **argv) {
                 fread(buffer, 1, size, code);
 
                 while (pc < size) {
-                        char *str = print_instruction(buffer, &flags);
+                        char *str = print_instruction(buffer);
 
-                        if (flags & 1)
+                        if ((disasm_flags >> DISASM_FLAG_LABEL) & 1)
                                 printf("%s:\n", str);
                         else
                                 printf("\t%s\n", str);
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
         init_shared_memory_client();
         init_ncurses();
 
-        uint8_t flags = 0b00001000;
+        disasm_flags = 0b00001000;
         
         // While running
         uint16_t cur_pc = 0;
@@ -134,9 +134,10 @@ int main(int argc, char **argv) {
                 cur_pc = *(memory + CUR_INST_OFF) | (*(memory + CUR_INST_OFF + 1) << 8);
                 pc = cur_pc;
 
-                int cur_inst_len = draw_disassembly(&flags);
+                int cur_inst_len = draw_disassembly();
                 draw_registers(cur_pc, cur_inst_len);
                 draw_sys_info();
+                render_cmd();
 
                 shared_memory_release_lock();
                 
@@ -146,7 +147,7 @@ int main(int argc, char **argv) {
 
                 refresh();
 
-                usleep(1000);
+                usleep(2000);
                 erase();
         }
 

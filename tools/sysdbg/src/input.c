@@ -1,7 +1,10 @@
 #include "include/input.h"
+#include "include/disassemble.h"
 #include "include/global.h"
 #include "include/shared_memory.h"
 #include "include/cmd_interpreter.h"
+
+#define IPS *(uint64_t *)(memory + IPS_OFF)
 
 void perform_action(int type) {
 	// Type C actions, triggered by backspace
@@ -36,7 +39,6 @@ void perform_action(int type) {
 	switch (debugger_mode) {
 	case DEBUG_MODE_BREAKPOINT: {
 		// Insert breakpoint
-
 		return;
 	}
 
@@ -44,12 +46,17 @@ void perform_action(int type) {
 		// Step forwards once
 		return;
 	}
+
+	default: {
+		if ((disasm_flags >> DISASM_FLAG_BREAK) & 1) {
+			disasm_flags &= ~(1 << DISASM_FLAG_BREAK);
+			IPS = 3500000;
+		}
+	}
 	}
 }
 
 void interpret_key(int key) {
-	uint64_t *ips = (uint64_t *)(memory + IPS_OFF);
-
 	// Action switch
 	switch (key) {
 	case ' ': { // "Action" key
@@ -80,26 +87,35 @@ void interpret_key(int key) {
 
 	// Mode / Key switch
 	switch (key) {
-	case ',': { // Basic speed control
-		*ips = 0;
+	case ',': { // Basic speed control	
+		disasm_flags &= ~(1 << DISASM_FLAG_BREAK);
+
+		IPS = 0;
+
 		break;
 	}
 
 	case '.': { // Basic speed control
-		*ips += 1;
+		disasm_flags &= ~(1 << DISASM_FLAG_BREAK);
+
+		IPS += 1;
+
 		break;
 	}
 
 	case '\'': { // Basic speed control
-		*ips = 3500000;
+		disasm_flags &= ~(1 << DISASM_FLAG_BREAK);
+
+		IPS = 3500000;
+
 		break;
 	}
 
 	case 'b': { // Toggle break point mode
 		DEBUG_MODE_TOGGLE(DEBUG_MODE_BREAKPOINT,
-			*ips = 0; // Allow user to adjust diassembly and set breakpoint
+			IPS = 0; // Allow user to adjust diassembly and set breakpoint
 		,
-			;
+			IPS = 3500000;
 		)
 
 		break;

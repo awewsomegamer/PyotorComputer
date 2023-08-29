@@ -1,6 +1,7 @@
 #include "include/render.h"
 #include "include/global.h"
 #include "include/shared_memory.h"
+#include "include/cmd_interpreter.h"
 #include <curses.h>
 #include <string.h>
 #include <ctype.h>
@@ -29,21 +30,21 @@ void draw_window(char *label, int start_x, int end_x, int start_y, int end_y) {
 	printw("%s", label);
 }
 
-int draw_disassembly(uint8_t *flags) {
+int draw_disassembly() {
 	draw_window(DISASM_LABEL, LABEL_COLUMN, CODE_COLUMN_END, DISASM_START_ROW, DISASM_END_ROW);
 	
 	int cur_inst_len = 0;
 	uint16_t last_pc = pc;
 
 	for (int i = DISASM_START_ROW + 1; i < DISASM_END_ROW; i++) {
-		char *str = print_instruction(memory, flags);
+		char *str = print_instruction(memory);
 		char *printable_str = malloc(max_x + 1);
 		memset(printable_str, 0, max_x + 1);
 
 		int length = CODE_COLUMN_END - CODE_COLUMN - 4;
 		int x = CODE_COLUMN;
 
-		if (*flags & 1) {
+		if ((disasm_flags >> DISASM_FLAG_LABEL) & 1) {
 			length = CODE_COLUMN - LABEL_COLUMN - 4;
 			x = LABEL_COLUMN;
 		}
@@ -54,24 +55,24 @@ int draw_disassembly(uint8_t *flags) {
 			memset(printable_str + length, '.', 2);
 		}
 
-		if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 0) {
+		if (i == DISASM_START_ROW + 1 && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 			HIGHLIGHT_ON
-		} else if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 1) {
+		} else if (i == DISASM_START_ROW + 1 && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 1) {
 		 	RED_ON
 		}
 
 		move(i, x);
-		printw("%s%c", printable_str, ((*flags >> DISASM_FLAG_LABEL) & 1) ? ':' : ' ');
+		printw("%s%c", printable_str, ((disasm_flags >> DISASM_FLAG_LABEL) & 1) ? ':' : ' ');
 		free(str);
 		
-		if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 0) {
+		if (i == DISASM_START_ROW + 1 && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 			HIGHLIGHT_OFF
-		} else if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 1) {
+		} else if (i == DISASM_START_ROW + 1 && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 1) {
 			RED_OFF
 		}
 		
-		if (*flags & 1) {
-			str = print_instruction(memory, flags);
+		if (disasm_flags & 1) {
+			str = print_instruction(memory);
 			memset(printable_str, 0, max_x + 1);
 			length = CODE_COLUMN_END - CODE_COLUMN - 4;
 
@@ -82,18 +83,18 @@ int draw_disassembly(uint8_t *flags) {
 				printable_str[length + 3] = ' ';
 			}
 			
-			if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 0) {
+			if (i == DISASM_START_ROW + 1 && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 				HIGHLIGHT_ON
-			} else if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 1) {
+			} else if (i == DISASM_START_ROW + 1 && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 1) {
 				RED_ON
 			}
 
 			move(i, CODE_COLUMN);
 			printw("%s", printable_str);
 
-			if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 0) {
+			if (i == DISASM_START_ROW + 1 && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 				HIGHLIGHT_OFF
-			} else if (i == DISASM_START_ROW + 1 && ((*flags >> DISASM_FLAG_BREAK) & 1) == 1) {
+			} else if (i == DISASM_START_ROW + 1 && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 1) {
 				RED_OFF
 			}
 
@@ -213,6 +214,16 @@ void draw_sys_info() {
 	printw("IPS: %lu", *((uint64_t *)(memory + IPS_OFF)));
 }
 
-void render_terminal() {
+void render_cmd() {
+	draw_window(CMD_LABEL, CMD_COLUMN, CMD_END_COLUMN, CMD_START_ROW, CMD_END_ROW);
 
+	int x = CMD_COLUMN;
+	int y = CMD_START_ROW + 1;
+
+	move(y++, x);
+	printw("USR> %s", command_buffer);
+	move(y, x);
+	printw("CMD> %s", command_response);
+
+	move(--y, x + strlen("USR> ") + command_buffer_idx);
 }

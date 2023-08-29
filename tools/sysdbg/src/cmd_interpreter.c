@@ -7,11 +7,14 @@
 
 int command_buffer_idx = 0;
 char command_buffer[512];
+char command_response[512];
 
 void execute_cmd() {
 	// Can't do anything without a command
 	if (command_buffer_idx == 0)
 		return;
+
+	memset(command_response, 0, 512);
 
 	uint64_t hash = 0xA5B1C2;
 	
@@ -26,8 +29,14 @@ void execute_cmd() {
 		char *symbol = (char *)malloc(i - start_idx);
 		strncpy(symbol, command_buffer + start_idx, (i - start_idx));
 
-		if (toggle_breakpoint(symbol) == -1)
-			// Error
+		int r = toggle_breakpoint(symbol);
+
+		if (r == -1) {
+			sprintf(command_response, "Failed to toggle break point");
+			break;
+		}
+		
+		sprintf(command_response, (r == 0) ? "Removed breakpoint" : "Added breakpoint");
 
 		break;
 	}
@@ -39,4 +48,8 @@ void execute_cmd() {
 
 void cmd_receive_char(char c) {
 	command_buffer[command_buffer_idx++] = c;
+}
+
+void cmd_backspace() {
+	command_buffer[--command_buffer_idx] = 0;
 }

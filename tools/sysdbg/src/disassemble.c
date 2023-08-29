@@ -9,6 +9,7 @@
 struct label *labels;
 size_t label_count = 0;
 uint16_t code_org = 0;
+uint8_t disasm_flags = 0;
 int pc = 0;
 
 #define PAGE_SIZE 0x100
@@ -50,20 +51,20 @@ uint8_t mem_byte_read(uint16_t address) {
 //	 | | `------ Single mode disassembly (1: yes, 0: no)
 //	 | `-------- Buffer is Shared RAM
 //	 `---------- Reached a breakpoint
-char *print_instruction(uint8_t *buffer, uint8_t *flags) {
+char *print_instruction(uint8_t *buffer) {
 	// Make this size dynamic
 	char *instruction_str = malloc(512);
 
-	uint8_t opcode = ((*flags >> DISASM_FLAG_RAM) & 1) ? mem_byte_read(pc) : *(buffer + pc);
-	uint8_t a = 	 ((*flags >> DISASM_FLAG_RAM) & 1) ? mem_byte_read(pc + 1) : *(buffer + pc + 1);
-	uint8_t b = 	 ((*flags >> DISASM_FLAG_RAM) & 1) ? mem_byte_read(pc + 2) : *(buffer + pc + 2);
+	uint8_t opcode = ((disasm_flags >> DISASM_FLAG_RAM) & 1) ? mem_byte_read(pc) : *(buffer + pc);
+	uint8_t a = 	 ((disasm_flags >> DISASM_FLAG_RAM) & 1) ? mem_byte_read(pc + 1) : *(buffer + pc + 1);
+	uint8_t b = 	 ((disasm_flags >> DISASM_FLAG_RAM) & 1) ? mem_byte_read(pc + 2) : *(buffer + pc + 2);
 	uint16_t word = a | (b << 8);
 
 	int label_index = -1;
 	for (int i = 0; i < label_count; i++) {
-		int pc_offset = (pc + ((*flags >> DISASM_FLAG_ORG) & 1 ? code_org : 0));
-		if (pc_offset == labels[i].address && ((*flags >> DISASM_FLAG_LABEL) & 1) == 0) {
-			*flags |= 1 << DISASM_FLAG_LABEL;
+		int pc_offset = (pc + ((disasm_flags >> DISASM_FLAG_ORG) & 1 ? code_org : 0));
+		if (pc_offset == labels[i].address && ((disasm_flags >> DISASM_FLAG_LABEL) & 1) == 0) {
+			disasm_flags |= 1 << DISASM_FLAG_LABEL;
 			label_index = i;
 			goto return_label;
 		}
@@ -72,7 +73,7 @@ char *print_instruction(uint8_t *buffer, uint8_t *flags) {
 			label_index = i;
 	}
 
-	*flags &= ~(1 << 0);
+	disasm_flags &= ~(1 << 0);
 
 	sprintf(instruction_str, "%s", instruction_name_lookup[opcode]);
 
@@ -206,7 +207,7 @@ char *print_instruction(uint8_t *buffer, uint8_t *flags) {
 	}
 
 	// If not in single dissassembly mode, increment PC
-	if (!((*flags >> 2) & 1))
+	if (!((disasm_flags >> DISASM_FLAG_SINGLE) & 1))
 		pc += instruction_size_lookup[instruction_addr_mode_lookup[opcode]];
 
 	return instruction_str;
@@ -215,9 +216,9 @@ char *print_instruction(uint8_t *buffer, uint8_t *flags) {
 
 	strcpy(instruction_str, labels[label_index].name);
 	
-	if ((labels[label_index].attributes & 1) && ((*flags >> DISASM_FLAG_BREAK) & 1) == 0) {
+	if (((labels[label_index].attributes >> LABEL_ATTR_BREAK) & 1) && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 		*(uint64_t *)(memory + IPS_OFF) = 0;
-		*flags |= 1 << DISASM_FLAG_BREAK;
+		disasm_flags |= 1 << DISASM_FLAG_BREAK;
 	}
 
 	return instruction_str;
@@ -248,6 +249,11 @@ void parse_labels(FILE *file) {
 	}
 }
 
+// Same as parse_labels, except breakpoint attribute is enabled
+void parse_breakpoints(FILE *file) {
+
+}
+
 int toggle_breakpoint(char *symbol) {
 	int label_index = -1;
 	for (int i = 0; i < label_count; i++) {
@@ -260,10 +266,10 @@ int toggle_breakpoint(char *symbol) {
 	if (label_index == -1)
 		return -1;
 
-	if (labels[label_index].attributes & 1)
-		labels[label_index].attributes &= ~(1 << 0);
+	if ((labels[label_index].attributes >> LABEL_ATTR_BREAK) & 1)
+		labels[label_index].attributes &= ~(1 << LABEL_ATTR_BREAK);
 	else
-		labels[label_index].attributes |= 1 << 0;
+		labels[label_index].attributes |= 1 << LABEL_ATTR_BREAK;
 
-	return 0;
+	return (labels[label_index].attributes >> LABEL_ATTR_BREAK);
 }

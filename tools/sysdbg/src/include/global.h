@@ -11,7 +11,7 @@
 #define CODE_COLUMN (max_x / 4)
 #define CODE_COLUMN_END (max_x / 2)
 #define DISASM_START_ROW 0 //((max_y / 2) - 1)
-#define DISASM_END_ROW max_y
+#define DISASM_END_ROW (max_y - 1)
 #define DISASM_LABEL " LIVE DISASSEMBLY "
 
 #define REGISTERS_COLUMN (CODE_COLUMN_END + 1)
@@ -25,6 +25,12 @@
 #define INFO_START_ROW (REGISTERS_END_ROW)
 #define INFO_END_ROW ((max_y / 4) + INFO_START_ROW)
 #define INFO_LABEL " INFORMATION "
+
+#define CMD_COLUMN REGISTERS_COLUMN
+#define CMD_END_COLUMN (max_x - 1)
+#define CMD_START_ROW (INFO_END_ROW)
+#define CMD_END_ROW (max_y - 1)
+#define CMD_LABEL " Command Prompt "
 
 #define SYSDBG_COLOR_REGULAR 0
 #define SYSDBG_COLOR_HIGHLIGHTED 1
@@ -49,6 +55,8 @@
 #define DISASM_FLAG_SINGLE      2
 #define DISASM_FLAG_RAM         3
 #define DISASM_FLAG_BREAK       4
+
+#define LABEL_ATTR_BREAK        0
 
 #define DEBUG_MODE_NONE         0
 #define DEBUG_MODE_BREAKPOINT   1
@@ -75,8 +83,9 @@ static const char *debugger_mode_strings[] = {
 
 extern int max_x;
 extern int max_y;
-extern uint8_t debugger_mode;
 extern uint8_t running;
+
+extern uint8_t debugger_mode;
 
 uint64_t char_hash(char c);
 

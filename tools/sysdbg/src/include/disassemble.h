@@ -91,8 +91,9 @@ extern struct label *labels;
 
 extern int pc;
 extern uint16_t code_org;
+extern uint8_t disasm_flags;
 
-char *print_instruction(uint8_t *buffer, uint8_t *flags);
+char *print_instruction(uint8_t *buffer);
 void parse_labels(FILE *file);
 char *print_label();
 int toggle_breakpoint(char *symbol);
