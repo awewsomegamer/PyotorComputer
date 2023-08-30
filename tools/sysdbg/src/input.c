@@ -13,9 +13,11 @@ void perform_action(int type) {
 		case DEBUG_MODE_BREAKPOINT: {
 			// Go back one instruction
 			// Figure this out somehow
-			return;
+			break;
 		}
 		}
+
+		return;
 	}
 
 	// Type B actions, triggered by enter
@@ -23,7 +25,7 @@ void perform_action(int type) {
 		switch (debugger_mode) {
 		case DEBUG_MODE_BREAKPOINT: {
 			// Go forward one instruction
-			return;
+			break;
 		}
 
 		case DEBUG_MODE_CMD: {
@@ -32,7 +34,9 @@ void perform_action(int type) {
 
 			break;
 		}
-		}	
+		}
+
+		return;
 	}
 
 	// Type A actions, triggered by space
@@ -72,6 +76,7 @@ void interpret_key(int key) {
 		break;
 	}
 
+	case 0x07: // BEL character patch
 	case '\b': { // "Action" key
 		perform_action(DEBUG_ACTION_C);
 
@@ -113,10 +118,13 @@ void interpret_key(int key) {
 
 	case 'b': { // Toggle break point mode
 		DEBUG_MODE_TOGGLE(DEBUG_MODE_BREAKPOINT,
-			IPS = 0; // Allow user to adjust diassembly and set breakpoint
+			IPS = 0;
+			disasm_flags |= (1 << DISASM_FLAG_BREAK);
 		,
 			IPS = 3500000;
+			disasm_flags &= ~(1 << DISASM_FLAG_BREAK);
 		)
+
 
 		break;
 	}

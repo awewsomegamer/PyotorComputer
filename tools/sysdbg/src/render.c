@@ -118,13 +118,21 @@ void draw_memdump_instruction_area(int x, int y, int cur_inst_len, uint16_t cur_
 		move(y, x);
 
 		for (int j = 0; j < 8; j++) {
-			if (i + j >= 0 && i + j < cur_inst_len)
+			if ((i + j) >= 0 && (i + j) < cur_inst_len && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 				HIGHLIGHT_ON
+			} else if ((i + j) >= 0 && (i + j) < cur_inst_len && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 1) {
+				RED_ON
+			}
+			
+			printw("%02X", *(memory + cur_pc + i + j));
 
-			printw("%02X ", *(memory + cur_pc + i + j));
-
-			if (i + j >= 0 && i + j < cur_inst_len)
+			if ((i + j) >= 0 && (i + j) < cur_inst_len && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 				HIGHLIGHT_OFF
+			} else if ((i + j) >= 0 && (i + j) < cur_inst_len && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 1) {
+				RED_OFF
+			}
+
+			addch(' ');
 
 		}
 
@@ -132,13 +140,21 @@ void draw_memdump_instruction_area(int x, int y, int cur_inst_len, uint16_t cur_
 			addch(' ');
 
 			for (int j = 0; j < 8; j++) {
-				if (i + j >= 0 && i + j < cur_inst_len)
+				if ((i + j) >= 0 && (i + j) < cur_inst_len && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 					HIGHLIGHT_ON
+				} else if ((i + j) >= 0 && (i + j) < cur_inst_len && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 1) {
+					RED_ON
+				}
 
-				printw("%c ", *(memory + cur_pc + i + j));
+				printw("%c", *(memory + cur_pc + i + j));
 
-				if (i + j >= 0 && i + j < cur_inst_len)
+				if ((i + j) >= 0 && (i + j) < cur_inst_len && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 					HIGHLIGHT_OFF
+				} else if ((i + j) >= 0 && (i + j) < cur_inst_len && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 1) {
+					RED_OFF
+				}
+
+				addch(' ');
 			}
 		}
 

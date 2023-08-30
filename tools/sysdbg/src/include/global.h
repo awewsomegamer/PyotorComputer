@@ -10,7 +10,7 @@
 #define LABEL_COLUMN 0
 #define CODE_COLUMN (max_x / 4)
 #define CODE_COLUMN_END (max_x / 2)
-#define DISASM_START_ROW 0 //((max_y / 2) - 1)
+#define DISASM_START_ROW 0
 #define DISASM_END_ROW (max_y - 1)
 #define DISASM_LABEL " LIVE DISASSEMBLY "
 
@@ -76,10 +76,11 @@ static const char *debugger_mode_strings[] = {
 
 #define DEBUG_MODE_TOGGLE(mode, on, off) \
         debugger_mode = (debugger_mode == mode) ? DEBUG_MODE_NONE : mode; \
-        if (debugger_mode == mode) \
-                on                 \
-        else                       \
-                off
+        if (debugger_mode == mode) { \
+                on                   \
+        } else {                     \
+                off                  \
+        }
 
 extern int max_x;
 extern int max_y;

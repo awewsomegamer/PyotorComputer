@@ -88,7 +88,6 @@ struct label {
 };
 extern struct label *labels;
 
-
 extern int pc;
 extern uint16_t code_org;
 extern uint8_t disasm_flags;

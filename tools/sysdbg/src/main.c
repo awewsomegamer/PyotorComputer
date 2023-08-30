@@ -7,12 +7,12 @@
 #include "include/render.h"
 #include "include/shared_memory.h"
 #include "include/disassemble.h"
+#include "include/cmd_interpreter.h"
 #include "include/input.h"
 #include <assert.h>
 #include <signal.h>
 #include <unistd.h>
 #include <pthread.h>
-
 int max_x = 0;
 int max_y = 0;
 uint8_t debugger_mode = 0;
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 
                 refresh();
 
-                usleep(2000);
+                usleep(16000);
                 erase();
         }
 

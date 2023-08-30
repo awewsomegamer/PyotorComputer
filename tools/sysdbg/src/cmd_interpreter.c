@@ -1,6 +1,7 @@
 #include "include/cmd_interpreter.h"
 #include "include/global.h"
 #include "include/disassemble.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +16,7 @@ void execute_cmd() {
 		return;
 
 	memset(command_response, 0, 512);
-
+	
 	uint64_t hash = 0xA5B1C2;
 	
 	int i = 0;
@@ -25,8 +26,9 @@ void execute_cmd() {
 	switch (hash) {
 	case CMD_BREAK_HASH: {
 		int start_idx = ++i;
-		for (; i < command_buffer_idx && command_buffer[i] != ' '; i++);
-		char *symbol = (char *)malloc(i - start_idx);
+		for (; i < command_buffer_idx && (command_buffer[i] != ' ' || command_buffer[i] != 0); i++);
+		char *symbol = (char *)malloc(i - start_idx + 1);
+		memset(symbol, 0, i - start_idx + 1);
 		strncpy(symbol, command_buffer + start_idx, (i - start_idx));
 
 		int r = toggle_breakpoint(symbol);
@@ -47,9 +49,12 @@ void execute_cmd() {
 }
 
 void cmd_receive_char(char c) {
-	command_buffer[command_buffer_idx++] = c;
-}
+	// Handle backspace
+	if (command_buffer > 0 && (c == '\b' || c == 7))
+		command_buffer[--command_buffer_idx] = 0;
 
-void cmd_backspace() {
-	command_buffer[--command_buffer_idx] = 0;
+	if (!isalnum(c) && c != ' ')
+		return;
+
+	command_buffer[command_buffer_idx++] = c;
 }
