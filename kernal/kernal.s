@@ -846,7 +846,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 
 ; A - Disk the file system is on
 ; A - Returned 0 for success
-.proc fs_new_dir
+.proc fs_new_dir_init
 			pha					; Save disk number
 			lda #.LOBYTE(FS_CUR_DIR)		; Load low byte of destination address
 			sta $5					; Store it
@@ -880,6 +880,53 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			stz DISK_SECTOR_COUNT_HI		; Zero the higher byte
 			pla					; Restore disk number
 			jmp write_disk				; Write the changes to the file system
+.endproc
+
+; A - Disk the file system is on
+; Descriptor will be placed at the next free sector
+; A - Returned 0 for success
+.proc fs_new_dir_desc
+.endproc
+
+; A - Disk the file system is on
+; ($5) - Pointer to file data
+; Initializer will be placed at the next free sector
+; A - Returned 0 for success
+.proc fs_new_file_init
+			pha
+			jsr fs_initialize			; Load the initial directory descriptor
+			lda FS_DIR_N_FREE_SECT_LO		; Get the low byte of the next free sector
+			sta DISK_SECTOR_LO			; Store it
+			lda FS_DIR_N_FREE_SECT_HI		; Get the high byte of the next free sector
+			sta DISK_SECTOR_HI			; Store it
+
+			lda #$02
+			
+		
+			lda #.LOBYTE(FS_CUR_FILE)		; Load low byte of destination address
+			sta $5					; Store it
+			lda #.HIBYTE(FS_CUR_FILE)		; Load high byte of destination address
+			sta $6					; Store it
+			lda #.LOBYTE(1024)			; Load low byte of count
+			sta $9					; Store it
+			lda #.HIBYTE(1024)			; Load high byte of count
+			sta $A					; Store it
+			lda #$0					; Load the value to set the memory with
+			jsr memset				; Set memory
+
+			
+
+			pla
+			jmp write_disk
+.endproc
+
+; A    - Disk the file system is on
+; ($5) - Pointer to file data
+; ($7) - File name
+; Descriptor will be placed at the next free sector
+; A    - Returned 0 for success
+.proc fs_new_file_desc
+
 .endproc
 
 ; A - Disk index
@@ -1048,7 +1095,13 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts
 .endproc
 
-; ($7) - Address to file name (zero terminated)
+; A    - Disk the file is on
+; ($7) - Name of the file
+; A    - Returned 0 for success
+.proc fs_create_file
+.endproc
+
+; ($7) - Address to file name
 ; ($5) - Address of the start of the data
 ; A - Returned as 0 for success
 .proc fs_save_file
