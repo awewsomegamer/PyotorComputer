@@ -899,10 +899,9 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta DISK_SECTOR_LO			; Store it
 			lda FS_DIR_N_FREE_SECT_HI		; Get the high byte of the next free sector
 			sta DISK_SECTOR_HI			; Store it
-
-			lda #$02
-			
-		
+			lda #$02				; Writing 2 sectors
+			sta DISK_SECTOR_COUNT_LO		; Send the memo
+			stz DISK_SECTOR_COUNT_HI		; Send the memo
 			lda #.LOBYTE(FS_CUR_FILE)		; Load low byte of destination address
 			sta $5					; Store it
 			lda #.HIBYTE(FS_CUR_FILE)		; Load high byte of destination address
@@ -914,9 +913,9 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			lda #$0					; Load the value to set the memory with
 			jsr memset				; Set memory
 
-			
+			; Write information
 
-			pla
+			pla					; Restore disk index
 			jmp write_disk
 .endproc
 
@@ -925,8 +924,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; ($7) - File name
 ; Descriptor will be placed at the next free sector
 ; A    - Returned 0 for success
-.proc fs_new_file_desc
-
+.proc fs_new_file_desc		
 .endproc
 
 ; A - Disk index
@@ -973,11 +971,11 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts					; Return
 .endproc
 
+; A - Disk the file system is on
 ; ($7) - Address to file name (zero terminated)
 ; A - Returned as the file index or 132 if the file was not found
 ; ($5) - The base address of the entry in the current directory
 .proc fs_find_file
-			lda #$1					; Disk number (make this dynamic)
 			phy					; Save the Y register
 			jsr fs_initialize			; Load initialization directory
 			bne @return				; Failed to initialize directory, return
@@ -1055,15 +1053,18 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts					; Return
 .endproc
 
+; A - Disk the file system is on
 ; ($5) - Load address
 ; ($7) - Address to file name
 ; Current dir should be the directory of the file
 ; A - Returned as 0 for success
 .proc fs_load_file
 			sei					; Disable interrupts
+			sta TEMP1				; Save disk
 			lda $5					; Get the low byte of the load address
 			pha					; Push the low byte to the stack
 			lda $6					; Get the high byte of the load address
+			lda TEMP1				; Restore disk
 			pha					; Push the high byte to the stack
 			jsr fs_find_file			; Find the file
 			cmp #FILE_NOT_FOUND_IDX			; Was the file found?
@@ -1095,16 +1096,25 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			rts
 .endproc
 
-; A    - Disk the file is on
 ; ($7) - Name of the file
 ; A    - Returned 0 for success
 .proc fs_create_file
 .endproc
 
+; A    - Disk the file is on
 ; ($7) - Address to file name
 ; ($5) - Address of the start of the data
 ; A - Returned as 0 for success
 .proc fs_save_file
+			jsr fs_find_file
+			cmp #FILE_NOT_FOUND_IDX
+			beq @create
+
+			; Update descriptors with new data
+
+			bra rts
+@create:		jmp fs_create_file
+@return:		rts
 .endproc
 
 ; A - Current file index
