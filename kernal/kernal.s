@@ -886,6 +886,35 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; Descriptor will be placed at the next free sector
 ; A - Returned 0 for success
 .proc fs_new_dir_desc
+			sei					; Disable interrupts
+			jsr fs_initialize			; Initialize the filesystem
+			lda FS_DIR_N_FREE_SECT_LO		; Load in the low byte of the next free sector
+			pha					; Store it
+			lda FS_DIR_N_FREE_SECT_HI		; Load in the high byte of the next free sector
+			pha					; Store it
+			inc FS_DIR_N_DIR_ENT_LO			; Increment the next free sector once
+			bne @no_inc_1				; If it didn't roll over, jump over
+			inc FS_DIR_N_DIR_ENT_HI			; Otherwise, increment the high byte too
+@no_inc_1:		inc FS_DIR_N_DIR_ENT_LO			; Increment the next free sector twice
+			bne @no_inc_2				; If it didn't roll over, jump over
+			inc FS_DIR_N_DIR_ENT_HI			; Otherwise, increment the high byte too
+@no_inc_2:		lda FS_FILE_N_DESC_HI			; Check if this is the first directory after the initializer
+			bne @create				; If not, jump over the iteration code
+			lda FS_FILE_N_DESC_LO			; Check if this is the first directory after the initializer
+			bne @create				; If not, jump over the iteration code
+@get_last:		jsr fs_next_dir				; Goto the next directory
+			beq @create				; We are on the last link
+			bra @get_last				; Loop
+@create:		pla					; Get the high byte off the stack
+			sta FS_DIR_N_DIR_ENT_HI			; Link it
+			pla					; Get the low byte off the stack
+			sta FS_DIR_N_DIR_ENT_LO			; Link it
+
+			
+
+
+			cli					; Enable interrupts
+			rts					; Return
 .endproc
 
 ; A - Disk the file system is on
@@ -1112,7 +1141,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 
 			; Update descriptors with new data
 
-			bra rts
+			bra @return
 @create:		jmp fs_create_file
 @return:		rts
 .endproc
