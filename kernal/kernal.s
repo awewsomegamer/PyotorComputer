@@ -152,6 +152,8 @@
 			stz TERMINAL_CHAR_Y			; Zero terminal Y coordinate
 			lda #$1					; Set disk number to 1
 			jsr fs_initialize			; Initialize virtual file system from disk 1
+			lda #$1
+			jsr fs_new_dir_desc			; Create a new descriptor
 			stz TERMINAL_STATUS			; Zero status
 .endproc
 			; Auto commands handling goes here
@@ -887,6 +889,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; A - Returned 0 for success
 .proc fs_new_dir_desc
 			sei					; Disable interrupts
+			pha					; Save the disk number
 			jsr fs_initialize			; Initialize the filesystem
 			lda FS_DIR_N_FREE_SECT_LO		; Load in the low byte of the next free sector
 			pha					; Store it
@@ -909,10 +912,25 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta FS_DIR_N_DIR_ENT_HI			; Link it
 			pla					; Get the low byte off the stack
 			sta FS_DIR_N_DIR_ENT_LO			; Link it
-
-			
-
-
+			pla					; Restore disk number
+			pha					; Save disk number
+			jsr write_disk				; Update the descriptor (the fs init and possible iteration should position disk ctrl. reg. correctly)
+			lda FS_DIR_N_DIR_ENT_LO			; Retrieve new descriptor sector's low byte
+			sta DISK_SECTOR_LO			; Update disk control register
+			lda FS_DIR_N_DIR_ENT_HI			; Retrieve new descriptor sector's high byte
+			sta DISK_SECTOR_HI			; Update disk control register
+			lda #.LOBYTE(FS_CUR_DIR)		; Load low byte of destination address
+			sta $5					; Store it
+			lda #.HIBYTE(FS_CUR_DIR)		; Load high byte of destination address
+			sta $6					; Store it
+			lda #.LOBYTE(1024)			; Load low byte of count
+			sta $9					; Store it
+			lda #.HIBYTE(1024)			; Load high byte of count
+			sta $A					; Store it
+			lda #$0					; Load the value to set the memory with
+			jsr memset				; Set memory
+			pla					; Restore disk number
+			jsr write_disk				; Write the new descriptor to disk
 			cli					; Enable interrupts
 			rts					; Return
 .endproc
@@ -1301,6 +1319,7 @@ CMD_NO_MATCH:		.asciiz "Command parameters insufficient!"
 FS_VER_NO_SUPPORT:	.asciiz "File system version not supported!"
 FS_NOT_VALID:		.asciiz "Unsupported file system!"
 DISK_READ_FAIL:		.asciiz "Failed to read the disk!"
+DISK_WRITE_FAIL:	.asciiz "Failed to write the disk!"
 
 .segment "VECTORS"
 			.addr nmi_handler
