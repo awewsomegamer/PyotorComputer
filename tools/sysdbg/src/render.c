@@ -63,13 +63,20 @@ int draw_disassembly() {
 
 		move(i, x);
 		printw("%s%c", printable_str, ((disasm_flags >> DISASM_FLAG_LABEL) & 1) ? ':' : ' ');
-		free(str);
 		
 		if (i == DISASM_START_ROW + 1 && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 0) {
 			HIGHLIGHT_OFF
 		} else if (i == DISASM_START_ROW + 1 && ((disasm_flags >> DISASM_FLAG_BREAK) & 1) == 1) {
 			RED_OFF
 		}
+
+		if (strncmp(str, "RTI", 3) == 0 || strncmp(str, "RTS", 3) == 0) {
+			free(str);
+			i++;
+			continue;
+		}
+
+		free(str);
 		
 		if (disasm_flags & 1) {
 			str = print_instruction(memory);
@@ -98,7 +105,14 @@ int draw_disassembly() {
 				RED_OFF
 			}
 
+			if (strncmp(str, "RTI", 3) == 0 || strncmp(str, "RTS", 3) == 0) {
+				free(str);
+				i++;
+				continue;
+			}
+
 			free(str);
+
 		}
 
 		free(printable_str);
