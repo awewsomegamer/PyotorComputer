@@ -895,15 +895,15 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			pha					; Store it
 			lda FS_DIR_N_FREE_SECT_HI		; Load in the high byte of the next free sector
 			pha					; Store it
-			inc FS_DIR_N_DIR_ENT_LO			; Increment the next free sector once
+			inc FS_DIR_N_FREE_SECT_LO			; Increment the next free sector once
 			bne @no_inc_1				; If it didn't roll over, jump over
-			inc FS_DIR_N_DIR_ENT_HI			; Otherwise, increment the high byte too
-@no_inc_1:		inc FS_DIR_N_DIR_ENT_LO			; Increment the next free sector twice
+			inc FS_DIR_N_FREE_SECT_HI			; Otherwise, increment the high byte too
+@no_inc_1:		inc FS_DIR_N_FREE_SECT_LO			; Increment the next free sector twice
 			bne @no_inc_2				; If it didn't roll over, jump over
-			inc FS_DIR_N_DIR_ENT_HI			; Otherwise, increment the high byte too
-@no_inc_2:		lda FS_FILE_N_DESC_HI			; Check if this is the first directory after the initializer
+			inc FS_DIR_N_FREE_SECT_HI			; Otherwise, increment the high byte too
+@no_inc_2:		lda FS_DIR_N_DIR_ENT_HI			; Check if this is the first directory after the initializer
 			bne @create				; If not, jump over the iteration code
-			lda FS_FILE_N_DESC_LO			; Check if this is the first directory after the initializer
+			lda FS_DIR_N_DIR_ENT_LO			; Check if this is the first directory after the initializer
 			bne @create				; If not, jump over the iteration code
 @get_last:		jsr fs_next_dir				; Goto the next directory
 			beq @create				; We are on the last link
