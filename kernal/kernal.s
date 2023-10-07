@@ -889,31 +889,32 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 ; A - Returned 0 for success
 .proc fs_new_dir_desc
 			sei					; Disable interrupts
-			pha					; Save the disk number
+			sta TEMP1				; Save the disk number
 			jsr fs_initialize			; Initialize the filesystem
 			lda FS_DIR_N_FREE_SECT_LO		; Load in the low byte of the next free sector
 			pha					; Store it
 			lda FS_DIR_N_FREE_SECT_HI		; Load in the high byte of the next free sector
 			pha					; Store it
-			inc FS_DIR_N_FREE_SECT_LO			; Increment the next free sector once
+			inc FS_DIR_N_FREE_SECT_LO		; Increment the next free sector once
 			bne @no_inc_1				; If it didn't roll over, jump over
-			inc FS_DIR_N_FREE_SECT_HI			; Otherwise, increment the high byte too
-@no_inc_1:		inc FS_DIR_N_FREE_SECT_LO			; Increment the next free sector twice
+			inc FS_DIR_N_FREE_SECT_HI		; Otherwise, increment the high byte too
+@no_inc_1:		inc FS_DIR_N_FREE_SECT_LO		; Increment the next free sector twice
 			bne @no_inc_2				; If it didn't roll over, jump over
-			inc FS_DIR_N_FREE_SECT_HI			; Otherwise, increment the high byte too
-@no_inc_2:		lda FS_DIR_N_DIR_ENT_HI			; Check if this is the first directory after the initializer
-			bne @create				; If not, jump over the iteration code
-			lda FS_DIR_N_DIR_ENT_LO			; Check if this is the first directory after the initializer
-			bne @create				; If not, jump over the iteration code
-@get_last:		jsr fs_next_dir				; Goto the next directory
+			inc FS_DIR_N_FREE_SECT_HI		; Otherwise, increment the high byte too
+@no_inc_2:		lda TEMP1				; Load the disk number
+			jsr write_disk				; Update initial descriptor
+			lda FS_DIR_N_DIR_ENT_HI			; Check if this is the first directory after the initializer
+			ora FS_DIR_N_DIR_ENT_LO			; Or the low byte with the high byte
+			beq @create				; If this is the first descriptor after the initial, goto @create
+@get_last:		lda TEMP1				; Load the disk number
+			jsr fs_next_dir				; Goto the next directory
 			beq @create				; We are on the last link
 			bra @get_last				; Loop
 @create:		pla					; Get the high byte off the stack
 			sta FS_DIR_N_DIR_ENT_HI			; Link it
 			pla					; Get the low byte off the stack
 			sta FS_DIR_N_DIR_ENT_LO			; Link it
-			pla					; Restore disk number
-			pha					; Save disk number
+			lda TEMP1				; Load the disk number
 			jsr write_disk				; Update the descriptor (the fs init and possible iteration should position disk ctrl. reg. correctly)
 			lda FS_DIR_N_DIR_ENT_LO			; Retrieve new descriptor sector's low byte
 			sta DISK_SECTOR_LO			; Update disk control register
@@ -929,7 +930,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta $A					; Store it
 			lda #$0					; Load the value to set the memory with
 			jsr memset				; Set memory
-			pla					; Restore disk number
+			lda TEMP1
 			jsr write_disk				; Write the new descriptor to disk
 			cli					; Enable interrupts
 			rts					; Return
@@ -1214,7 +1215,7 @@ reg_char_routine:	lda $3					; Load A with what is in the keyboard buffer
 			sta DISK_SECTOR_COUNT_LO		; Set the right byte
 			stz DISK_SECTOR_COUNT_HI		; Zero the higher byte
 			pla					; Restore the disk number
-			jsr read_disk				; Jump to the read disk sub-routine (piggy backing off of its RTS statement)
+			jsr read_disk				; Jump to the read disk sub-routine
 			bne @no_next_dir_ld			; See if operation resulted in error
 			rts					; If not, return
 @no_next_dir:		pla					; Restore A

@@ -20,7 +20,7 @@ for y in range(0, im.size[1], 5):
 					b = b | (int((pix[x + i_i, y + j][0] >= 1)) << i)
 				except:
 					print("ERROR: ", end='')
-				print("X: ",x + i_i, "Y: ", y + j, "[]: ", int(pix[x + i_i, y + j][0] >= 1), "(", i, i_i, j, x, y, ")")
+				#print("X: ",x + i_i, "Y: ", y + j, "[]: ", int(pix[x + i_i, y + j][0] >= 1), "(", i, i_i, j, x, y, ")")
 				i_i = i_i + 1
 
 			s += str(b) + ", "
